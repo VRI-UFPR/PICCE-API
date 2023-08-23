@@ -9,3 +9,15 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model Address {
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updateAt DateTime @updatedAt
+    
+    city      String
+    state     String
+    country   String
+
+    @@unique([city, state, country])
+}
