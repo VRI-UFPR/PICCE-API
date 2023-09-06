@@ -73,7 +73,7 @@ The forms contain one kind of components indicating for the user what to do, how
 	npx prisma migrate dev
 ```
 
--   Após a execução deste comando, é esperado que seja mostrado uma mensagem semelhante à `Environment variables loaded from .env
+-   After executing this command, it is expected that a message similar to the one shown will be displayed: `Environment variables loaded from .env
 Prisma schema loaded from prisma/schema.prisma
 Datasource "db": PostgreSQL database "vri_picce", schema "public" at "localhost:5432"`.
 
