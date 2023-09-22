@@ -11,13 +11,67 @@ datasource db {
 }
 
 model Address {
-    id        Int      @id @default(autoincrement())
+    id Int @id @default(autoincrement())
     createdAt DateTime @default(now())
     updateAt DateTime @updatedAt
     
-    city      String
-    state     String
-    country   String
+    city String
+    state String
+    country String
 
     @@unique([city, state, country])
+}
+
+model ApplicationAnswer{
+    id Int @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updateAt DateTime @updatedAt
+
+    date DateTime
+    itemAnswerGroups ItemAnswerGroup[]
+
+    userId Int
+    user User @relation(fields: [userId], references: [id])
+    applicationId Int
+    application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+    addressId Int
+    address Address @relation(fields: [addressId], references: [id], onDelete: SetNull)
+}
+
+model ItemAnswer{
+    id Int @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updateAt DateTime @updatedAt
+
+    text String
+    itemOptionSelections ItemOptionSelection[]
+
+    itemId Int
+    item Item @relation(fields: [itemId], references: [id])
+    groupId Int
+    group ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
+
+model ItemAnswerGroup{
+    id Int @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updateAt DateTime @updatedAt
+
+    itemAnswers ItemAnswer[]
+
+    applicationAnswerId Int
+    applicationAnswer ApplicationAnswer @relation(fields: [applicationAnswerId], references: [id], onDelete: Cascade)
+}
+
+model ItemOptionSelection{
+    id Int @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updateAt DateTime @updatedAt
+
+    text String
+    
+    itemAnswerId Int
+    itemAnswer ItemAnswer @relation(fields: [itemAnswerId], references: [id], onDelete: Cascade)
+    itemOptionId Int
+    itemOption ItemOption @relation(fields: [itemOptionId], references: [id], onDelete: Cascade)
 }
