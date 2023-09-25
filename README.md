@@ -44,18 +44,7 @@ The forms contain one kind of components indicating for the user what to do, how
 	npm install
 ```
 
-### 4. Compile the TypeScript project:
-
--   In the same directory, compile your TypeScript code into JavaScript using the TypeScript compiler (`tsc`). Run the following command:
-
-```
-	# This will create a "dist" folder with compiled JavaScript files.
-	npx tsc
-```
-
--   After running this command, a `dist` folder should have been created in the root directory of the project.
-
-### 5. Generate Prisma code and run database migrations:
+### 4. Generate Prisma code and run database migrations:
 
 -   Generate Prisma code based on your database configuration in the `.env` file. In your terminal, execute the following command:
 
@@ -77,12 +66,12 @@ The forms contain one kind of components indicating for the user what to do, how
 Prisma schema loaded from prisma/schema.prisma
 Datasource "db": PostgreSQL database "vri_picce", schema "public" at "localhost:5432"`.
 
-### 6. Start the API:
+### 5. Start the API:
 
--   Start the API running its compiled entry point located in dist/app.js, using the following command:
+-   Start the API running with nodemon, using the following command:
 
 ```
-	node dist/app.js
+	npm start
 ```
 
 -   Your API should now be up and running, accessible locally, if the message `Server running on port 3000` was displayed.
