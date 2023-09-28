@@ -61,13 +61,13 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                     address_id: applicationAnswer.address_id,
                 },
             })
-            applicationAnswer.item_answer_groups.forEach(async (itemAnswerGroup) => {
+            for (const itemAnswerGroup of applicationAnswer.item_answer_groups) {
                 const createdItemAnswerGroup = await prisma.itemAnswerGroup.create({
                     data: {
                         application_answer_id: createdApplicationAnswer.id,
                     },
                 })
-                itemAnswerGroup.item_answers.forEach(async (itemAnswer) => {
+                for (const itemAnswer of itemAnswerGroup.item_answers) {
                     const createdItemAnswer = await prisma.itemAnswer.create({
                         data: {
                             text: itemAnswer.text,
@@ -75,17 +75,17 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                             group_id: createdItemAnswerGroup.id,
                         },
                     })
-                    itemAnswer.item_option_selections.forEach(async (itemOptionSelection) => {
-                        await prisma.itemOptionSelection.create({
-                            data: {
+                    await prisma.itemOptionSelection.createMany({
+                        data: itemAnswer.item_option_selections.map((itemOptionSelection) => {
+                            return {
                                 text: itemOptionSelection.text,
                                 item_option_id: itemOptionSelection.item_option_id,
                                 item_answer_id: createdItemAnswer.id,
-                            },
-                        })
+                            }
+                        }),
                     })
-                })
-            })
+                }
+            }
             return prismaClient.applicationAnswer.findUnique({
                 where: {
                     id: createdApplicationAnswer.id,
@@ -198,7 +198,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                     id: { notIn: applicationAnswer.item_answer_groups.map((itemAnswerGroup) => itemAnswerGroup.id) },
                 },
             })
-            applicationAnswer.item_answer_groups.forEach(async (itemAnswerGroup) => {
+            for (const itemAnswerGroup of applicationAnswer.item_answer_groups) {
                 const createdItemAnswerGroup = await prismaClient.itemAnswerGroup.upsert({
                     where: {
                         id: itemAnswerGroup.id,
@@ -215,7 +215,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                         id: { notIn: itemAnswerGroup.item_answers.map((itemAnswer) => itemAnswer.id) },
                     },
                 })
-                itemAnswerGroup.item_answers.forEach(async (itemAnswer) => {
+                for (const itemAnswer of itemAnswerGroup.item_answers) {
                     const createdItemAnswer = await prismaClient.itemAnswer.upsert({
                         where: {
                             id: itemAnswer.id,
@@ -238,7 +238,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                             },
                         },
                     })
-                    itemAnswer.item_option_selections.forEach(async (itemOptionSelection) => {
+                    for (const itemOptionSelection of itemAnswer.item_option_selections) {
                         await prismaClient.itemOptionSelection.upsert({
                             where: {
                                 id: itemOptionSelection.id,
@@ -254,9 +254,9 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                                 item_answer_id: createdItemAnswer.id,
                             },
                         })
-                    })
-                })
-            })
+                    }
+                }
+            }
             return prismaClient.applicationAnswer.findUnique({
                 where: {
                     id: updatedApplicationAnswer.id,
