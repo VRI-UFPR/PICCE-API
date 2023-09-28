@@ -53,27 +53,35 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
 
         const applicationAnswer = await createApplicationAnswerSchema.validate(req.body)
         const createdApplicationAnswer: ApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
-            prismaClient.applicationAnswer.create({
-                date: applicationAnswer.date,
-                user_id: applicationAnswer.user_id,
-                application_id: applicationAnswer.application_id,
-                address_id: applicationAnswer.address_id,
+            prisma.applicationAnswer.create({
+                data: {
+                    date: applicationAnswer.date,
+                    user_id: applicationAnswer.user_id,
+                    application_id: applicationAnswer.application_id,
+                    address_id: applicationAnswer.address_id,
+                },
             })
             applicationAnswer.item_answer_groups.forEach(async (itemAnswerGroup) => {
-                const createdItemAnswerGroup = await prismaClient.itemAnswerGroup.create({
-                    application_answer_id: createdApplicationAnswer.id,
+                const createdItemAnswerGroup = await prisma.itemAnswerGroup.create({
+                    data: {
+                        application_answer_id: createdApplicationAnswer.id,
+                    },
                 })
                 itemAnswerGroup.item_answers.forEach(async (itemAnswer) => {
-                    const createdItemAnswer = await prismaClient.itemAnswer.create({
-                        text: itemAnswer.text,
-                        item_id: itemAnswer.item_id,
-                        group_id: createdItemAnswerGroup.id,
+                    const createdItemAnswer = await prisma.itemAnswer.create({
+                        data: {
+                            text: itemAnswer.text,
+                            item_id: itemAnswer.item_id,
+                            group_id: createdItemAnswerGroup.id,
+                        },
                     })
                     itemAnswer.item_option_selections.forEach(async (itemOptionSelection) => {
-                        await prismaClient.itemOptionSelection.create({
-                            text: itemOptionSelection.text,
-                            item_option_id: itemOptionSelection.item_option_id,
-                            item_answer_id: createdItemAnswer.id,
+                        await prisma.itemOptionSelection.create({
+                            data: {
+                                text: itemOptionSelection.text,
+                                item_option_id: itemOptionSelection.item_option_id,
+                                item_answer_id: createdItemAnswer.id,
+                            },
                         })
                     })
                 })
