@@ -7,17 +7,76 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url = env("DATABASE_URL")
+}
+
+enum InstitutionType {
+    PRIMARY
+    LOWER_SECONDARY
+    UPPER_SECONDARY
+    TERTIARY
+}
+
+enum UserRole {
+    USER
+    APLICATOR
+    PUBLISHER
+    COORDINATOR
+    ADMIN
 }
 
 model Address {
-    id        Int      @id @default(autoincrement())
+    id Int @id @default(autoincrement())
     createdAt DateTime @default(now())
     updateAt DateTime @updatedAt
     
-    city      String
-    state     String
-    country   String
+    city String
+    state String
+    country String
 
     @@unique([city, state, country])
+}
+
+model Institution {
+    id Int @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updateAt DateTime @updatedAt
+
+    name String
+    type InstitutionType
+    addressId Int
+    address Address @relation(fields: [addressId], references: [id], onDelete: SetNull)
+}
+
+model User {
+    id Int @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updateAt DateTime @updatedAt
+
+    name String
+    username String
+    hash String
+    role UserRole
+    institutionId Int
+    institution Institution @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+}
+
+model Classroom {
+    id Int @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updateAt DateTime @updatedAt
+
+    institutionId Int
+    institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+}
+
+model ClassroomMember {
+    id Int @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updateAt DateTime @updatedAt
+
+    userId Int
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    classroomId Int
+    classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 }
