@@ -1,6 +1,12 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+
+ENUM VisibilityMode {
+  PUBLIC
+  RESTRICT
+}
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,13 +17,47 @@ datasource db {
 }
 
 model Address {
-    id        Int      @id @default(autoincrement())
+    id Int @id @default(autoincrement())
     createdAt DateTime @default(now())
     updateAt DateTime @updatedAt
     
-    city      String
-    state     String
-    country   String
+    city String
+    state String
+    country String
 
     @@unique([city, state, country])
+}
+
+model Application {
+    id Int @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    
+    protocolId int 
+    protocol Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+    applicatorId int
+    applicator User @relation(fields: [applicatorId], references: [id], onDelete: Cascade)
+    visibilityMode VisibilityMode
+}
+
+model ApplicationViewerUser {
+    id Int @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    applicationId int
+    aplication Application @relation(fields: [applicationId], references [id], onDelete: Cascade)
+    userId int
+    user User @relation(fields: [userId], references [id], onDelete: Cascade)
+}
+
+model ApplicationViewerClassroom {
+    id Int @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    applicationId int
+    aplication Application @relation(fields: [applicationId], references [id], onDelete: Cascade)
+    classroomId int
+    classroom Clasroom @relation(fields: [classroomId], references [id], onDelete: Cascade)
 }
