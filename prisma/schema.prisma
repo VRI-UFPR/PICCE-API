@@ -1,8 +1,7 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-
-ENUM VisibilityMode {
+enum VisibilityMode {
   PUBLIC
   RESTRICT
 }
@@ -33,9 +32,9 @@ model Application {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
     
-    protocolId int 
+    protocolId Int 
     protocol Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
-    applicatorId int
+    applicatorId Int
     applicator User @relation(fields: [applicatorId], references: [id], onDelete: Cascade)
     visibilityMode VisibilityMode
 }
@@ -45,10 +44,10 @@ model ApplicationViewerUser {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    applicationId int
-    aplication Application @relation(fields: [applicationId], references [id], onDelete: Cascade)
-    userId int
-    user User @relation(fields: [userId], references [id], onDelete: Cascade)
+    applicationId Int
+    application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+    userId Int
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model ApplicationViewerClassroom {
@@ -56,8 +55,8 @@ model ApplicationViewerClassroom {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    applicationId int
-    aplication Application @relation(fields: [applicationId], references [id], onDelete: Cascade)
-    classroomId int
-    classroom Clasroom @relation(fields: [classroomId], references [id], onDelete: Cascade)
+    applicationId Int
+    aplication Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+    classroomId Int
+    classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 }
