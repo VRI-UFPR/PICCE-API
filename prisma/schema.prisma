@@ -58,7 +58,7 @@ model User {
   createdAt DateTime @default(now())
   updateAt DateTime @updatedAt
 
-  classroomMember ClassroomMember[]
+  classrooms Classroom[]
 
   name String
   username String
@@ -73,19 +73,8 @@ model Classroom {
   createdAt DateTime @default(now())
   updateAt DateTime @updatedAt
 
-  classroomMember ClassroomMember[]
+  users User[]
 
   institutionId Int
   institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-}
-
-model ClassroomMember {
-  id Int @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updateAt DateTime @updatedAt
-
-  userId Int
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  classroomId Int
-  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 }

@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.post("/createAddress", uploader.none(), createAddress);
 router.put("/updateAddress/:addressId", uploader.none(), updateAddress);
-router.get("/getAllAddress", uploader.none(), getAllAddresses);
+router.get("/getAllAddresses", uploader.none(), getAllAddresses);
 router.get("/getAddress/:addressId", uploader.none(), getAddress);
 router.delete("/deleteAddress/:addressId", uploader.none(), deleteAddress);
 
