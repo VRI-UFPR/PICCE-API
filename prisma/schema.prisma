@@ -37,26 +37,6 @@ model Application {
     applicatorId Int
     applicator User @relation(fields: [applicatorId], references: [id], onDelete: Cascade)
     visibilityMode VisibilityMode
-}
-
-model ApplicationViewerUser {
-    id Int @id @default(autoincrement())
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    applicationId Int
-    application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-    userId Int
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model ApplicationViewerClassroom {
-    id Int @id @default(autoincrement())
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    applicationId Int
-    aplication Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-    classroomId Int
-    classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+    viewersUser User[]
+    viewersClassroom Classroom[]
 }
