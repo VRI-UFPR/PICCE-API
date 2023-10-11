@@ -21,3 +21,112 @@ model Address {
 
     @@unique([city, state, country])
 }
+
+model Protocol {
+  id      Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updateAt DateTime @updatedAt
+
+  pages Page[]
+  owner Protocol_owner[]
+  title String
+  description String?
+  enabled Boolean
+}
+
+model Page {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updateAt DateTime @updatedAt
+
+  type Page_type //algum default?
+  item_groups Item_group[]
+  placement Int
+  protocol_id Int
+  protocol Protocol @relation(fields: [protocol_id], references: [id])
+}
+
+model Protocol_owner {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updateAt DateTime @updatedAt
+
+  protocol_id Int
+  protocol Protocol @relation(fields: [protocol_id], references: [id])
+  //user_id integer [NOT NULL]
+}
+model Item_group {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updateAt DateTime @updatedAt
+
+  table_columns Table_column[]
+  items Item[]
+
+  type Item_group_type
+  placement Int
+  isRepeatable Boolean
+  page_id Int
+  page Page @relation(fields: [page_id], references: [id])
+}
+
+model Item {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updateAt DateTime @updatedAt
+
+  text String
+  description String?
+
+  type Item_type
+
+  placement Int
+  enabled Boolean
+  item_options Item_option[] 
+  
+  group_id Int
+  item_group Item_group @relation(fields: [group_id], references: [id])
+}
+
+model Item_option {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updateAt DateTime @updatedAt
+
+  text String
+  placement Int
+
+  item_id Int
+  item Item @relation(fields: [item_id], references: [id])
+}
+
+model Table_column {
+  id Int @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updateAt DateTime @updatedAt
+
+  text String
+  placement Int
+
+  group_id Int
+  item_group Item_group @relation(fields: [group_id], references: [id])
+}
+
+enum Page_type {
+  ITEMS
+  SUBPROTOCOL
+}
+
+enum Item_group_type {
+  SINGLE_ITEM
+  MULTIPLE_ITEMS
+  TABLE
+}
+
+enum Item_type {
+  TEXTBOX
+  CHECKBOX
+  RADIO
+  SELECT
+  SCALE
+}
