@@ -44,7 +44,6 @@ model ItemAnswer{
     updateAt DateTime @updatedAt
 
     text String
-    itemOptionSelections ItemOptionSelection[]
 
     itemId Int
     item Item @relation(fields: [itemId], references: [id])
@@ -58,20 +57,39 @@ model ItemAnswerGroup{
     updateAt DateTime @updatedAt
 
     itemAnswers ItemAnswer[]
+    optionAnswers OptionAnswer[]
+    tableAnswers TableAnswer[]
 
     applicationAnswerId Int
     applicationAnswer ApplicationAnswer @relation(fields: [applicationAnswerId], references: [id], onDelete: Cascade)
 }
 
-model ItemOptionSelection{
+model OptionAnswer{
     id Int @id @default(autoincrement())
     createdAt DateTime @default(now())
     updateAt DateTime @updatedAt
 
     text String
-    
-    itemAnswerId Int
-    itemAnswer ItemAnswer @relation(fields: [itemAnswerId], references: [id], onDelete: Cascade)
-    itemOptionId Int
-    itemOption ItemOption @relation(fields: [itemOptionId], references: [id], onDelete: Cascade)
+
+    itemId Int
+    item Item @relation(fields: [itemId], references: [id])
+    groupId Int
+    group ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    optionId Int
+    option ItemOption @relation(fields: [optionId], references: [id])
+}
+
+model TableAnswer{
+    id Int @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updateAt DateTime @updatedAt
+
+    text String
+
+    itemId Int
+    item Item @relation(fields: [itemId], references: [id])
+    groupId Int
+    group ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    columnId Int
+    column TableColumn @relation(fields: [columnId], references: [id])
 }
