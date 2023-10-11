@@ -5,6 +5,42 @@ import prismaClient from "../services/prismaClient"
 
 export const createApplicationAnswer = async (req: Request, res: Response) => {
     try {
+        // Yup schemas
+        const createItemAnswerSchema = yup
+            .object()
+            .shape({
+                text: yup.string().min(3).max(255).required(),
+                item_id: yup.number().required(),
+            })
+            .noUnknown()
+
+        const createOptionAnswerSchema = yup
+            .object()
+            .shape({
+                text: yup.string().min(3).max(255).required(),
+                item_id: yup.number().required(),
+                option_id: yup.number().required(),
+            })
+            .noUnknown()
+
+        const createTableAnswerSchema = yup
+            .object()
+            .shape({
+                text: yup.string().min(3).max(255).required(),
+                item_id: yup.number().required(),
+                column_id: yup.number().required(),
+            })
+            .noUnknown()
+
+        const createItemAnswerGroupSchema = yup
+            .object()
+            .shape({
+                item_answers: yup.array().of(createItemAnswerSchema).min(1).required(),
+                table_answers: yup.array().of(createTableAnswerSchema).min(1).required(),
+                option_answers: yup.array().of(createOptionAnswerSchema).min(1).required(),
+            })
+            .noUnknown()
+
         const createApplicationAnswerSchema = yup
             .object()
             .shape({
@@ -12,48 +48,16 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 user_id: yup.number().required(),
                 application_id: yup.number().required(),
                 address_id: yup.number().required(),
-                item_answer_groups: yup
-                    .array()
-                    .of(
-                        yup
-                            .object()
-                            .shape({
-                                item_answers: yup
-                                    .array()
-                                    .of(
-                                        yup
-                                            .object()
-                                            .shape({
-                                                text: yup.string().min(3).max(255).required(),
-                                                item_id: yup.number().required(),
-                                                item_option_selections: yup
-                                                    .array()
-                                                    .of(
-                                                        yup
-                                                            .object()
-                                                            .shape({
-                                                                text: yup.string().min(3).max(255).required(),
-                                                                item_option_id: yup.number().required(),
-                                                            })
-                                                            .noUnknown()
-                                                    )
-                                                    .default([]),
-                                            })
-                                            .noUnknown()
-                                    )
-                                    .min(1)
-                                    .required(),
-                            })
-                            .noUnknown()
-                    )
-                    .min(1)
-                    .required(),
+                item_answer_groups: yup.array().of(createItemAnswerGroupSchema).min(1).required(),
             })
             .noUnknown()
 
+        // Yup parsing/validation
         const applicationAnswer = await createApplicationAnswerSchema.validate(req.body)
+
+        // Prisma transaction
         const createdApplicationAnswer: ApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
-            prisma.applicationAnswer.create({
+            const createdApplicationAnswer = prisma.applicationAnswer.create({
                 data: {
                     date: applicationAnswer.date,
                     user_id: applicationAnswer.user_id,
@@ -62,31 +66,39 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 },
             })
             for (const itemAnswerGroup of applicationAnswer.item_answer_groups) {
-                const createdItemAnswerGroup = await prisma.itemAnswerGroup.create({
+                await prisma.itemAnswerGroup.create({
                     data: {
                         application_answer_id: createdApplicationAnswer.id,
+                        itemAnswers: {
+                            createMany: itemAnswerGroup.item_answers.map((itemAnswer) => {
+                                return {
+                                    text: itemAnswer.text,
+                                    item_id: itemAnswer.item_id,
+                                }
+                            }),
+                        },
+                        optionAnswers: {
+                            createMany: itemAnswerGroup.option_answers.map((optionAnswer) => {
+                                return {
+                                    text: optionAnswer.text,
+                                    item_id: optionAnswer.item_id,
+                                    option_id: optionAnswer.option_id,
+                                }
+                            }),
+                        },
+                        tableAnswers: {
+                            createMany: itemAnswerGroup.table_answers.map((tableAnswer) => {
+                                return {
+                                    text: tableAnswer.text,
+                                    item_id: tableAnswer.item_id,
+                                    column_id: tableAnswer.column_id,
+                                }
+                            }),
+                        },
                     },
                 })
-                for (const itemAnswer of itemAnswerGroup.item_answers) {
-                    const createdItemAnswer = await prisma.itemAnswer.create({
-                        data: {
-                            text: itemAnswer.text,
-                            item_id: itemAnswer.item_id,
-                            group_id: createdItemAnswerGroup.id,
-                        },
-                    })
-                    await prisma.itemOptionSelection.createMany({
-                        data: itemAnswer.item_option_selections.map((itemOptionSelection) => {
-                            return {
-                                text: itemOptionSelection.text,
-                                item_option_id: itemOptionSelection.item_option_id,
-                                item_answer_id: createdItemAnswer.id,
-                            }
-                        }),
-                    })
-                }
             }
-            return prismaClient.applicationAnswer.findUnique({
+            return prisma.applicationAnswer.findUnique({
                 where: {
                     id: createdApplicationAnswer.id,
                 },
@@ -111,7 +123,48 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
 
 export const updateApplicationAnswer = async (req: Request, res: Response): Promise<void> => {
     try {
+        // ID from params
         const id: number = parseInt(req.params.applicationAnswerId)
+
+        // Yup schemas
+        const updateItemAnswerSchema = yup
+            .object()
+            .shape({
+                id: yup.number(),
+                text: yup.string().min(3).max(255),
+                item_id: yup.number(),
+            })
+            .noUnknown()
+
+        const updateOptionAnswerSchema = yup
+            .object()
+            .shape({
+                id: yup.number(),
+                text: yup.string().min(3).max(255),
+                item_id: yup.number(),
+                option_id: yup.number(),
+            })
+            .noUnknown()
+
+        const updateTableAnswerSchema = yup
+            .object()
+            .shape({
+                id: yup.number(),
+                text: yup.string().min(3).max(255),
+                item_id: yup.number(),
+                column_id: yup.number(),
+            })
+            .noUnknown()
+
+        const updateItemAnswerGroupSchema = yup
+            .object()
+            .shape({
+                id: yup.number(),
+                item_answers: yup.array().of(updateItemAnswerSchema).min(1).required(),
+                table_answers: yup.array().of(updateTableAnswerSchema).min(1).required(),
+                option_answers: yup.array().of(updateOptionAnswerSchema).min(1).required(),
+            })
+            .noUnknown()
 
         const updateApplicationAnswerSchema = yup
             .object()
@@ -120,69 +173,16 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 user_id: yup.number(),
                 application_id: yup.number(),
                 address_id: yup.number(),
-                item_answer_groups: yup
-                    .array()
-                    .of(
-                        yup
-                            .object()
-                            .shape({
-                                id: yup.number(),
-                                item_answers: yup
-                                    .array()
-                                    .of(
-                                        yup
-                                            .object()
-                                            .shape({
-                                                id: yup.number(),
-                                                text: yup.string().min(3).max(255),
-                                                item_id: yup.number(),
-                                                item_option_selections: yup
-                                                    .array()
-                                                    .of(
-                                                        yup
-                                                            .object()
-                                                            .shape({
-                                                                id: yup.number(),
-                                                                text: yup.string().min(3).max(255),
-                                                                item_option_id: yup.number(),
-                                                            })
-                                                            .noUnknown()
-                                                    )
-                                                    .default([]),
-                                            })
-                                            .noUnknown()
-                                    )
-                                    .min(1)
-                                    .required(),
-                            })
-                            .noUnknown()
-                    )
-                    .min(1)
-                    .required(),
+                item_answer_groups: yup.array().of(updateItemAnswerGroupSchema).min(1).required(),
             })
             .noUnknown()
 
+        // Yup parsing/validation
         const applicationAnswer = await updateApplicationAnswerSchema.validate(req.body)
 
-        const currentApplicationAnswer: ApplicationAnswer = await prismaClient.applicationAnswer.findUnique({
-            where: {
-                id: id,
-            },
-            include: {
-                item_answer_groups: {
-                    include: {
-                        item_answers: {
-                            include: {
-                                item_option_selections: true,
-                            },
-                        },
-                    },
-                },
-            },
-        })
-
-        const updatedApplicationAnswer: ApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
-            prismaClient.applicationAnswer.update({
+        // Prisma transaction
+        const upsertedApplicationAnswer: ApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
+            prisma.applicationAnswer.update({
                 where: {
                     id: id,
                 },
@@ -193,73 +193,97 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                     address_id: applicationAnswer.address_id,
                 },
             })
-            prismaClient.itemAnswerGroup.deleteMany({
+            prisma.itemAnswerGroup.deleteMany({
                 where: {
                     id: { notIn: applicationAnswer.item_answer_groups.map((itemAnswerGroup) => itemAnswerGroup.id) },
                 },
             })
             for (const itemAnswerGroup of applicationAnswer.item_answer_groups) {
-                const createdItemAnswerGroup = await prismaClient.itemAnswerGroup.upsert({
+                const upsertedItemAnswerGroup = await prisma.itemAnswerGroup.upsert({
                     where: {
                         id: itemAnswerGroup.id,
                     },
                     create: {
-                        application_answer_id: updatedApplicationAnswer.id,
+                        application_answer_id: id,
                     },
                     update: {
-                        application_answer_id: updatedApplicationAnswer.id,
+                        application_answer_id: id,
                     },
                 })
-                prismaClient.itemAnswer.deleteMany({
+                prisma.itemAnswer.deleteMany({
                     where: {
                         id: { notIn: itemAnswerGroup.item_answers.map((itemAnswer) => itemAnswer.id) },
                     },
                 })
                 for (const itemAnswer of itemAnswerGroup.item_answers) {
-                    const createdItemAnswer = await prismaClient.itemAnswer.upsert({
+                    await prisma.itemAnswer.upsert({
                         where: {
                             id: itemAnswer.id,
                         },
                         create: {
                             text: itemAnswer.text,
                             item_id: itemAnswer.item_id,
-                            group_id: createdItemAnswerGroup.id,
+                            group_id: upsertedItemAnswerGroup.id,
                         },
                         update: {
                             text: itemAnswer.text,
                             item_id: itemAnswer.item_id,
-                            group_id: createdItemAnswerGroup.id,
+                            group_id: upsertedItemAnswerGroup.id,
                         },
                     })
-                    prismaClient.itemOptionSelection.deleteMany({
+                }
+                prisma.optionAnswer.deleteMany({
+                    where: {
+                        id: { notIn: itemAnswerGroup.option_answers.map((optionAnswer) => optionAnswer.id) },
+                    },
+                })
+                for (const optionAnswer of itemAnswerGroup.option_answers) {
+                    await prisma.optionAnswer.upsert({
                         where: {
-                            id: {
-                                notIn: itemAnswer.item_option_selections.map((itemOptionSelection) => itemOptionSelection.id),
-                            },
+                            id: optionAnswer.id,
+                        },
+                        create: {
+                            text: optionAnswer.text,
+                            item_id: optionAnswer.item_id,
+                            option_id: optionAnswer.option_id,
+                            group_id: upsertedItemAnswerGroup.id,
+                        },
+                        update: {
+                            text: optionAnswer.text,
+                            item_id: optionAnswer.item_id,
+                            option_id: optionAnswer.option_id,
+                            group_id: upsertedItemAnswerGroup.id,
                         },
                     })
-                    for (const itemOptionSelection of itemAnswer.item_option_selections) {
-                        await prismaClient.itemOptionSelection.upsert({
-                            where: {
-                                id: itemOptionSelection.id,
-                            },
-                            create: {
-                                text: itemOptionSelection.text,
-                                item_option_id: itemOptionSelection.item_option_id,
-                                item_answer_id: createdItemAnswer.id,
-                            },
-                            update: {
-                                text: itemOptionSelection.text,
-                                item_option_id: itemOptionSelection.item_option_id,
-                                item_answer_id: createdItemAnswer.id,
-                            },
-                        })
-                    }
+                }
+                prisma.tableAnswer.deleteMany({
+                    where: {
+                        id: { notIn: itemAnswerGroup.table_answers.map((tableAnswer) => tableAnswer.id) },
+                    },
+                })
+                for (const tableAnswer of itemAnswerGroup.table_answers) {
+                    await prisma.tableAnswer.upsert({
+                        where: {
+                            id: tableAnswer.id,
+                        },
+                        create: {
+                            text: tableAnswer.text,
+                            item_id: tableAnswer.item_id,
+                            column_id: tableAnswer.column_id,
+                            group_id: upsertedItemAnswerGroup.id,
+                        },
+                        update: {
+                            text: tableAnswer.text,
+                            item_id: tableAnswer.item_id,
+                            column_id: tableAnswer.column_id,
+                            group_id: upsertedItemAnswerGroup.id,
+                        },
+                    })
                 }
             }
-            return prismaClient.applicationAnswer.findUnique({
+            return prisma.applicationAnswer.findUnique({
                 where: {
-                    id: updatedApplicationAnswer.id,
+                    id: id,
                 },
                 include: {
                     item_answer_groups: {
@@ -274,7 +298,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 },
             })
         })
-        res.status(200).json({ message: "Application answer updated.", data: updatedApplicationAnswer })
+        res.status(200).json({ message: "Application answer updated.", data: upsertedApplicationAnswer })
     } catch (error: any) {
         res.status(400).json({ error: error })
     }
