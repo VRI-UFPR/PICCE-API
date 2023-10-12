@@ -1,5 +1,5 @@
 import { Response, Request } from "express";
-import { ApplicationAnswer } from "@prisma/client";
+import { ApplicationAnswer, ItemAnswer, OptionAnswer, TableAnswer } from "@prisma/client";
 import * as yup from "yup";
 import prismaClient from "../services/prismaClient";
 
@@ -56,8 +56,8 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         const applicationAnswer = await createApplicationAnswerSchema.validate(req.body);
 
         // Prisma transaction
-        const createdApplicationAnswer: ApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
-            const createdApplicationAnswer = prisma.applicationAnswer.create({
+        const createdApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
+            const createdApplicationAnswer: ApplicationAnswer = await prisma.applicationAnswer.create({
                 data: {
                     date: applicationAnswer.date,
                     userId: applicationAnswer.userId,
@@ -65,35 +65,42 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                     addressId: applicationAnswer.addressId,
                 },
             });
+
             for (const itemAnswerGroup of applicationAnswer.itemAnswerGroups) {
                 await prisma.itemAnswerGroup.create({
                     data: {
                         applicationAnswerId: createdApplicationAnswer.id,
                         itemAnswers: {
-                            createMany: itemAnswerGroup.itemAnswers.map((itemAnswer) => {
-                                return {
-                                    text: itemAnswer.text,
-                                    itemId: itemAnswer.itemId,
-                                };
-                            }),
+                            createMany: {
+                                data: itemAnswerGroup.itemAnswers.map((itemAnswer) => {
+                                    return {
+                                        text: itemAnswer.text,
+                                        itemId: itemAnswer.itemId,
+                                    };
+                                }),
+                            },
                         },
                         optionAnswers: {
-                            createMany: itemAnswerGroup.optionAnswers.map((optionAnswer) => {
-                                return {
-                                    text: optionAnswer.text,
-                                    itemId: optionAnswer.itemId,
-                                    optionId: optionAnswer.optionId,
-                                };
-                            }),
+                            createMany: {
+                                data: itemAnswerGroup.optionAnswers.map((optionAnswer) => {
+                                    return {
+                                        text: optionAnswer.text,
+                                        itemId: optionAnswer.itemId,
+                                        optionId: optionAnswer.optionId,
+                                    };
+                                }),
+                            },
                         },
                         tableAnswers: {
-                            createMany: itemAnswerGroup.tableAnswers.map((tableAnswer) => {
-                                return {
-                                    text: tableAnswer.text,
-                                    itemId: tableAnswer.itemId,
-                                    columnId: tableAnswer.columnId,
-                                };
-                            }),
+                            createMany: {
+                                data: itemAnswerGroup.tableAnswers.map((tableAnswer) => {
+                                    return {
+                                        text: tableAnswer.text,
+                                        itemId: tableAnswer.itemId,
+                                        columnId: tableAnswer.columnId,
+                                    };
+                                }),
+                            },
                         },
                     },
                 });
@@ -107,7 +114,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                         include: {
                             itemAnswers: true,
                             optionAnswers: true,
-                            tableAnsers: true,
+                            tableAnswers: true,
                         },
                     },
                 },
@@ -179,7 +186,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
         const applicationAnswer = await updateApplicationAnswerSchema.validate(req.body);
 
         // Prisma transaction
-        const upsertedApplicationAnswer: ApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
+        const upsertedApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
             prisma.applicationAnswer.update({
                 where: {
                     id: id,
@@ -193,7 +200,11 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
             });
             prisma.itemAnswerGroup.deleteMany({
                 where: {
-                    id: { notIn: applicationAnswer.itemAnswerGroups.map((itemAnswerGroup) => itemAnswerGroup.id) },
+                    id: {
+                        notIn: applicationAnswer.itemAnswerGroups
+                            .filter((itemAnswerGroup) => itemAnswerGroup.id)
+                            .map((itemAnswerGroup) => itemAnswerGroup.id as number),
+                    },
                 },
             });
             for (const itemAnswerGroup of applicationAnswer.itemAnswerGroups) {
@@ -210,7 +221,11 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 });
                 prisma.itemAnswer.deleteMany({
                     where: {
-                        id: { notIn: itemAnswerGroup.itemAnswers.map((itemAnswer) => itemAnswer.id) },
+                        id: {
+                            notIn: itemAnswerGroup.itemAnswers
+                                .filter((itemAnswer) => itemAnswer.id)
+                                .map((itemAnswer) => itemAnswer.id as number),
+                        },
                     },
                 });
                 for (const itemAnswer of itemAnswerGroup.itemAnswers) {
@@ -219,9 +234,9 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                             id: itemAnswer.id,
                         },
                         create: {
-                            text: itemAnswer.text,
-                            itemId: itemAnswer.itemId,
-                            groupId: upsertedItemAnswerGroup.id,
+                            text: itemAnswer.text as string,
+                            itemId: itemAnswer.itemId as number,
+                            groupId: upsertedItemAnswerGroup.id as number,
                         },
                         update: {
                             text: itemAnswer.text,
@@ -232,7 +247,11 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 }
                 prisma.optionAnswer.deleteMany({
                     where: {
-                        id: { notIn: itemAnswerGroup.optionAnswers.map((optionAnswer) => optionAnswer.id) },
+                        id: {
+                            notIn: itemAnswerGroup.optionAnswers
+                                .filter((optionAnswer) => optionAnswer.id)
+                                .map((optionAnswer) => optionAnswer.id as number),
+                        },
                     },
                 });
                 for (const optionAnswer of itemAnswerGroup.optionAnswers) {
@@ -241,10 +260,10 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                             id: optionAnswer.id,
                         },
                         create: {
-                            text: optionAnswer.text,
-                            itemId: optionAnswer.itemId,
-                            optionId: optionAnswer.optionId,
-                            groupId: upsertedItemAnswerGroup.id,
+                            text: optionAnswer.text as string,
+                            itemId: optionAnswer.itemId as number,
+                            optionId: optionAnswer.optionId as number,
+                            groupId: upsertedItemAnswerGroup.id as number,
                         },
                         update: {
                             text: optionAnswer.text,
@@ -256,7 +275,11 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 }
                 prisma.tableAnswer.deleteMany({
                     where: {
-                        id: { notIn: itemAnswerGroup.tableAnswers.map((tableAnswer) => tableAnswer.id) },
+                        id: {
+                            notIn: itemAnswerGroup.tableAnswers
+                                .filter((tableAnswer) => tableAnswer.id)
+                                .map((tableAnswer) => tableAnswer.id as number),
+                        },
                     },
                 });
                 for (const tableAnswer of itemAnswerGroup.tableAnswers) {
@@ -265,10 +288,10 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                             id: tableAnswer.id,
                         },
                         create: {
-                            text: tableAnswer.text,
-                            itemId: tableAnswer.itemId,
-                            columnId: tableAnswer.columnId,
-                            groupId: upsertedItemAnswerGroup.id,
+                            text: tableAnswer.text as string,
+                            itemId: tableAnswer.itemId as number,
+                            columnId: tableAnswer.columnId as number,
+                            groupId: upsertedItemAnswerGroup.id as number,
                         },
                         update: {
                             text: tableAnswer.text,
@@ -288,7 +311,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                         include: {
                             itemAnswers: true,
                             optionAnswers: true,
-                            tableAnsers: true,
+                            tableAnswers: true,
                         },
                     },
                 },
@@ -308,7 +331,7 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
                     include: {
                         itemAnswers: true,
                         optionAnswers: true,
-                        tableAnsers: true,
+                        tableAnswers: true,
                     },
                 },
             },
@@ -332,7 +355,7 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
                     include: {
                         itemAnswers: true,
                         optionAnswers: true,
-                        tableAnsers: true,
+                        tableAnswers: true,
                     },
                 },
             },
