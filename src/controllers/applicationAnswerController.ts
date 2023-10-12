@@ -65,7 +65,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                     addressId: applicationAnswer.addressId,
                 },
             });
-
+            // Create nested item answer groups as well as nested item, option and table answers
             for (const itemAnswerGroup of applicationAnswer.itemAnswerGroups) {
                 await prisma.itemAnswerGroup.create({
                     data: {
@@ -105,7 +105,8 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                     },
                 });
             }
-            return prisma.applicationAnswer.findUnique({
+            // Return the created application answer with nested content included
+            return await prisma.applicationAnswer.findUnique({
                 where: {
                     id: createdApplicationAnswer.id,
                 },
@@ -185,9 +186,12 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
         // Yup parsing/validation
         const applicationAnswer = await updateApplicationAnswerSchema.validate(req.body);
 
+        console.log(JSON.stringify(applicationAnswer));
+
         // Prisma transaction
         const upsertedApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
-            prisma.applicationAnswer.update({
+            // Update application answer
+            await prisma.applicationAnswer.update({
                 where: {
                     id: id,
                 },
@@ -198,7 +202,8 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                     addressId: applicationAnswer.addressId,
                 },
             });
-            prisma.itemAnswerGroup.deleteMany({
+            // Remove item answer groups that are not in the updated application answer
+            await prisma.itemAnswerGroup.deleteMany({
                 where: {
                     id: {
                         notIn: applicationAnswer.itemAnswerGroups
@@ -208,18 +213,23 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 },
             });
             for (const itemAnswerGroup of applicationAnswer.itemAnswerGroups) {
-                const upsertedItemAnswerGroup = await prisma.itemAnswerGroup.upsert({
-                    where: {
-                        id: itemAnswerGroup.id,
-                    },
-                    create: {
-                        applicationAnswerId: id,
-                    },
-                    update: {
-                        applicationAnswerId: id,
-                    },
-                });
-                prisma.itemAnswer.deleteMany({
+                // Update existing item answer groups or create new ones
+                const upsertedItemAnswerGroup = itemAnswerGroup.id
+                    ? await prisma.itemAnswerGroup.update({
+                          where: {
+                              id: itemAnswerGroup.id,
+                          },
+                          data: {
+                              applicationAnswerId: id,
+                          },
+                      })
+                    : await prisma.itemAnswerGroup.create({
+                          data: {
+                              applicationAnswerId: id,
+                          },
+                      });
+                // Remove item answers that are not in the updated item answer group
+                await prisma.itemAnswer.deleteMany({
                     where: {
                         id: {
                             notIn: itemAnswerGroup.itemAnswers
@@ -229,23 +239,26 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                     },
                 });
                 for (const itemAnswer of itemAnswerGroup.itemAnswers) {
-                    await prisma.itemAnswer.upsert({
-                        where: {
-                            id: itemAnswer.id,
-                        },
-                        create: {
-                            text: itemAnswer.text as string,
-                            itemId: itemAnswer.itemId as number,
-                            groupId: upsertedItemAnswerGroup.id as number,
-                        },
-                        update: {
-                            text: itemAnswer.text,
-                            itemId: itemAnswer.itemId,
-                            groupId: upsertedItemAnswerGroup.id,
-                        },
-                    });
+                    // Update existing item answers or create new ones
+                    itemAnswer.id
+                        ? await prisma.itemAnswer.update({
+                              where: { id: itemAnswer.id },
+                              data: {
+                                  text: itemAnswer.text,
+                                  itemId: itemAnswer.itemId,
+                                  groupId: upsertedItemAnswerGroup.id,
+                              },
+                          })
+                        : await prisma.itemAnswer.create({
+                              data: {
+                                  text: itemAnswer.text as string,
+                                  itemId: itemAnswer.itemId as number,
+                                  groupId: upsertedItemAnswerGroup.id as number,
+                              },
+                          });
                 }
-                prisma.optionAnswer.deleteMany({
+                // Remove option answers that are not in the updated item answer group
+                await prisma.optionAnswer.deleteMany({
                     where: {
                         id: {
                             notIn: itemAnswerGroup.optionAnswers
@@ -255,25 +268,30 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                     },
                 });
                 for (const optionAnswer of itemAnswerGroup.optionAnswers) {
-                    await prisma.optionAnswer.upsert({
-                        where: {
-                            id: optionAnswer.id,
-                        },
-                        create: {
-                            text: optionAnswer.text as string,
-                            itemId: optionAnswer.itemId as number,
-                            optionId: optionAnswer.optionId as number,
-                            groupId: upsertedItemAnswerGroup.id as number,
-                        },
-                        update: {
-                            text: optionAnswer.text,
-                            itemId: optionAnswer.itemId,
-                            optionId: optionAnswer.optionId,
-                            groupId: upsertedItemAnswerGroup.id,
-                        },
-                    });
+                    // Update existing option answers or create new ones
+                    optionAnswer.id
+                        ? await prisma.optionAnswer.update({
+                              where: {
+                                  id: optionAnswer.id,
+                              },
+                              data: {
+                                  text: optionAnswer.text,
+                                  itemId: optionAnswer.itemId,
+                                  optionId: optionAnswer.optionId,
+                                  groupId: upsertedItemAnswerGroup.id,
+                              },
+                          })
+                        : await prisma.optionAnswer.create({
+                              data: {
+                                  text: optionAnswer.text as string,
+                                  itemId: optionAnswer.itemId as number,
+                                  optionId: optionAnswer.optionId as number,
+                                  groupId: upsertedItemAnswerGroup.id as number,
+                              },
+                          });
                 }
-                prisma.tableAnswer.deleteMany({
+                // Remove table answers that are not in the updated item answer group
+                await prisma.tableAnswer.deleteMany({
                     where: {
                         id: {
                             notIn: itemAnswerGroup.tableAnswers
@@ -283,26 +301,31 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                     },
                 });
                 for (const tableAnswer of itemAnswerGroup.tableAnswers) {
-                    await prisma.tableAnswer.upsert({
-                        where: {
-                            id: tableAnswer.id,
-                        },
-                        create: {
-                            text: tableAnswer.text as string,
-                            itemId: tableAnswer.itemId as number,
-                            columnId: tableAnswer.columnId as number,
-                            groupId: upsertedItemAnswerGroup.id as number,
-                        },
-                        update: {
-                            text: tableAnswer.text,
-                            itemId: tableAnswer.itemId,
-                            columnId: tableAnswer.columnId,
-                            groupId: upsertedItemAnswerGroup.id,
-                        },
-                    });
+                    // Update existing table answers or create new ones
+                    tableAnswer.id
+                        ? await prisma.tableAnswer.update({
+                              where: {
+                                  id: tableAnswer.id,
+                              },
+                              data: {
+                                  text: tableAnswer.text,
+                                  itemId: tableAnswer.itemId,
+                                  columnId: tableAnswer.columnId,
+                                  groupId: upsertedItemAnswerGroup.id,
+                              },
+                          })
+                        : await prisma.tableAnswer.create({
+                              data: {
+                                  text: tableAnswer.text as string,
+                                  itemId: tableAnswer.itemId as number,
+                                  columnId: tableAnswer.columnId as number,
+                                  groupId: upsertedItemAnswerGroup.id as number,
+                              },
+                          });
                 }
             }
-            return prisma.applicationAnswer.findUnique({
+            // Return the updated application answer with nested content included
+            return await prisma.applicationAnswer.findUnique({
                 where: {
                     id: id,
                 },
@@ -319,12 +342,14 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
         });
         res.status(200).json({ message: "Application answer updated.", data: upsertedApplicationAnswer });
     } catch (error: any) {
+        console.log(error);
         res.status(400).json({ error: error });
     }
 };
 
 export const getAllApplicationAnswers = async (req: Request, res: Response): Promise<void> => {
     try {
+        // Get all application answers with nested content included
         const applicationAnswers: ApplicationAnswer[] = await prismaClient.applicationAnswer.findMany({
             include: {
                 itemAnswerGroups: {
@@ -344,8 +369,10 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
 
 export const getApplicationAnswer = async (req: Request, res: Response): Promise<void> => {
     try {
+        // ID from params
         const id: number = parseInt(req.params.applicationAnswerId);
 
+        // Get application answer with nested content included
         const applicationAnswer: ApplicationAnswer = await prismaClient.applicationAnswer.findUniqueOrThrow({
             where: {
                 id,
@@ -369,11 +396,13 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
 
 export const deleteApplicationAnswer = async (req: Request, res: Response): Promise<void> => {
     try {
-        const applicationAnswerId: number = parseInt(req.params.applicationAnswerId);
+        // ID from params
+        const id: number = parseInt(req.params.applicationAnswerId);
 
+        // Delete application answer
         const deletedApplicationAnswer: ApplicationAnswer = await prismaClient.applicationAnswer.delete({
             where: {
-                id: applicationAnswerId,
+                id: id,
             },
         });
 

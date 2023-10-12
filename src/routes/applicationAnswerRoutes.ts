@@ -16,7 +16,7 @@ import {
  *      type: object
  *      required:
  *        - text
- *        - item_id
+ *        - itemId
  *      properties:
  *        id:
  *          type: integer
@@ -26,19 +26,19 @@ import {
  *          type: string
  *          description: The text of the answer
  *          example: "This is the answer because..."
- *        item_id:
+ *        itemId:
  *          type: integer
  *          description: The id of the item that the answer is for
  *          example: 1
- *        group_id:
+ *        groupId:
  *          type: integer
  *          description: The id of the group that the answer belongs to
  *          example: 1
  *     OptionAnswer:
  *      type: object
  *      required:
- *        - item_id
- *        - option_id
+ *        - itemId
+ *        - optionId
  *      properties:
  *        id:
  *          type: integer
@@ -48,23 +48,23 @@ import {
  *          type: string
  *          description: The text of the answer (if any)
  *          example: "This is the answer because..."
- *        item_id:
+ *        itemId:
  *          type: integer
  *          description: The id of the item that the answer is for
  *          example: 1
- *        option_id:
+ *        optionId:
  *          type: integer
  *          description: The id of the item option that the answer selects
  *          example: 1
- *        group_id:
+ *        groupId:
  *          type: integer
  *          description: The id of the group that the answer belongs to
  *          example: 1
  *     TableAnswer:
  *      type: object
  *      required:
- *        - item_id
- *        - column_id
+ *        - itemId
+ *        - columnId
  *      properties:
  *        id:
  *          type: integer
@@ -74,15 +74,15 @@ import {
  *          type: string
  *          description: The text of the answer (if any)
  *          example: "This is the answer because..."
- *        item_id:
+ *        itemId:
  *          type: integer
  *          description: The id of the item (i.e. the table row) that the answer is for
  *          example: 1
- *        column_id:
+ *        columnId:
  *          type: integer
  *          description: The id of the table column that the answer is for
  *          example: 1
- *        group_id:
+ *        groupId:
  *          type: integer
  *          description: The id of the group that the answer belongs to
  *          example: 1
@@ -93,19 +93,19 @@ import {
  *          type: integer
  *          description: The auto-generated id of the address
  *          example: 1
- *        application_id:
+ *        applicationId:
  *          type: integer
  *          description: The id of the application that the answer group belongs to
  *          example: 1
- *        item_answers:
+ *        itemAnswers:
  *          type: array
  *          items:
  *            $ref: '#/components/schemas/ItemAnswer'
- *        option_answers:
+ *        optionAnswers:
  *          type: array
  *          items:
  *            $ref: '#/components/schemas/OptionAnswer'
- *        table_answers:
+ *        tableAnswers:
  *          type: array
  *          items:
  *            $ref: '#/components/schemas/TableAnswer'
@@ -113,9 +113,9 @@ import {
  *      type: object
  *      required:
  *        - date
- *        - user_id
- *        - application_id
- *        - address_id
+ *        - userId
+ *        - applicationId
+ *        - addressId
  *      properties:
  *        id:
  *          type: integer
@@ -125,19 +125,19 @@ import {
  *          type: string
  *          description: The date that the application was submitted (using EN-US date format)
  *          example: "2021-01-01"
- *        user_id:
+ *        userId:
  *          type: integer
  *          description: The id of the user that submitted the answer
  *          example: 1
- *        application_id:
+ *        applicationId:
  *          type: integer
  *          description: The id of the application that the answer is for
  *          example: 1
- *        address_id:
+ *        addressId:
  *          type: integer
  *          description: The id of the address where the application was submitted
  *          example: 1
- *        applicationAnswerGroups:
+ *        itemAnswerGroups:
  *          type: array
  *          items:
  *            $ref: '#/components/schemas/ItemAnswerGroup'
