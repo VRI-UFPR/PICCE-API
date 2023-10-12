@@ -1,5 +1,5 @@
 import { Response, Request } from "express";
-import { Application } from "@prisma/client";
+import { Application, VisibilityMode } from "@prisma/client";
 import * as yup from "yup";
 import prismaClient from "../services/prismaClient";
 
@@ -10,7 +10,7 @@ export const createApplication = async (req: Request, res: Response) => {
             .shape({
                 protocolId: yup.number().required(),
                 applicatorId: yup.number().required(),
-                visibilityMode: yup.string().required(),
+                visibilityMode: yup.string().oneOf(Object.values(VisibilityMode)).required(),
                 viewersUser: yup.array().of(yup.number()).min(1).required(),
                 viewersClassroom: yup.array().of(yup.number()).min(1).required(),
             })
@@ -22,13 +22,17 @@ export const createApplication = async (req: Request, res: Response) => {
             data: {
                 protocolId: application.protocolId,
                 applicatorId: application.applicatorId,
-                visibilityMode: application.viewersClassroom,
+                visibilityMode: application.visibilityMode,
                 viewersUser: {
                     connect: application.viewersUser.map((id) => ({ id: id })),
                 },
                 viewersClassroom: {
-                    connect: application.viewersUser.map((id) => ({ id: id })),
+                    connect: application.viewersClassroom.map((id) => ({ id: id })),
                 },
+            },
+            include: {
+                viewersUser: true,
+                viewersClassroom: true,
             },
         });
 
@@ -47,7 +51,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
             .shape({
                 protocolId: yup.number(),
                 applicatorId: yup.number(),
-                visibilityMode: yup.string(),
+                visibilityMode: yup.string().oneOf(Object.values(VisibilityMode)),
                 viewersUser: yup.array().of(yup.number()).min(1).required(),
                 viewersClassroom: yup.array().of(yup.number()).min(1).required(),
             })
@@ -69,8 +73,12 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
                 },
                 viewersClassroom: {
                     set: [],
-                    connect: application.viewersUser.map((id) => ({ id: id })),
+                    connect: application.viewersClassroom.map((id) => ({ id: id })),
                 },
+            },
+            include: {
+                viewersUser: true,
+                viewersClassroom: true,
             },
         });
 
@@ -82,7 +90,12 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
 
 export const getAllApplications = async (req: Request, res: Response): Promise<void> => {
     try {
-        const applicationes: Application[] = await prismaClient.application.findMany();
+        const applicationes: Application[] = await prismaClient.application.findMany({
+            include: {
+                viewersUser: true,
+                viewersClassroom: true,
+            },
+        });
         res.status(200).json({ message: "All applicationes found.", data: applicationes });
     } catch (error: any) {
         res.status(400).json({ error: error });
@@ -96,6 +109,10 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
         const application: Application = await prismaClient.application.findUniqueOrThrow({
             where: {
                 id,
+            },
+            include: {
+                viewersUser: true,
+                viewersClassroom: true,
             },
         });
 
