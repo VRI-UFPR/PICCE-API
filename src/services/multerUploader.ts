@@ -2,12 +2,11 @@ import multer from "multer";
 import path from "path";
 
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, path.basename("uploads"));
-    },
+    destination: path.basename("uploads"),
     filename: function (req, file, cb) {
+        const fileExt = path.extname(file.originalname);
         const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        cb(null, file.fieldname + "-" + uniqueSuffix);
+        cb(null, "PICCE-" + file.fieldname + "-" + uniqueSuffix + fileExt);
     },
 });
 
