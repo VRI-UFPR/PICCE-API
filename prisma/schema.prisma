@@ -88,6 +88,8 @@ model ItemAnswer {
 
   text String
 
+  files File[]
+
   itemId  Int
   item    Item            @relation(fields: [itemId], references: [id])
   groupId Int
@@ -271,6 +273,7 @@ model Item {
   itemAnswers   ItemAnswer[]
   optionAnswers OptionAnswer[]
   tableAnswers  TableAnswer[]
+  files         File[]
 
   groupId   Int
   itemGroup ItemGroup @relation(fields: [groupId], references: [id])
@@ -285,6 +288,7 @@ model ItemOption {
   placement Int
 
   optionAnswers OptionAnswer[]
+  files         File[]
 
   itemId Int
   item   Item @relation(fields: [itemId], references: [id])
@@ -302,4 +306,19 @@ model TableColumn {
 
   groupId   Int
   itemGroup ItemGroup @relation(fields: [groupId], references: [id])
+}
+
+model File {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+
+  path String
+
+  itemId       Int?
+  item         Item?       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemOptionId Int?
+  itemOption   ItemOption? @relation(fields: [itemOptionId], references: [id], onDelete: Cascade)
+  itemAnswerId Int?
+  itemAnswer   ItemAnswer? @relation(fields: [itemAnswerId], references: [id], onDelete: Cascade)
 }
