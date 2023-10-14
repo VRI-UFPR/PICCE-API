@@ -179,7 +179,7 @@ const router = express.Router();
  *               type: string
  *               description: Error message
  */
-router.post("/createApplicationAnswer", uploader.none(), createApplicationAnswer);
+router.post("/createApplicationAnswer", uploader.any(), createApplicationAnswer);
 
 /**
  * @swagger
@@ -230,7 +230,7 @@ router.post("/createApplicationAnswer", uploader.none(), createApplicationAnswer
  *               type: string
  *               description: Error message
  */
-router.put("/updateApplicationAnswer/:applicationAnswerId", uploader.none(), updateApplicationAnswer);
+router.put("/updateApplicationAnswer/:applicationAnswerId", uploader.any(), updateApplicationAnswer);
 
 /**
  * @swagger

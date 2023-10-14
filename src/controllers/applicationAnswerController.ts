@@ -55,6 +55,9 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         // Yup parsing/validation
         const applicationAnswer = await createApplicationAnswerSchema.validate(req.body);
 
+        // Multer files
+        const files = req.files as Express.Multer.File[];
+
         // Prisma transaction
         const createdApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
             const createdApplicationAnswer: ApplicationAnswer = await prisma.applicationAnswer.create({
@@ -66,20 +69,10 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 },
             });
             // Create nested item answer groups as well as nested item, option and table answers
-            for (const itemAnswerGroup of applicationAnswer.itemAnswerGroups) {
-                await prisma.itemAnswerGroup.create({
+            for (const [itemAnswerGroupIndex, itemAnswerGroup] of applicationAnswer.itemAnswerGroups.entries()) {
+                const createdItemAnswerGroup = await prisma.itemAnswerGroup.create({
                     data: {
                         applicationAnswerId: createdApplicationAnswer.id,
-                        itemAnswers: {
-                            createMany: {
-                                data: itemAnswerGroup.itemAnswers.map((itemAnswer) => {
-                                    return {
-                                        text: itemAnswer.text,
-                                        itemId: itemAnswer.itemId,
-                                    };
-                                }),
-                            },
-                        },
                         optionAnswers: {
                             createMany: {
                                 data: itemAnswerGroup.optionAnswers.map((optionAnswer) => {
@@ -104,6 +97,27 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                         },
                     },
                 });
+                for (const [itemAnswerIndex, itemAnswer] of itemAnswerGroup.itemAnswers.entries()) {
+                    const itemAnswerFiles = files
+                        .filter(
+                            (file) => file.fieldname === `itemAnswerGroups[${itemAnswerGroupIndex}][itemAnswers][${itemAnswerIndex}][files]`
+                        )
+                        .map((file) => {
+                            return { path: file.path };
+                        });
+                    await prisma.itemAnswer.create({
+                        data: {
+                            text: itemAnswer.text,
+                            itemId: itemAnswer.itemId,
+                            groupId: createdItemAnswerGroup.id,
+                            files: {
+                                createMany: {
+                                    data: itemAnswerFiles,
+                                },
+                            },
+                        },
+                    });
+                }
             }
             // Return the created application answer with nested content included
             return await prisma.applicationAnswer.findUnique({
@@ -113,7 +127,11 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 include: {
                     itemAnswerGroups: {
                         include: {
-                            itemAnswers: true,
+                            itemAnswers: {
+                                include: {
+                                    files: true,
+                                },
+                            },
                             optionAnswers: true,
                             tableAnswers: true,
                         },
@@ -139,6 +157,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 id: yup.number(),
                 text: yup.string().min(3).max(255),
                 itemId: yup.number(),
+                filesIds: yup.array().of(yup.number()).default([]),
             })
             .noUnknown();
 
@@ -186,7 +205,8 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
         // Yup parsing/validation
         const applicationAnswer = await updateApplicationAnswerSchema.validate(req.body);
 
-        console.log(JSON.stringify(applicationAnswer));
+        // Multer files
+        const files = req.files as Express.Multer.File[];
 
         // Prisma transaction
         const upsertedApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
@@ -212,7 +232,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                     },
                 },
             });
-            for (const itemAnswerGroup of applicationAnswer.itemAnswerGroups) {
+            for (const [itemAnswerGroupIndex, itemAnswerGroup] of applicationAnswer.itemAnswerGroups.entries()) {
                 // Update existing item answer groups or create new ones
                 const upsertedItemAnswerGroup = itemAnswerGroup.id
                     ? await prisma.itemAnswerGroup.update({
@@ -238,9 +258,9 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                         },
                     },
                 });
-                for (const itemAnswer of itemAnswerGroup.itemAnswers) {
+                for (const [itemAnswerIndex, itemAnswer] of itemAnswerGroup.itemAnswers.entries()) {
                     // Update existing item answers or create new ones
-                    itemAnswer.id
+                    const upsertedItemAnswer = itemAnswer.id
                         ? await prisma.itemAnswer.update({
                               where: { id: itemAnswer.id },
                               data: {
@@ -256,6 +276,25 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                                   groupId: upsertedItemAnswerGroup.id as number,
                               },
                           });
+                    //Remove files that are not in the updated item answer
+                    await prisma.file.deleteMany({
+                        where: {
+                            id: {
+                                notIn: itemAnswer.filesIds.filter((fileId) => fileId).map((fileId) => fileId as number),
+                            },
+                        },
+                    });
+                    // Create new files (udpating files is not supported)
+                    const itemAnswerFiles = files
+                        .filter(
+                            (file) => file.fieldname === `itemAnswerGroups[${itemAnswerGroupIndex}][itemAnswers][${itemAnswerIndex}][files]`
+                        )
+                        .map((file) => {
+                            return { path: file.path, itemAnswerId: upsertedItemAnswer.id };
+                        });
+                    await prisma.file.createMany({
+                        data: itemAnswerFiles,
+                    });
                 }
                 // Remove option answers that are not in the updated item answer group
                 await prisma.optionAnswer.deleteMany({
@@ -332,7 +371,11 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 include: {
                     itemAnswerGroups: {
                         include: {
-                            itemAnswers: true,
+                            itemAnswers: {
+                                include: {
+                                    files: true,
+                                },
+                            },
                             optionAnswers: true,
                             tableAnswers: true,
                         },
@@ -342,7 +385,6 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
         });
         res.status(200).json({ message: "Application answer updated.", data: upsertedApplicationAnswer });
     } catch (error: any) {
-        console.log(error);
         res.status(400).json({ error: error });
     }
 };
@@ -354,7 +396,11 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
             include: {
                 itemAnswerGroups: {
                     include: {
-                        itemAnswers: true,
+                        itemAnswers: {
+                            include: {
+                                files: true,
+                            },
+                        },
                         optionAnswers: true,
                         tableAnswers: true,
                     },
@@ -380,7 +426,11 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
             include: {
                 itemAnswerGroups: {
                     include: {
-                        itemAnswers: true,
+                        itemAnswers: {
+                            include: {
+                                files: true,
+                            },
+                        },
                         optionAnswers: true,
                         tableAnswers: true,
                     },
