@@ -14,22 +14,42 @@ export const createInstitution = async (req: Request, res: Response) => {
           .oneOf(["PRIMARY", "LOWER_SECONDARY", "UPPER_SECONDARY", "TERTIARY"])
           .required(),
         addressId: yup.number().required(),
+        classrooms: yup.array().of(yup.number()).required(),
       })
       .noUnknown();
 
     const institution = await createInstitutionSchema.validate(req.body);
 
-    const createdInstitution: Institution = await prismaClient.institution.create({
-        data: institution,
+    const createdInstitution: Institution =
+      await prismaClient.institution.create({
+        data: {
+          name: institution.name,
+          type: institution.type,
+          addressId: institution.addressId,
+          classrooms: {
+            connect: institution.classrooms
+              .filter((classroomId): classroomId is number =>
+                Boolean(classroomId)
+              )
+              .map((classroomId: number) => {
+                return { id: classroomId };
+              }),
+          },
+        },
       });
 
-    res.status(201).json({ message: "Institution created.", data: createdInstitution });
+    res
+      .status(201)
+      .json({ message: "Institution created.", data: createdInstitution });
   } catch (error: any) {
     res.status(400).json({ error: error });
   }
 };
 
-export const updateInstitution = async (req: Request, res: Response): Promise<void> => {
+export const updateInstitution = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const id: number = parseInt(req.params.institutionId);
 
@@ -41,6 +61,7 @@ export const updateInstitution = async (req: Request, res: Response): Promise<vo
           .string()
           .oneOf(["PRIMARY", "LOWER_SECONDARY", "UPPER_SECONDARY", "TERTIARY"]),
         addressId: yup.number(),
+        classrooms: yup.array().of(yup.number()),
       })
       .noUnknown();
 
@@ -57,26 +78,50 @@ export const updateInstitution = async (req: Request, res: Response): Promise<vo
           name: institution.name,
           type: typeEnum,
           addressId: institution.addressId,
+          classrooms: {
+            connect: institution.classrooms
+              ?.filter((classroomId): classroomId is number =>
+                Boolean(classroomId)
+              )
+              .map((classroomId: number) => {
+                return { id: classroomId };
+              }),
+          },
         },
       });
 
-    res.status(200).json({ message: "Institution updated.", data: updatedInstitution });
+    res
+      .status(200)
+      .json({ message: "Institution updated.", data: updatedInstitution });
   } catch (error: any) {
     res.status(400).json({ error: error });
   }
 };
 
-export const getAllInstitutions = async (req: Request, res: Response): Promise<void> => {
+export const getAllInstitutions = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const institutions: Institution[] =
-      await prismaClient.institution.findMany();
-    res.status(200).json({ message: "All institutions found.", data: institutions });
+    const institutions: Institution[] = await prismaClient.institution.findMany(
+      {
+        include: {
+          classrooms: true,
+        },
+      }
+    );
+    res
+      .status(200)
+      .json({ message: "All institutions found.", data: institutions });
   } catch (error: any) {
     res.status(400).json({ error: error });
   }
 };
 
-export const getInstitution = async (req: Request, res: Response): Promise<void> => {
+export const getInstitution = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const id: number = parseInt(req.params.institutionId);
 
@@ -84,6 +129,9 @@ export const getInstitution = async (req: Request, res: Response): Promise<void>
       await prismaClient.institution.findUniqueOrThrow({
         where: {
           id,
+        },
+        include: {
+          classrooms: true,
         },
       });
 
@@ -93,7 +141,10 @@ export const getInstitution = async (req: Request, res: Response): Promise<void>
   }
 };
 
-export const deleteInstitution = async (req: Request, res: Response): Promise<void> => {
+export const deleteInstitution = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const id: number = parseInt(req.params.institutionId);
 
@@ -104,7 +155,9 @@ export const deleteInstitution = async (req: Request, res: Response): Promise<vo
         },
       });
 
-    res.status(200).json({ message: "Institution deleted.", data: deletedInstitution });
+    res
+      .status(200)
+      .json({ message: "Institution deleted.", data: deletedInstitution });
   } catch (error: any) {
     res.status(400).json({ error: error });
   }

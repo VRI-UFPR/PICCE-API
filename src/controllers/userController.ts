@@ -16,13 +16,29 @@ export const createUser = async (req: Request, res: Response) => {
           .oneOf(["USER", "APLICATOR", "PUBLISHER", "COORDINATOR", "ADMIN"])
           .required(),
         institutionId: yup.number().required(),
+        classrooms: yup.array().of(yup.number()).required(),
       })
       .noUnknown();
 
     const user = await createUserSchema.validate(req.body);
 
     const createdUser: User = await prismaClient.user.create({
-      data: user,
+      data: {
+        name: user.name,
+        username: user.username,
+        hash: user.hash,
+        role: user.role,
+        institutionId: user.institutionId,
+        classrooms: {
+          connect: user.classrooms
+            .filter((classroomId): classroomId is number =>
+              Boolean(classroomId)
+            )
+            .map((classroomId: number) => {
+              return { id: classroomId };
+            }),
+        },
+      },
     });
 
     res.status(201).json({ message: "User created.", data: createdUser });
@@ -31,7 +47,10 @@ export const createUser = async (req: Request, res: Response) => {
   }
 };
 
-export const updateUser = async (req: Request, res: Response): Promise<void> => {
+export const updateUser = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const id: number = parseInt(req.params.userId);
 
@@ -45,6 +64,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
           .string()
           .oneOf(["USER", "APLICATOR", "PUBLISHER", "COORDINATOR", "ADMIN"]),
         institutionId: yup.number(),
+        classrooms: yup.array().of(yup.number()),
       })
       .noUnknown();
 
@@ -62,6 +82,15 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         hash: user.hash,
         role: roleEnum,
         institutionId: user.institutionId,
+        classrooms: {
+          connect: user.classrooms
+            ?.filter((classroomId): classroomId is number =>
+              Boolean(classroomId)
+            )
+            .map((classroomId: number) => {
+              return { id: classroomId };
+            }),
+        },
       },
     });
 
@@ -71,9 +100,16 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
+export const getAllUsers = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const users: User[] = await prismaClient.user.findMany();
+    const users: User[] = await prismaClient.user.findMany({
+      include: {
+        classrooms: true,
+      },
+    });
     res.status(200).json({ message: "All users found.", data: users });
   } catch (error: any) {
     res.status(400).json({ error: error });
@@ -88,6 +124,9 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
       where: {
         id,
       },
+      include: {
+        classrooms: true,
+      },
     });
 
     res.status(200).json({ message: "User found.", data: user });
@@ -96,7 +135,10 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+export const deleteUser = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const id: number = parseInt(req.params.userId);
 

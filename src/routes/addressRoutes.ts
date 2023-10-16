@@ -1,6 +1,12 @@
 import express from "express";
 import uploader from "../services/multerUploader";
-import { createAddress, updateAddress, getAllAddresses, getAddress, deleteAddress } from "../controllers/addressController";
+import {
+  createAddress,
+  updateAddress,
+  getAllAddresses,
+  getAddress,
+  deleteAddress,
+} from "../controllers/addressController";
 
 const router = express.Router();
 
