@@ -1,103 +1,123 @@
 import { Response, Request } from "express";
-import { Protocol, Item_type, Item_group_type, Page_type } from "@prisma/client";
+import { Protocol, ItemType, ItemGroupType, PageType } from "@prisma/client";
 import * as yup from "yup";
 import prismaClient from "../services/prismaClient";
+import { userInfo } from "os";
 
 export const createProtocol = async  (req: Request, res: Response) => {
     try {
-        const item_optionsSchema = yup.object().shape({
-            text: yup.string().min(3).max(255).required(),//n sei limite
-            placement: yup.number().min(1).required(),
-            item_id: yup.number().required(),
-        }).noUnknown()
+        const itemOptionsSchema = yup
+            .object()
+            .shape({
+                text: yup.string().min(3).max(255).required(),
+                placement: yup.number().min(1).required(),
+                itemId: yup.number().required(),
+            })
+            .noUnknown();
         
-        const itemsSchema = yup.object().shape({
-            text: yup.string().min(3).max(255).required(),//n sei limite
-            description: yup.string().min(3).max(255).notRequired(),//n sei o tamanho
-            enabled: yup.boolean().required(),//default?
-            group_id: yup.number().required(),
-            type: yup.string().oneOf(Object.values(Item_type)).required(),
-            placement: yup.number().min(1).required(),
-            item_options: yup.array().of(item_optionsSchema).min(1).required(),//nseidefault
-        }).noUnknown()
+        const itemsSchema = yup
+            .object()
+            .shape({
+                text: yup.string().min(3).max(255).required(),
+                description: yup.string().min(3).max(255).notRequired(),
+                enabled: yup.boolean().required(),
+                groupId: yup.number().required(),
+                type: yup.string().oneOf(Object.values(ItemType)).required(),
+                placement: yup.number().min(1).required(),
+                itemOptions: yup.array().of(itemOptionsSchema).min(1).required(),
+            })
+            .noUnknown();
 
-        const item_groupsSchema = yup.object().shape({
-            placement: yup.number().min(1).required(),
-            isRepeatable: yup.boolean().required(),
-            page_id: yup.number().required(),
-            type: yup.string().oneOf(Object.values(Item_group_type)).required(),
-            items: yup.array().of(itemsSchema).min(1).required(),
-        }).noUnknown()
+        const itemGroupsSchema = yup
+            .object()
+            .shape({
+                placement: yup.number().min(1).required(),
+                isRepeatable: yup.boolean().required(),
+                pageId: yup.number().required(),
+                type: yup.string().oneOf(Object.values(ItemGroupType)).required(),
+                items: yup.array().of(itemsSchema).min(1).required(),
+            })
+            .noUnknown();
 
-        const pagesSchema = yup.object().shape({
-            placement: yup.number().min(1).required(),
-            protocol_id: yup.number().required(),
-            type: yup.string().oneOf(Object.values(Page_type)).required(),
-            item_groups: yup.array().of(item_groupsSchema).default([]),
-        }).noUnknown()
+        const pagesSchema = yup
+            .object()
+            .shape({
+                placement: yup.number().min(1).required(),
+                protocolId: yup.number().required(),
+                type: yup.string().oneOf(Object.values(PageType)).required(),
+                itemGroups: yup.array().of(itemGroupsSchema).default([]),
+            })
+            .noUnknown();
 
-        const ownerSchema = yup.object().shape({
-            protocol_id: yup.number().required(),
-        }).noUnknown()
-
-        const createProtocolSchema = yup.object().shape({
-            title:  yup.string().min(3).max(255).required(),
-            description: yup.string().min(3).max(255).notRequired(),//n sei o tamanho
-            enabled: yup.boolean().required(),
-            pages: yup.array().of(pagesSchema).min(1).required(),
-            owner: yup.array().of(ownerSchema).min(1).required(),
-        }).noUnknown()
+        const createProtocolSchema = yup
+            .object()
+            .shape({
+                title:  yup.string().min(3).max(255).required(),
+                description: yup.string().min(3).max(255).notRequired(),
+                enabled: yup.boolean().required(),
+                pages: yup.array().of(pagesSchema).min(1).required(),
+                owners: yup.array().of(yup.number()).min(1).required(),
+            })
+            .noUnknown();
         
-        const protocol = await createProtocolSchema.validate(req.body)
-        const createdProtocol: Protocol = await prismaClient.$transaction(async (prisma) => {
-            const createdProtocol = await prismaClient.protocol.create({
+        const protocol = await createProtocolSchema.validate(req.body);
+
+        const createdProtocol = await prismaClient.$transaction(async (prisma) => {
+            const createdProtocol = await prisma.protocol.create({
                 data:{
                     title: protocol.title,
                     description: protocol.description,
                     enabled: protocol.enabled,
-                }
-            })
-            for(const page of protocol.pages){
-                const createdPage = await prismaClient.page.create({
+                    owners: {connect: protocol.owners.map((owner) => {
+                        return {id: owner}
+                    })},
+                },
+            });
+            for(const [pageId, page] of protocol.pages.entries()){
+                const createdPage = await prisma.page.create({
                     data:{
                         placement: page.placement,
-                        protocol_id: createdProtocol.id,
+                        protocolId: createdProtocol.id,
                         type: page.type,
                     }
                 })
-                for(const item_group of page.item_groups){
-                    const createdItem_group = await prismaClient.item_group.create({
+                for(const [itemGroupId, itemGroup] of page.itemGroups.entries()){
+                    const createdItemGroup = await prisma.itemGroup.create({
                         data:{
-                            placement: item_group.placement,
-                            isRepeatable: item_group.isRepeatable,
-                            page_id: createdPage.id,
-                            type: item_group.type,
+                            placement: itemGroup.placement,
+                            isRepeatable: itemGroup.isRepeatable,
+                            pageId: createdPage.id,
+                            type: itemGroup.type,
                         }
                     })
-                    for(const item of item_group.items){
-                        const createdItem = await prismaClient.item.create({
+                    for(const [itemId, item] of itemGroup.items.entries()){
+                        const createdItem = await prisma.item.create({
                             data:{
                                 text: item.text,
                                 description: item.description,
                                 enabled: item.enabled,
-                                group_id: createdItem_group.id,
+                                groupId: createdItemGroup.id,
                                 type: item.type, 
                                 placement: item.placement,
                             }
                         })
-                        for(const item_option of item.item_options){
-                            const createdItem_option = await prismaClient.item_option.create({
+                        for(const [itemOptionId, itemOption] of item.itemOptions.entries()){
+                            const createdItemOption = await prisma.itemOption.create({
                                 data:{
-                                    text: item_option.text,
-                                    placement: item_option.placement,
-                                    item_id: createdItem.id,
+                                    text: itemOption.text,
+                                    placement: itemOption.placement,
+                                    itemId: createdItem.id,
                                 }
                             })
                         }
                     }
                 }
             }
-            return createdProtocol
+            return await prisma.protocol.findUnique({
+                where: {
+                    id: createdProtocol.id,
+                },
+            })
         })
         res.status(201).json({ message: "Protocol created.", data: createdProtocol })
     } catch (error: any) {
@@ -109,65 +129,69 @@ export const updateProtocol = async  (req: Request, res: Response): Promise<void
     try {
         const id:number = parseInt(req.params.protocolId)
 
-        const item_optionsSchema = yup.object().shape({
-            id: yup.number().required(),
-            text: yup.string().min(3).max(255).required(),//n sei limite
-            placement: yup.number().min(1).required(),
-            item_id: yup.number().required(),
-        }).noUnknown()
+        const updateItemOptionsSchema = yup
+            .object()
+            .shape({
+                id: yup.number().required(),
+                text: yup.string().min(3).max(255).required(),
+                placement: yup.number().min(1).required(),
+                itemId: yup.number().required(),
+            })
+            .noUnknown()
         
-        const itemsSchema = yup.object().shape({
-            id: yup.number().required(),
-            text: yup.string().min(3).max(255).required(),//n sei limite
-            description: yup.string().min(3).max(255).notRequired(),//n sei o tamanho
-            enabled: yup.boolean().required(),//default?
-            group_id: yup.number().required(),
-            type: yup.string().oneOf(Object.values(Item_type)).required(),
-            placement: yup.number().min(1).required(),
-            item_options: yup.array().of(item_optionsSchema).min(1).required(),//nseidefault
-        }).noUnknown()
+        const updateItemsSchema = yup
+            .object()
+            .shape({
+                id: yup.number().required(),
+                text: yup.string().min(3).max(255).required(),
+                description: yup.string().min(3).max(255).notRequired(),
+                enabled: yup.boolean().required(),
+                groupId: yup.number().required(),
+                type: yup.string().oneOf(Object.values(ItemType)).required(),
+                placement: yup.number().min(1).required(),
+                itemOptions: yup.array().of(updateItemOptionsSchema).min(1).required(),
+            })
+            .noUnknown()
 
-        const item_groupsSchema = yup.object().shape({
-            id: yup.number().required(),
-            placement: yup.number().min(1).required(),
-            isRepeatable: yup.boolean().required(),
-            page_id: yup.number().required(),
-            type: yup.string().oneOf(Object.values(Item_group_type)).required(),
-            items: yup.array().of(itemsSchema).min(1).required(),
-        }).noUnknown()
+        const updateItemGroupsSchema = yup
+            .object()
+            .shape({
+                id: yup.number().required(),
+                placement: yup.number().min(1).required(),
+                isRepeatable: yup.boolean().required(),
+                pageId: yup.number().required(),
+                type: yup.string().oneOf(Object.values(ItemGroupType)).required(),
+                items: yup.array().of(updateItemsSchema).min(1).required(),
+            })
+            .noUnknown()
 
-        const pagesSchema = yup.object().shape({
-            id: yup.number().required(),
-            placement: yup.number().min(1).required(),
-            protocol_id: yup.number().required(),
-            type: yup.string().oneOf(Object.values(Page_type)).required(),
-            item_groups: yup.array().of(item_groupsSchema).default([]),
-        }).noUnknown()
+        const updatePagesSchema = yup
+            .object()
+            .shape({
+                id: yup.number().required(),
+                placement: yup.number().min(1).required(),
+                protocolId: yup.number().required(),
+                type: yup.string().oneOf(Object.values(PageType)).required(),
+                itemGroups: yup.array().of(updateItemGroupsSchema).default([]),
+            })
+            .noUnknown()
 
-        const ownerSchema = yup.object().shape({
-            id: yup.number().required(),
-            protocol_id: yup.number().required(),
-        }).noUnknown()
-
-        const updateProtocolSchema = yup.object().shape({
-            id: yup.number().required(),
-            title:  yup.string().min(3).max(255).required(),
-            description: yup.string().min(3).max(255).notRequired(),//n sei o tamanho
-            enabled: yup.boolean().required(),
-            pages: yup.array().of(pagesSchema).min(1).required(),
-            owner: yup.array().of(ownerSchema).min(1).required(),
-        }).noUnknown()
+        const updateProtocolSchema = yup
+            .object()
+            .shape({
+                id: yup.number().required(),
+                title:  yup.string().min(3).max(255).required(),
+                description: yup.string().min(3).max(255).notRequired(),
+                enabled: yup.boolean().required(),
+                pages: yup.array().of(updatePagesSchema).min(1).required(),
+                owners: yup.array().of(yup.number()).min(1).required(),
+            })
+            .noUnknown()
 
         const protocol = await updateProtocolSchema.validate(req.body)
 
-        const currentProtocol: Protocol = await prismaClient.protocol.findUnique({
-            where:{
-                id: id,
-            },
-        })
-
-        const updatedProtocol: Protocol = await prismaClient.$transaction(async (prisma) => {
-            prismaClient.protocol.update({
+        const upsertedProtocol = await prismaClient.$transaction(async (prisma) => {
+            await prisma.protocol.update({
                 where:{
                     id: id,
                 },
@@ -175,129 +199,143 @@ export const updateProtocol = async  (req: Request, res: Response): Promise<void
                     title: protocol.title,
                     description: protocol.description,
                     enabled: protocol.enabled,
+                    owners: {set: [],
+                        connect: protocol.owners.map((owner) => {
+                            return {id: owner}
+                        })},
                 },
-            })
-            prismaClient.protocol_owner.deleteMany({
+            });
+            prisma.page.deleteMany({
                 where:{
-                    id: { notIn: protocol.owner.map((protocol_owner) => protocol_owner.id)},
+                    id: { 
+                        notIn: protocol.pages
+                        .filter((page) => page.id)
+                        .map((page) => page.id as number)
+                    },
                 },
-            })
-            for(const protocol_owner of protocol.owner){
-                const createdProtocol_owner = await prismaClient.protocol_owner.upsert({
-                    where:{
-                        id: protocol_owner.id,
-                    },
-                    create:{
-                        protocol_id: updatedProtocol.id,
-                    },
-                    update:{
-                        protocol_id: updatedProtocol.id,
-                    },
-                })
-            }
-            prismaClient.page.deleteMany({
-                where:{
-                    id: { notIn: protocol.pages.map((page) => page.id)},
-                },
-            })
-            for(const page of protocol.pages){
-                const createdPage = await prismaClient.page.upsert({
+            });
+            for(const [pageId, page] of protocol.pages.entries()){
+                const upsertedPage = page.id
+                    ? await prisma.page.update({
                     where:{
                         id: page.id,
                     },
-                    create:{
-                        protocol_id: updatedProtocol.id,
-                        placement: page.placement,
-                        type: page.type,
-                    },
-                    update:{
-                        protocol_id: updatedProtocol.id,
+                    data:{
+                        protocolId: id,
                         placement: page.placement,
                         type: page.type,
                     },
                 })
-                prismaClient.item_group.deleteMany({
+                : await prisma.page.create({
+                    data: {
+                        protocolId: id as number,
+                        placement: page.placement as number,
+                        type: page.type,
+                    },
+                });
+                prisma.itemGroup.deleteMany({
                     where:{
-                        id: { notIn: page.item_groups.map((item_group) => item_group.id)},
+                        id: {
+                            notIn: page.itemGroups
+                            .filter((itemGroup) => itemGroup.id)
+                            .map((itemGroup) => itemGroup.id as number)
+                        },
                     },
                 })
-                for(const item_group of page.item_groups){
-                    const createdItemGroup = await prismaClient.item_group.upsert({
-                        where:{
-                            id: item_group.id,
-                        },
-                        create:{
-                            placement: item_group.placement,
-                            isRepeatable: item_group.isRepeatable,
-                            page_id: createdPage.id,
-                            type: item_group.type,
-                        },
-                        update:{
-                            placement: item_group.placement,
-                            isRepeatable: item_group.isRepeatable,
-                            page_id: createdPage.id,
-                            type: item_group.type,
-                        },
-                    })
-                    prismaClient.item.deleteMany({
-                        where:{
-                            id: { notIn: item_group.items.map((item) => item.id)},
-                        },
-                    })
-                    for(const item of item_group.items){
-                        const createdItem = await prismaClient.item.upsert({
+                for(const [itemGroupId, itemGroup] of page.itemGroups.entries()){
+                    const upsertedItemGroup = itemGroup.id
+                        ? await prisma.itemGroup.update({
                             where:{
-                                id: item.id,
+                                id: itemGroup.id,
                             },
-                            create:{
-                                text: item.text,
-                                description: item.description,
-                                enabled: item.enabled,
-                                group_id: createdItemGroup.id,
-                                type: item.type,
-                                placement: item.placement,
-                            },
-                            update:{
-                                text: item.text,
-                                description: item.description,
-                                enabled: item.enabled,
-                                group_id: createdItemGroup.id,
-                                type: item.type,
-                                placement: item.placement,
+                            data:{
+                                placement: itemGroup.placement,
+                                isRepeatable: itemGroup.isRepeatable,
+                                pageId: upsertedPage.id,
+                                type: itemGroup.type,
                             },
                         })
-                        prismaClient.item_option.deleteMany({
-                            where:{
-                                id: { notIn:item.item_options.map((item_option) => item_option.id)},
+                        : await prisma.itemGroup.create({
+                            data:{
+                                placement: itemGroup.placement as number,
+                                isRepeatable: itemGroup.isRepeatable as boolean,
+                                pageId: upsertedPage.id as number,
+                                type: itemGroup.type,
                             },
-                        })
-                        for(const item_option of item.item_options){
-                            const createdItemOption = await prismaClient.item_option.upsert({
+                        });
+                    prisma.item.deleteMany({
+                        where:{
+                            id:{
+                                notIn: itemGroup.items
+                                .filter((item) => item.id)
+                                .map((item) => item.id as number)
+                            },
+                        },
+                    })
+                    for(const [itemId, item] of itemGroup.items.entries()){
+                        const upsertedItem = item.id
+                            ? await prisma.item.update({
                                 where:{
-                                    id: item_option.id,
+                                    id: item.id,
                                 },
-                                create:{
-                                    text: item_option.text,
-                                    placement: item_option.placement,
-                                    item_id: createdItem.id,
-                                },
-                                update:{
-                                    text: item_option.text,
-                                    placement: item_option.placement,
-                                    item_id: createdItem.id,
+                                data:{
+                                    text: item.text,
+                                    description: item.description,
+                                    enabled: item.enabled,
+                                    groupId: upsertedItemGroup.id,
+                                    type: item.type,
+                                    placement: item.placement,
                                 },
                             })
+                            : await prisma.item.create({
+                                data:{
+                                    text: item.text as string,
+                                    description: item.description as string,
+                                    enabled: item.enabled as boolean,
+                                    groupId: upsertedItemGroup.id as number,
+                                    type: item.type,
+                                    placement: item.placement as number,
+                                },
+                            })
+                        prisma.itemOption.deleteMany({
+                            where:{
+                                id:{
+                                    notIn: item.itemOptions
+                                    .filter((itemOption) => item.id)
+                                    .map((itemOption) => itemOption.id as number)
+                                },
+                            },
+                        })
+                        for(const [itemOptionId, itemOption] of item.itemOptions.entries()){
+                            const upsertedItemOption = itemOption.id
+                            ? await prisma.itemOption.update({
+                                where:{
+                                    id: itemOption.id,
+                                },
+                                data:{
+                                    text: itemOption.text,
+                                    placement: itemOption.placement,
+                                    itemId: upsertedItem.id,
+                                },
+                            })
+                            : await prisma.itemOption.create({
+                                data:{
+                                    text: itemOption.text as string,
+                                    placement: itemOption.placement as number,
+                                    itemId: upsertedItem.id as number,
+                                },
+                            });
                         }
                     }
                 }
             }
-            return prismaClient.protocol.findUnique({
+            return await prisma.protocol.findUnique({
                 where:{
                     id: id,
                 },
             })
         })
-        res.status(200).json({ message: "Protocol updated.", data: updatedProtocol })
+        res.status(200).json({ message: "Protocol updated.", data: upsertedProtocol })
     } catch (error: any) {
         res.status(400).json({ error: error });
     }
@@ -305,8 +343,8 @@ export const updateProtocol = async  (req: Request, res: Response): Promise<void
 
 export const getAllProtocols = async (req: Request, res: Response): Promise<void> => {
     try {
-        const protocol: Protocol[] = await prismaClient.protocol.findMany()
-        res.status(200).json({ message: "All protocolsfound.", data: protocol })
+        const protocol: Protocol[] = await prismaClient.protocol.findMany();
+        res.status(200).json({ message: "All protocols found.", data: protocol })
     } catch (error: any) {
         res.status(400).json({ error: error })
     }
@@ -314,7 +352,7 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
 
 export const getProtocol = async (req: Request, res: Response): Promise<void> => {
     try {
-        const id: number = parseInt(req.params.protocol_id);
+        const id: number = parseInt(req.params.protocolId);
 
         const protocol: Protocol = await prismaClient.protocol.findUniqueOrThrow({
             where: {
