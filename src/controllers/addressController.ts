@@ -8,10 +8,9 @@ export const createAddress = async (req: Request, res: Response) => {
     const createAddressSchema = yup
       .object()
       .shape({
-        city: yup.string().min(3).max(255).required(),
-        state: yup.string().min(3).max(255).required(),
-        country: yup.string().min(3).max(255).required(),
-        institutions: yup.array().of(yup.number()).required(),
+        city: yup.string().min(1).required(),
+        state: yup.string().min(1).required(),
+        country: yup.string().min(1).required(),
       })
       .noUnknown();
 
@@ -22,15 +21,6 @@ export const createAddress = async (req: Request, res: Response) => {
         city: address.city,
         state: address.state,
         country: address.country,
-        institutions: {
-          connect: address.institutions
-            .filter((institutionId): institutionId is number =>
-              Boolean(institutionId)
-            )
-            .map((institutionId: number) => {
-              return { id: institutionId };
-            }),
-        },
       },
     });
 
@@ -40,24 +30,20 @@ export const createAddress = async (req: Request, res: Response) => {
   }
 };
 
-export const updateAddress = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const updateAddress = async (req: Request, res: Response): Promise<void> => {
   try {
     const id: number = parseInt(req.params.addressId);
 
-    const createAddressSchema = yup
+    const updateAddressSchema = yup
       .object()
       .shape({
-        city: yup.string().min(3).max(255),
-        state: yup.string().min(3).max(255),
-        country: yup.string().min(3).max(255),
-        institutions: yup.array().of(yup.number()),
+        city: yup.string().min(1),
+        state: yup.string().min(1),
+        country: yup.string().min(1),
       })
       .noUnknown();
 
-    const address = await createAddressSchema.validate(req.body);
+    const address = await updateAddressSchema.validate(req.body);
 
     const updatedAddress: Address = await prismaClient.address.update({
       where: {
@@ -67,15 +53,6 @@ export const updateAddress = async (
         city: address.city,
         state: address.state,
         country: address.country,
-        institutions: {
-          connect: address.institutions
-            ?.filter((institutionId): institutionId is number =>
-              Boolean(institutionId)
-            )
-            .map((institutionId: number) => {
-              return { id: institutionId };
-            }),
-        },
       },
     });
 
@@ -85,16 +62,10 @@ export const updateAddress = async (
   }
 };
 
-export const getAllAddresses = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getAllAddresses = async (res: Response): Promise<void> => {
   try {
-    const addresses: Address[] = await prismaClient.address.findMany({
-      include: {
-        institutions: true,
-      },
-    });
+    const addresses: Address[] = await prismaClient.address.findMany({});
+
     res.status(200).json({ message: "All addresses found.", data: addresses });
   } catch (error: any) {
     res.status(400).json({ error: error });
@@ -123,10 +94,7 @@ export const getAddress = async (
   }
 };
 
-export const deleteAddress = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const deleteAddress = async (req: Request, res: Response): Promise<void> => {
   try {
     const id: number = parseInt(req.params.addressId);
 

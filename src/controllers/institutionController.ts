@@ -8,13 +8,9 @@ export const createInstitution = async (req: Request, res: Response) => {
     const createInstitutionSchema = yup
       .object()
       .shape({
-        name: yup.string().min(3).max(255).required(),
-        type: yup
-          .string()
-          .oneOf(["PRIMARY", "LOWER_SECONDARY", "UPPER_SECONDARY", "TERTIARY"])
-          .required(),
+        name: yup.string().min(1).max(255).required(),
+        type: yup.string().oneOf(Object.values(InstitutionType)).required(),
         addressId: yup.number().required(),
-        classrooms: yup.array().of(yup.number()).required(),
       })
       .noUnknown();
 
@@ -26,48 +22,30 @@ export const createInstitution = async (req: Request, res: Response) => {
           name: institution.name,
           type: institution.type,
           addressId: institution.addressId,
-          classrooms: {
-            connect: institution.classrooms
-              .filter((classroomId): classroomId is number =>
-                Boolean(classroomId)
-              )
-              .map((classroomId: number) => {
-                return { id: classroomId };
-              }),
-          },
         },
       });
 
-    res
-      .status(201)
-      .json({ message: "Institution created.", data: createdInstitution });
+    res.status(201).json({ message: "Institution created.", data: createdInstitution });
   } catch (error: any) {
     res.status(400).json({ error: error });
   }
 };
 
-export const updateInstitution = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const updateInstitution = async (req: Request, res: Response): Promise<void> => {
   try {
     const id: number = parseInt(req.params.institutionId);
 
-    const createInstitutionSchema = yup
+    const updateInstitutionSchema = yup
       .object()
       .shape({
-        name: yup.string().min(3).max(255),
-        type: yup
-          .string()
-          .oneOf(["PRIMARY", "LOWER_SECONDARY", "UPPER_SECONDARY", "TERTIARY"]),
+        name: yup.string().min(1).max(255),
+        type: yup.string().oneOf(Object.values(InstitutionType)),
         addressId: yup.number(),
         classrooms: yup.array().of(yup.number()),
       })
       .noUnknown();
 
-    const institution = await createInstitutionSchema.validate(req.body);
-
-    const typeEnum: InstitutionType = institution.type as InstitutionType;
+    const institution = await updateInstitutionSchema.validate(req.body);
 
     const updatedInstitution: Institution =
       await prismaClient.institution.update({
@@ -76,52 +54,28 @@ export const updateInstitution = async (
         },
         data: {
           name: institution.name,
-          type: typeEnum,
+          type: institution.type,
           addressId: institution.addressId,
-          classrooms: {
-            connect: institution.classrooms
-              ?.filter((classroomId): classroomId is number =>
-                Boolean(classroomId)
-              )
-              .map((classroomId: number) => {
-                return { id: classroomId };
-              }),
-          },
         },
       });
 
-    res
-      .status(200)
-      .json({ message: "Institution updated.", data: updatedInstitution });
+    res.status(200).json({ message: "Institution updated.", data: updatedInstitution });
   } catch (error: any) {
     res.status(400).json({ error: error });
   }
 };
 
-export const getAllInstitutions = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getAllInstitutions = async (res: Response): Promise<void> => {
   try {
-    const institutions: Institution[] = await prismaClient.institution.findMany(
-      {
-        include: {
-          classrooms: true,
-        },
-      }
-    );
-    res
-      .status(200)
-      .json({ message: "All institutions found.", data: institutions });
+    const institutions: Institution[] = await prismaClient.institution.findMany({});
+
+    res.status(200).json({ message: "All institutions found.", data: institutions });
   } catch (error: any) {
     res.status(400).json({ error: error });
   }
 };
 
-export const getInstitution = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getInstitution = async (req: Request, res: Response): Promise<void> => {
   try {
     const id: number = parseInt(req.params.institutionId);
 
@@ -141,10 +95,7 @@ export const getInstitution = async (
   }
 };
 
-export const deleteInstitution = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const deleteInstitution = async (req: Request, res: Response): Promise<void> => {
   try {
     const id: number = parseInt(req.params.institutionId);
 
@@ -155,9 +106,7 @@ export const deleteInstitution = async (
         },
       });
 
-    res
-      .status(200)
-      .json({ message: "Institution deleted.", data: deletedInstitution });
+    res.status(200).json({ message: "Institution deleted.", data: deletedInstitution });
   } catch (error: any) {
     res.status(400).json({ error: error });
   }

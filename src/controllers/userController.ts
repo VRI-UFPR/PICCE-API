@@ -8,15 +8,14 @@ export const createUser = async (req: Request, res: Response) => {
     const createUserSchema = yup
       .object()
       .shape({
-        name: yup.string().min(3).max(255).required(),
-        username: yup.string().min(3).max(255).required(),
-        hash: yup.string().min(8).max(255).required(),
+        name: yup.string().min(1).max(255).required(),
+        username: yup.string().min(3).max(16).required(),
+        hash: yup.string().required(),
         role: yup
           .string()
-          .oneOf(["USER", "APLICATOR", "PUBLISHER", "COORDINATOR", "ADMIN"])
+          .oneOf(Object.values(UserRole))
           .required(),
         institutionId: yup.number().required(),
-        classrooms: yup.array().of(yup.number()).required(),
       })
       .noUnknown();
 
@@ -29,15 +28,6 @@ export const createUser = async (req: Request, res: Response) => {
         hash: user.hash,
         role: user.role,
         institutionId: user.institutionId,
-        classrooms: {
-          connect: user.classrooms
-            .filter((classroomId): classroomId is number =>
-              Boolean(classroomId)
-            )
-            .map((classroomId: number) => {
-              return { id: classroomId };
-            }),
-        },
       },
     });
 
@@ -47,30 +37,25 @@ export const createUser = async (req: Request, res: Response) => {
   }
 };
 
-export const updateUser = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const updateUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const id: number = parseInt(req.params.userId);
 
-    const createUserSchema = yup
+    const updateUserSchema = yup
       .object()
       .shape({
-        name: yup.string().min(3).max(255),
-        username: yup.string().min(3).max(255),
-        hash: yup.string().min(8).max(255),
+        name: yup.string().min(1).max(255),
+        username: yup.string().min(3).max(16),
+        hash: yup.string(),
         role: yup
           .string()
-          .oneOf(["USER", "APLICATOR", "PUBLISHER", "COORDINATOR", "ADMIN"]),
+          .oneOf(Object.values(UserRole)),
         institutionId: yup.number(),
         classrooms: yup.array().of(yup.number()),
       })
       .noUnknown();
 
-    const user = await createUserSchema.validate(req.body);
-
-    const roleEnum: UserRole = user.role as UserRole;
+    const user = await updateUserSchema.validate(req.body);
 
     const updatedUser: User = await prismaClient.user.update({
       where: {
@@ -80,16 +65,10 @@ export const updateUser = async (
         name: user.name,
         username: user.username,
         hash: user.hash,
-        role: roleEnum,
+        role: user.role,
         institutionId: user.institutionId,
         classrooms: {
-          connect: user.classrooms
-            ?.filter((classroomId): classroomId is number =>
-              Boolean(classroomId)
-            )
-            .map((classroomId: number) => {
-              return { id: classroomId };
-            }),
+          disconnect: user.classrooms?.map((id) => ({ id: id })),
         },
       },
     });
@@ -100,16 +79,10 @@ export const updateUser = async (
   }
 };
 
-export const getAllUsers = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getAllUsers = async (res: Response): Promise<void> => {
   try {
-    const users: User[] = await prismaClient.user.findMany({
-      include: {
-        classrooms: true,
-      },
-    });
+    const users: User[] = await prismaClient.user.findMany({});
+    
     res.status(200).json({ message: "All users found.", data: users });
   } catch (error: any) {
     res.status(400).json({ error: error });
@@ -135,10 +108,7 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const deleteUser = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const deleteUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const id: number = parseInt(req.params.userId);
 

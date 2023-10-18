@@ -9,7 +9,7 @@ export const createClassroom = async (req: Request, res: Response) => {
       .object()
       .shape({
         institutionId: yup.number().required(),
-        users: yup.array().of(yup.number()).required(),
+        users: yup.array().of(yup.number()).default([]),
       })
       .noUnknown();
 
@@ -19,31 +19,22 @@ export const createClassroom = async (req: Request, res: Response) => {
       data: {
         institutionId: classroom.institutionId,
         users: {
-          connect: classroom.users
-            .filter((userId): userId is number => Boolean(userId))
-            .map((userId: number) => {
-              return { id: userId };
-            }),
+          connect: classroom.users.map((id) => ({ id: id })),
         },
       },
     });
 
-    res
-      .status(201)
-      .json({ message: "Classroom created.", data: createdClassroom });
+    res.status(201).json({ message: "Classroom created.", data: createdClassroom });
   } catch (error: any) {
     res.status(400).json({ error: error });
   }
 };
 
-export const updateClassroom = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const updateClassroom = async (req: Request, res: Response): Promise<void> => {
   try {
     const id: number = parseInt(req.params.classroomId);
 
-    const createClassroomSchema = yup
+    const updateClassroomSchema = yup
       .object()
       .shape({
         institutionId: yup.number(),
@@ -51,7 +42,7 @@ export const updateClassroom = async (
       })
       .noUnknown();
 
-    const classroom = await createClassroomSchema.validate(req.body);
+    const classroom = await updateClassroomSchema.validate(req.body);
 
     const updatedClassroom: Classroom = await prismaClient.classroom.update({
       where: {
@@ -60,45 +51,29 @@ export const updateClassroom = async (
       data: {
         institutionId: classroom.institutionId,
         users: {
-          connect: classroom.users
-            ?.filter((userId): userId is number => Boolean(userId))
-            .map((userId: number) => {
-              return { id: userId };
-            }),
+          set: [],
+          connect: classroom.users?.map((id) => ({ id: id })),
         },
       },
     });
 
-    res
-      .status(200)
-      .json({ message: "Classroom updated.", data: updatedClassroom });
+    res.status(200).json({ message: "Classroom updated.", data: updatedClassroom });
   } catch (error: any) {
     res.status(400).json({ error: error });
   }
 };
 
-export const getAllClassrooms = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getAllClassrooms = async (res: Response): Promise<void> => {
   try {
-    const classrooms: Classroom[] = await prismaClient.classroom.findMany({
-      include: {
-        users: true,
-      },
-    });
-    res
-      .status(200)
-      .json({ message: "All classrooms found.", data: classrooms });
+    const classrooms: Classroom[] = await prismaClient.classroom.findMany({});
+
+    res.status(200).json({ message: "All classrooms found.", data: classrooms });
   } catch (error: any) {
     res.status(400).json({ error: error });
   }
 };
 
-export const getClassroom = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getClassroom = async (req: Request, res: Response): Promise<void> => {
   try {
     const id: number = parseInt(req.params.classroomId);
 
@@ -119,10 +94,7 @@ export const getClassroom = async (
   }
 };
 
-export const deleteClassroom = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const deleteClassroom = async (req: Request, res: Response): Promise<void> => {
   try {
     const id: number = parseInt(req.params.classroomId);
 
@@ -132,9 +104,7 @@ export const deleteClassroom = async (
       },
     });
 
-    res
-      .status(200)
-      .json({ message: "Classroom deleted.", data: deletedClassroom });
+    res.status(200).json({ message: "Classroom deleted.", data: deletedClassroom });
   } catch (error: any) {
     res.status(400).json({ error: error });
   }
