@@ -63,7 +63,7 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
   }
 };
 
-export const getAllClassrooms = async (res: Response): Promise<void> => {
+export const getAllClassrooms = async (req: Request, res: Response): Promise<void> => {
   try {
     const classrooms: Classroom[] = await prismaClient.classroom.findMany({});
 

@@ -16,6 +16,7 @@ export const createUser = async (req: Request, res: Response) => {
           .oneOf(Object.values(UserRole))
           .required(),
         institutionId: yup.number().required(),
+        classrooms: yup.array().of(yup.number()).default([]),
       })
       .noUnknown();
 
@@ -68,7 +69,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         role: user.role,
         institutionId: user.institutionId,
         classrooms: {
-          disconnect: user.classrooms?.map((id) => ({ id: id })),
+          disconnect: user.classrooms?.map((id) => ({ id })),
         },
       },
     });
@@ -79,7 +80,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const getAllUsers = async (res: Response): Promise<void> => {
+export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
   try {
     const users: User[] = await prismaClient.user.findMany({});
     

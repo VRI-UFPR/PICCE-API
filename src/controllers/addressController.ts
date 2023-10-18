@@ -62,7 +62,7 @@ export const updateAddress = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-export const getAllAddresses = async (res: Response): Promise<void> => {
+export const getAllAddresses = async (req: Request, res: Response): Promise<void> => {
   try {
     const addresses: Address[] = await prismaClient.address.findMany({});
 

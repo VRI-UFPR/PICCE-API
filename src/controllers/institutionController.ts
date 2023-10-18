@@ -65,7 +65,7 @@ export const updateInstitution = async (req: Request, res: Response): Promise<vo
   }
 };
 
-export const getAllInstitutions = async (res: Response): Promise<void> => {
+export const getAllInstitutions = async (req: Request, res: Response): Promise<void> => {
   try {
     const institutions: Institution[] = await prismaClient.institution.findMany({});
 
