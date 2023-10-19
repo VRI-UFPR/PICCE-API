@@ -9,7 +9,7 @@ export const createClassroom = async (req: Request, res: Response) => {
       .object()
       .shape({
         institutionId: yup.number().required(),
-        users: yup.array().of(yup.number()).default([]),
+        users: yup.array().of(yup.number()).min(2).required(),
       })
       .noUnknown();
 
@@ -38,7 +38,7 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
       .object()
       .shape({
         institutionId: yup.number(),
-        users: yup.array().of(yup.number()),
+        users: yup.array().of(yup.number()).min(2),
       })
       .noUnknown();
 
