@@ -1,42 +1,44 @@
 {
-  "name": "picce-api",
-  "version": "1.0.0",
-  "description": "### Introduction",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon --watch 'src/' --exec 'ts-node src/app.ts' -e ts"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/VRI-UFPR/PICCE-API.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/VRI-UFPR/PICCE-API/issues"
-  },
-  "homepage": "https://github.com/VRI-UFPR/PICCE-API#readme",
-  "dependencies": {
-    "@prisma/client": "^5.2.0",
-    "@types/swagger-jsdoc": "^6.0.1",
-    "@types/swagger-ui-express": "^4.1.4",
-    "express": "^4.18.2",
-    "multer": "^1.4.5-lts.1",
-    "pg": "^8.11.3",
-    "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.0",
-    "yup": "^1.2.0"
-  },
-  "devDependencies": {
-    "@types/express": "^4.17.17",
-    "@types/multer": "^1.4.7",
-    "@types/node": "^20.5.3",
-    "body-parser": "^1.20.2",
-    "nodemon": "^3.0.1",
-    "prisma": "^5.2.0",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.1.6"
-  }
+    "name": "picce-api",
+    "version": "1.0.0",
+    "description": "### Introduction",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "start": "nodemon --watch 'src/' --exec 'ts-node src/app.ts' -e ts",
+        "prettier": "prettier --config .prettierrc --write \"src/**/*.{js,ts}\""
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/VRI-UFPR/PICCE-API.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/VRI-UFPR/PICCE-API/issues"
+    },
+    "homepage": "https://github.com/VRI-UFPR/PICCE-API#readme",
+    "dependencies": {
+        "@prisma/client": "^5.2.0",
+        "@types/swagger-jsdoc": "^6.0.1",
+        "@types/swagger-ui-express": "^4.1.4",
+        "express": "^4.18.2",
+        "multer": "^1.4.5-lts.1",
+        "pg": "^8.11.3",
+        "swagger-jsdoc": "^6.2.8",
+        "swagger-ui-express": "^5.0.0",
+        "yup": "^1.2.0"
+    },
+    "devDependencies": {
+        "@types/express": "^4.17.17",
+        "@types/multer": "^1.4.7",
+        "@types/node": "^20.5.3",
+        "body-parser": "^1.20.2",
+        "nodemon": "^3.0.1",
+        "prettier": "^3.0.3",
+        "prisma": "^5.2.0",
+        "ts-node-dev": "^2.0.0",
+        "typescript": "^5.1.6"
+    }
 }

@@ -1,12 +1,12 @@
-import express from "express";
-import uploader from "../services/multerUploader";
+import express from 'express';
+import uploader from '../services/multerUploader';
 import {
     createApplicationAnswer,
     updateApplicationAnswer,
     getAllApplicationAnswers,
     getApplicationAnswer,
     deleteApplicationAnswer,
-} from "../controllers/applicationAnswerController";
+} from '../controllers/applicationAnswerController';
 
 /**
  * @swagger
@@ -179,7 +179,7 @@ const router = express.Router();
  *               type: string
  *               description: Error message
  */
-router.post("/createApplicationAnswer", uploader.none(), createApplicationAnswer);
+router.post('/createApplicationAnswer', uploader.none(), createApplicationAnswer);
 
 /**
  * @swagger
@@ -230,7 +230,7 @@ router.post("/createApplicationAnswer", uploader.none(), createApplicationAnswer
  *               type: string
  *               description: Error message
  */
-router.put("/updateApplicationAnswer/:applicationAnswerId", uploader.none(), updateApplicationAnswer);
+router.put('/updateApplicationAnswer/:applicationAnswerId', uploader.none(), updateApplicationAnswer);
 
 /**
  * @swagger
@@ -256,7 +256,7 @@ router.put("/updateApplicationAnswer/:applicationAnswerId", uploader.none(), upd
  *               type: string
  *               description: Error message
  */
-router.get("/getAllApplicationAnswers", uploader.none(), getAllApplicationAnswers);
+router.get('/getAllApplicationAnswers', uploader.none(), getAllApplicationAnswers);
 
 /**
  * @swagger
@@ -294,7 +294,7 @@ router.get("/getAllApplicationAnswers", uploader.none(), getAllApplicationAnswer
  *               type: string
  *               description: Error message
  */
-router.get("/getApplicationAnswer/:applicationAnswerId", uploader.none(), getApplicationAnswer);
+router.get('/getApplicationAnswer/:applicationAnswerId', uploader.none(), getApplicationAnswer);
 
 /**
  * @swagger
@@ -332,6 +332,6 @@ router.get("/getApplicationAnswer/:applicationAnswerId", uploader.none(), getApp
  *               type: string
  *               description: Error message
  */
-router.delete("/deleteApplicationAnswer/:applicationAnswerId", uploader.none(), deleteApplicationAnswer);
+router.delete('/deleteApplicationAnswer/:applicationAnswerId', uploader.none(), deleteApplicationAnswer);
 
 export default router;

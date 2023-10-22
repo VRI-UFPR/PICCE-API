@@ -1,15 +1,15 @@
-import swaggerJsdoc from "swagger-jsdoc"
+import swaggerJsdoc from 'swagger-jsdoc';
 
 const options: swaggerJsdoc.Options = {
     definition: {
-        openapi: "3.0.1",
+        openapi: '3.0.1',
         info: {
-            title: "PICCE API",
-            version: "1.0.0",
+            title: 'PICCE API',
+            version: '1.0.0',
         },
     },
-    apis: ["./src/routes/*.ts"],
-}
+    apis: ['./src/routes/*.ts'],
+};
 
-const openAPISpec = swaggerJsdoc(options)
-export default openAPISpec
+const openAPISpec = swaggerJsdoc(options);
+export default openAPISpec;
