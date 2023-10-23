@@ -36,7 +36,10 @@ import {
  *          example: 1
  *        files:
  *          type: array
- *          items: string
+ *          items:
+ *            type: string
+ *          description: The files of the answer
+ *          example: ["file1.png", "file2.png"]
  *      example:
  *        text: "This is the answer because..."
  *        itemId: 1
