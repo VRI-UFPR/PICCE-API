@@ -47,7 +47,8 @@ import {
  *          example: [1, 2, 3]
  *        visibilityMode:
  *          type: string
- *          description: The visibility mode of the application (PUBLIC, RESTRICT)
+ *          enum: [PUBLIC, RESTRICT]
+ *          description: The visibility mode of the application
  *          example: PUBLIC
  */
 const router = express.Router();
