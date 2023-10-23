@@ -202,7 +202,7 @@ router.post('/createApplicationAnswer', uploader.any(), createApplicationAnswer)
  * @swagger
  * /api/applicationAnswer/updateApplicationAnswer/{applicationAnswerId}:
  *   put:
- *     summary: Update an existing application answer by id. All the fields are optional. Performs individual update on nested objects: the items passed with an id will be kept or updated, and the items passed without an id will be created. The items that are not passed will be deleted.
+ *     summary: Update an existing application answer by id. All the fields are optional. Performs individual update on nested objects. The items passed with an id will be kept or updated, and the items passed without an id will be created. The items that are not passed will be deleted.
  *     tags: [ApplicationAnswer]
  *     parameters:
  *       - in: path
