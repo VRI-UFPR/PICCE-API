@@ -1,6 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import routes from './routes';
+import path from 'path';
 import swaggerDocs from './config/openAPISpec';
 import swaggerUi from 'swagger-ui-express';
 
@@ -20,6 +21,7 @@ app.use(
 
 // API routes
 app.use('/api', routes);
+app.use('/uploads', express.static(path.basename('uploads')));
 
 // Server starting point
 const server = app.listen(3000);
