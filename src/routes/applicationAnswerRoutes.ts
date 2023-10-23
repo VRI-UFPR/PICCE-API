@@ -1,5 +1,6 @@
 import express from 'express';
 import uploader from '../services/multerUploader';
+import passport from '../services/passportAuth';
 import {
     createApplicationAnswer,
     updateApplicationAnswer,
@@ -11,6 +12,11 @@ import {
 /**
  * @swagger
  * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
  *   schemas:
  *     ItemAnswer:
  *      type: object
@@ -170,6 +176,8 @@ const router = express.Router();
  *   post:
  *     summary: Create a new application answer
  *     tags: [ApplicationAnswer]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -199,7 +207,7 @@ const router = express.Router();
  *               type: string
  *               description: Error message
  */
-router.post('/createApplicationAnswer', uploader.any(), createApplicationAnswer);
+router.post('/createApplicationAnswer', passport.authenticate('jwt', { session: false }), uploader.any(), createApplicationAnswer);
 
 /**
  * @swagger
@@ -207,6 +215,8 @@ router.post('/createApplicationAnswer', uploader.any(), createApplicationAnswer)
  *   put:
  *     summary: Update an existing application answer by id. All the fields are optional. Performs individual update on nested objects. The items passed with an id will be kept or updated, and the items passed without an id will be created. The items that are not passed will be deleted.
  *     tags: [ApplicationAnswer]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: applicationAnswerId
@@ -243,7 +253,12 @@ router.post('/createApplicationAnswer', uploader.any(), createApplicationAnswer)
  *               type: string
  *               description: Error message
  */
-router.put('/updateApplicationAnswer/:applicationAnswerId', uploader.any(), updateApplicationAnswer);
+router.put(
+    '/updateApplicationAnswer/:applicationAnswerId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.any(),
+    updateApplicationAnswer
+);
 
 /**
  * @swagger
@@ -251,6 +266,8 @@ router.put('/updateApplicationAnswer/:applicationAnswerId', uploader.any(), upda
  *   get:
  *     summary: Get all application answers
  *     tags: [ApplicationAnswer]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: The list of application answers was successfully retrieved
@@ -269,7 +286,7 @@ router.put('/updateApplicationAnswer/:applicationAnswerId', uploader.any(), upda
  *               type: string
  *               description: Error message
  */
-router.get('/getAllApplicationAnswers', uploader.none(), getAllApplicationAnswers);
+router.get('/getAllApplicationAnswers', passport.authenticate('jwt', { session: false }), uploader.none(), getAllApplicationAnswers);
 
 /**
  * @swagger
@@ -277,6 +294,8 @@ router.get('/getAllApplicationAnswers', uploader.none(), getAllApplicationAnswer
  *   get:
  *     summary: Get an application answer by id
  *     tags: [ApplicationAnswer]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: applicationAnswerId
@@ -307,7 +326,12 @@ router.get('/getAllApplicationAnswers', uploader.none(), getAllApplicationAnswer
  *               type: string
  *               description: Error message
  */
-router.get('/getApplicationAnswer/:applicationAnswerId', uploader.none(), getApplicationAnswer);
+router.get(
+    '/getApplicationAnswer/:applicationAnswerId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    getApplicationAnswer
+);
 
 /**
  * @swagger
@@ -315,6 +339,8 @@ router.get('/getApplicationAnswer/:applicationAnswerId', uploader.none(), getApp
  *   delete:
  *     summary: Delete an application answer by id
  *     tags: [ApplicationAnswer]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: applicationAnswerId
@@ -345,6 +371,11 @@ router.get('/getApplicationAnswer/:applicationAnswerId', uploader.none(), getApp
  *               type: string
  *               description: Error message
  */
-router.delete('/deleteApplicationAnswer/:applicationAnswerId', uploader.none(), deleteApplicationAnswer);
+router.delete(
+    '/deleteApplicationAnswer/:applicationAnswerId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    deleteApplicationAnswer
+);
 
 export default router;
