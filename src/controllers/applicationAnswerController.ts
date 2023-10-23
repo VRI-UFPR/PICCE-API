@@ -1,7 +1,7 @@
-import { Response, Request } from "express";
-import { ApplicationAnswer, ItemAnswer, OptionAnswer, TableAnswer } from "@prisma/client";
-import * as yup from "yup";
-import prismaClient from "../services/prismaClient";
+import { Response, Request } from 'express';
+import { ApplicationAnswer, ItemAnswer, OptionAnswer, TableAnswer } from '@prisma/client';
+import * as yup from 'yup';
+import prismaClient from '../services/prismaClient';
 
 export const createApplicationAnswer = async (req: Request, res: Response) => {
     try {
@@ -53,7 +53,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
             .noUnknown();
 
         // Yup parsing/validation
-        const applicationAnswer = await createApplicationAnswerSchema.validate(req.body);
+        const applicationAnswer = await createApplicationAnswerSchema.validate(req.body, { stripUnknown: false });
 
         // Multer files
         const files = req.files as Express.Multer.File[];
@@ -139,7 +139,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 },
             });
         });
-        res.status(201).json({ message: "Application answer created.", data: createdApplicationAnswer });
+        res.status(201).json({ message: 'Application answer created.', data: createdApplicationAnswer });
     } catch (error: any) {
         res.status(400).json({ error: error });
     }
@@ -203,7 +203,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
             .noUnknown();
 
         // Yup parsing/validation
-        const applicationAnswer = await updateApplicationAnswerSchema.validate(req.body);
+        const applicationAnswer = await updateApplicationAnswerSchema.validate(req.body, { stripUnknown: false });
 
         // Multer files
         const files = req.files as Express.Multer.File[];
@@ -383,7 +383,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 },
             });
         });
-        res.status(200).json({ message: "Application answer updated.", data: upsertedApplicationAnswer });
+        res.status(200).json({ message: 'Application answer updated.', data: upsertedApplicationAnswer });
     } catch (error: any) {
         res.status(400).json({ error: error });
     }
@@ -407,7 +407,7 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
                 },
             },
         });
-        res.status(200).json({ message: "All application answers found.", data: applicationAnswers });
+        res.status(200).json({ message: 'All application answers found.', data: applicationAnswers });
     } catch (error: any) {
         res.status(400).json({ error: error });
     }
@@ -438,7 +438,7 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
             },
         });
 
-        res.status(200).json({ message: "Application answer found.", data: applicationAnswer });
+        res.status(200).json({ message: 'Application answer found.', data: applicationAnswer });
     } catch (error: any) {
         res.status(400).json({ error: error });
     }
@@ -456,7 +456,7 @@ export const deleteApplicationAnswer = async (req: Request, res: Response): Prom
             },
         });
 
-        res.status(200).json({ message: "Application answer deleted.", data: deletedApplicationAnswer });
+        res.status(200).json({ message: 'Application answer deleted.', data: deletedApplicationAnswer });
     } catch (error: any) {
         res.status(400).json({ error: error });
     }

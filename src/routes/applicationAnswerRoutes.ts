@@ -1,12 +1,12 @@
-import express from "express";
-import uploader from "../services/multerUploader";
+import express from 'express';
+import uploader from '../services/multerUploader';
 import {
     createApplicationAnswer,
     updateApplicationAnswer,
     getAllApplicationAnswers,
     getApplicationAnswer,
     deleteApplicationAnswer,
-} from "../controllers/applicationAnswerController";
+} from '../controllers/applicationAnswerController';
 
 /**
  * @swagger
@@ -34,6 +34,12 @@ import {
  *          type: integer
  *          description: The id of the group that the answer belongs to
  *          example: 1
+ *        files:
+ *          type: array
+ *          items: string
+ *      example:
+ *        text: "This is the answer because..."
+ *        itemId: 1
  *     OptionAnswer:
  *      type: object
  *      required:
@@ -60,6 +66,9 @@ import {
  *          type: integer
  *          description: The id of the group that the answer belongs to
  *          example: 1
+ *      example:
+ *        itemId: 1
+ *        optionId: 1
  *     TableAnswer:
  *      type: object
  *      required:
@@ -86,6 +95,9 @@ import {
  *          type: integer
  *          description: The id of the group that the answer belongs to
  *          example: 1
+ *      example:
+ *        itemId: 1
+ *        columnId: 1
  *     ItemAnswerGroup:
  *      type: object
  *      properties:
@@ -141,6 +153,11 @@ import {
  *          type: array
  *          items:
  *            $ref: '#/components/schemas/ItemAnswerGroup'
+ *      example:
+ *        date: "2021-01-01"
+ *        userId: 1
+ *        applicationId: 1
+ *        addressId: 1
  */
 const router = express.Router();
 
@@ -172,20 +189,20 @@ const router = express.Router();
  *               type: string
  *               description: Error message
  *       500:
- *         description: An error occurred while creating the application answer
+ *         description: A server-side error occurred while creating the application answer
  *         content:
  *           application/json:
  *             error:
  *               type: string
  *               description: Error message
  */
-router.post("/createApplicationAnswer", uploader.any(), createApplicationAnswer);
+router.post('/createApplicationAnswer', uploader.any(), createApplicationAnswer);
 
 /**
  * @swagger
  * /api/applicationAnswer/updateApplicationAnswer/{applicationAnswerId}:
  *   put:
- *     summary: Update an existing application answer
+ *     summary: Update an existing application answer by id. All the fields are optional. Performs individual update on nested objects: the items passed with an id will be kept or updated, and the items passed without an id will be created. The items that are not passed will be deleted.
  *     tags: [ApplicationAnswer]
  *     parameters:
  *       - in: path
@@ -209,28 +226,21 @@ router.post("/createApplicationAnswer", uploader.any(), createApplicationAnswer)
  *             data:
  *               $ref: '#/components/schemas/ApplicationAnswer'
  *       400:
- *         description: The request was malformed or invalid
- *         content:
- *           application/json:
- *             error:
- *               type: string
- *               description: Error message
- *       404:
- *         description: An application answer with the specified id was not found
+ *         description: The request was malformed/invalid or the application answer with the specified id was not found
  *         content:
  *           application/json:
  *             error:
  *               type: string
  *               description: Error message
  *       500:
- *         description: An error occurred while updating the application answer
+ *         description: An server-side error occurred while updating the application answer
  *         content:
  *           application/json:
  *             error:
  *               type: string
  *               description: Error message
  */
-router.put("/updateApplicationAnswer/:applicationAnswerId", uploader.any(), updateApplicationAnswer);
+router.put('/updateApplicationAnswer/:applicationAnswerId', uploader.any(), updateApplicationAnswer);
 
 /**
  * @swagger
@@ -256,7 +266,7 @@ router.put("/updateApplicationAnswer/:applicationAnswerId", uploader.any(), upda
  *               type: string
  *               description: Error message
  */
-router.get("/getAllApplicationAnswers", uploader.none(), getAllApplicationAnswers);
+router.get('/getAllApplicationAnswers', uploader.none(), getAllApplicationAnswers);
 
 /**
  * @swagger
@@ -279,7 +289,7 @@ router.get("/getAllApplicationAnswers", uploader.none(), getAllApplicationAnswer
  *             message: Application answer found.
  *             data:
  *               $ref: '#/components/schemas/ApplicationAnswer'
- *       404:
+ *       400:
  *         description: An application answer with the specified id was not found
  *         content:
  *           application/json:
@@ -294,7 +304,7 @@ router.get("/getAllApplicationAnswers", uploader.none(), getAllApplicationAnswer
  *               type: string
  *               description: Error message
  */
-router.get("/getApplicationAnswer/:applicationAnswerId", uploader.none(), getApplicationAnswer);
+router.get('/getApplicationAnswer/:applicationAnswerId', uploader.none(), getApplicationAnswer);
 
 /**
  * @swagger
@@ -317,7 +327,7 @@ router.get("/getApplicationAnswer/:applicationAnswerId", uploader.none(), getApp
  *             message: Application answer deleted.
  *             data:
  *               $ref: '#/components/schemas/ApplicationAnswer'
- *       404:
+ *       400:
  *         description: An application answer with the specified id was not found
  *         content:
  *           application/json:
@@ -332,6 +342,6 @@ router.get("/getApplicationAnswer/:applicationAnswerId", uploader.none(), getApp
  *               type: string
  *               description: Error message
  */
-router.delete("/deleteApplicationAnswer/:applicationAnswerId", uploader.none(), deleteApplicationAnswer);
+router.delete('/deleteApplicationAnswer/:applicationAnswerId', uploader.none(), deleteApplicationAnswer);
 
 export default router;
