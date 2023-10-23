@@ -93,7 +93,7 @@ router.post('/createApplication', uploader.none(), createApplication);
  * @swagger
  * /api/application/updateApplication/{applicationId}:
  *   put:
- *     summary: Update an existing application by id. All the fields are optional. Performs individual update on nested objects. The items passed with an id will be kept or updated, and the items passed without an id will be created. The items that are not passed will be deleted.
+ *     summary: Update an existing application by id. All the fields are optional. The nested connected fields must be passed entirely, since all the existing connected objects that are not passed will be disconnected.
  *     tags: [Application]
  *     parameters:
  *       - in: path
