@@ -110,19 +110,11 @@ router.post('/createUser', uploader.none(), createUser);
  *            data:
  *              $ref: '#/components/schemas/User'
  *      400:
- *        description: Some required fields are missing or the user does not exists
+ *        description: Some required fields are missing or the user does not exist
  *        content:
  *          application/json:
  *            error:
  *              message: Bad Request.
- *              data:
- *                $ref: '#/components/schemas/User'
- *      404:
- *        description: The user was not found
- *        content:
- *          application/json:
- *            error:
- *              message: Not Found.
  *              data:
  *                $ref: '#/components/schemas/User'
  *      500:
@@ -180,13 +172,6 @@ router.get('/getAllUsers', uploader.none(), getAllUsers);
  *             message: User found.
  *             data:
  *               $ref: '#/components/schemas/User'
- *       400:
- *         description: Some required fields are missing
- *         content:
- *           application/json:
- *             error:
- *               type: string
- *               description: Error message
  *       404:
  *         description: The user was not found
  *         content:
@@ -225,20 +210,12 @@ router.get('/getUser/:userId', uploader.none(), getUser);
  *            message: User deleted.
  *            data:
  *              $ref: '#/components/schemas/User'
- *      400:
+ *      404:
  *        description: Some required fields are missing or the user does not exists
  *        content:
  *          application/json:
  *            error:
  *              message: Bad Request.
- *              data:
- *                $ref: '#/components/schemas/User'
- *      404:
- *        description: The user was not found
- *        content:
- *          application/json:
- *            error:
- *              message: Not Found.
  *              data:
  *                $ref: '#/components/schemas/User'
  *      500:

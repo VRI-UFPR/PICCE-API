@@ -103,7 +103,7 @@ router.post('/createInstitution', uploader.none(), createInstitution);
  *             data:
  *               $ref: '#/components/schemas/Institution'
  *       400:
- *         description: Some required fields are missing or the institution does not exists
+ *         description: Some required fields are missing or the institution does not exist
  *         content:
  *           application/json:
  *             error:
@@ -163,7 +163,7 @@ router.get('/getAllInstitutions', uploader.none(), getAllInstitutions);
  *             message: Institution found.
  *             data:
  *               $ref: '#/components/schemas/Institution'
- *       400:
+ *       404:
  *         description: The institution was not found
  *         content:
  *           application/json:
@@ -197,7 +197,7 @@ router.get('/getInstitution/:institutionId', uploader.none(), getInstitution);
  *             message: Institution deleted.
  *             data:
  *               $ref: '#/components/schemas/Institution'
- *       400:
+ *       404:
  *         description: The institution was not found
  *         content:
  *           application/json:

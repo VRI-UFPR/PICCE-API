@@ -101,14 +101,6 @@ router.post('/createClassroom', uploader.none(), createClassroom);
  *               message: Bad Request.
  *               data:
  *                 $ref: '#/components/schemas/Classroom'
- *       404:
- *         description: Classroom not found
- *         content:
- *           application/json:
- *             error:
- *               message: Not Found.
- *               data:
- *                 $ref: '#/components/schemas/Classroom'
  *       500:
  *         description: Some error occurred while updating the classroom.
  *         content:

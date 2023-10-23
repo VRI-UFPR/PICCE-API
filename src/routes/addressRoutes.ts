@@ -98,14 +98,7 @@ router.post('/createAddress', uploader.none(), createAddress);
  *             data:
  *               $ref: '#/components/schemas/Address'
  *       400:
- *         description: Some required fields are missing
- *         content:
- *           application/json:
- *             error:
- *               type: string
- *               description: Error message
- *       404:
- *         description: The address was not found
+ *         description: Some required fields are missing or the address does not exist
  *         content:
  *           application/json:
  *             error:
@@ -123,7 +116,7 @@ router.put('/updateAddress/:addressId', uploader.none(), updateAddress);
 
 /**
  * @swagger
- * /api/address/getAllAddresss:
+ * /api/address/getAllAddresses:
  *   get:
  *     summary: Get all addresses
  *     tags: [Address]
@@ -145,7 +138,7 @@ router.put('/updateAddress/:addressId', uploader.none(), updateAddress);
  *               type: string
  *               description: Error message
  */
-router.get('/getAllAddresss', uploader.none(), getAllAddresses);
+router.get('/getAllAddresses', uploader.none(), getAllAddresses);
 
 /**
  * @swagger
