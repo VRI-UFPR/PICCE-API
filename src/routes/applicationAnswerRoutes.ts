@@ -1,5 +1,6 @@
 import express from 'express';
 import uploader from '../services/multerUploader';
+import passport from '../services/passportAuth';
 import {
     createApplicationAnswer,
     updateApplicationAnswer,
@@ -11,6 +12,11 @@ import {
 /**
  * @swagger
  * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
  *   schemas:
  *     ItemAnswer:
  *      type: object
@@ -34,6 +40,15 @@ import {
  *          type: integer
  *          description: The id of the group that the answer belongs to
  *          example: 1
+ *        files:
+ *          type: array
+ *          items:
+ *            type: string
+ *          description: The files of the answer
+ *          example: ["file1.png", "file2.png"]
+ *      example:
+ *        text: "This is the answer because..."
+ *        itemId: 1
  *     OptionAnswer:
  *      type: object
  *      required:
@@ -60,6 +75,9 @@ import {
  *          type: integer
  *          description: The id of the group that the answer belongs to
  *          example: 1
+ *      example:
+ *        itemId: 1
+ *        optionId: 1
  *     TableAnswer:
  *      type: object
  *      required:
@@ -86,6 +104,9 @@ import {
  *          type: integer
  *          description: The id of the group that the answer belongs to
  *          example: 1
+ *      example:
+ *        itemId: 1
+ *        columnId: 1
  *     ItemAnswerGroup:
  *      type: object
  *      properties:
@@ -141,6 +162,11 @@ import {
  *          type: array
  *          items:
  *            $ref: '#/components/schemas/ItemAnswerGroup'
+ *      example:
+ *        date: "2021-01-01"
+ *        userId: 1
+ *        applicationId: 1
+ *        addressId: 1
  */
 const router = express.Router();
 
@@ -150,6 +176,8 @@ const router = express.Router();
  *   post:
  *     summary: Create a new application answer
  *     tags: [ApplicationAnswer]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -172,21 +200,23 @@ const router = express.Router();
  *               type: string
  *               description: Error message
  *       500:
- *         description: An error occurred while creating the application answer
+ *         description: A server-side error occurred while creating the application answer
  *         content:
  *           application/json:
  *             error:
  *               type: string
  *               description: Error message
  */
-router.post('/createApplicationAnswer', uploader.none(), createApplicationAnswer);
+router.post('/createApplicationAnswer', passport.authenticate('jwt', { session: false }), uploader.any(), createApplicationAnswer);
 
 /**
  * @swagger
  * /api/applicationAnswer/updateApplicationAnswer/{applicationAnswerId}:
  *   put:
- *     summary: Update an existing application answer
+ *     summary: Update an existing application answer by id. All the fields are optional. Performs individual update on nested objects. The items passed with an id will be kept or updated, and the items passed without an id will be created. The items that are not passed will be deleted.
  *     tags: [ApplicationAnswer]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: applicationAnswerId
@@ -209,28 +239,26 @@ router.post('/createApplicationAnswer', uploader.none(), createApplicationAnswer
  *             data:
  *               $ref: '#/components/schemas/ApplicationAnswer'
  *       400:
- *         description: The request was malformed or invalid
- *         content:
- *           application/json:
- *             error:
- *               type: string
- *               description: Error message
- *       404:
- *         description: An application answer with the specified id was not found
+ *         description: The request was malformed/invalid or the application answer with the specified id was not found
  *         content:
  *           application/json:
  *             error:
  *               type: string
  *               description: Error message
  *       500:
- *         description: An error occurred while updating the application answer
+ *         description: An server-side error occurred while updating the application answer
  *         content:
  *           application/json:
  *             error:
  *               type: string
  *               description: Error message
  */
-router.put('/updateApplicationAnswer/:applicationAnswerId', uploader.none(), updateApplicationAnswer);
+router.put(
+    '/updateApplicationAnswer/:applicationAnswerId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.any(),
+    updateApplicationAnswer
+);
 
 /**
  * @swagger
@@ -238,6 +266,8 @@ router.put('/updateApplicationAnswer/:applicationAnswerId', uploader.none(), upd
  *   get:
  *     summary: Get all application answers
  *     tags: [ApplicationAnswer]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: The list of application answers was successfully retrieved
@@ -256,7 +286,7 @@ router.put('/updateApplicationAnswer/:applicationAnswerId', uploader.none(), upd
  *               type: string
  *               description: Error message
  */
-router.get('/getAllApplicationAnswers', uploader.none(), getAllApplicationAnswers);
+router.get('/getAllApplicationAnswers', passport.authenticate('jwt', { session: false }), uploader.none(), getAllApplicationAnswers);
 
 /**
  * @swagger
@@ -264,6 +294,8 @@ router.get('/getAllApplicationAnswers', uploader.none(), getAllApplicationAnswer
  *   get:
  *     summary: Get an application answer by id
  *     tags: [ApplicationAnswer]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: applicationAnswerId
@@ -279,7 +311,7 @@ router.get('/getAllApplicationAnswers', uploader.none(), getAllApplicationAnswer
  *             message: Application answer found.
  *             data:
  *               $ref: '#/components/schemas/ApplicationAnswer'
- *       404:
+ *       400:
  *         description: An application answer with the specified id was not found
  *         content:
  *           application/json:
@@ -294,7 +326,12 @@ router.get('/getAllApplicationAnswers', uploader.none(), getAllApplicationAnswer
  *               type: string
  *               description: Error message
  */
-router.get('/getApplicationAnswer/:applicationAnswerId', uploader.none(), getApplicationAnswer);
+router.get(
+    '/getApplicationAnswer/:applicationAnswerId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    getApplicationAnswer
+);
 
 /**
  * @swagger
@@ -302,6 +339,8 @@ router.get('/getApplicationAnswer/:applicationAnswerId', uploader.none(), getApp
  *   delete:
  *     summary: Delete an application answer by id
  *     tags: [ApplicationAnswer]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: applicationAnswerId
@@ -317,7 +356,7 @@ router.get('/getApplicationAnswer/:applicationAnswerId', uploader.none(), getApp
  *             message: Application answer deleted.
  *             data:
  *               $ref: '#/components/schemas/ApplicationAnswer'
- *       404:
+ *       400:
  *         description: An application answer with the specified id was not found
  *         content:
  *           application/json:
@@ -332,6 +371,11 @@ router.get('/getApplicationAnswer/:applicationAnswerId', uploader.none(), getApp
  *               type: string
  *               description: Error message
  */
-router.delete('/deleteApplicationAnswer/:applicationAnswerId', uploader.none(), deleteApplicationAnswer);
+router.delete(
+    '/deleteApplicationAnswer/:applicationAnswerId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    deleteApplicationAnswer
+);
 
 export default router;
