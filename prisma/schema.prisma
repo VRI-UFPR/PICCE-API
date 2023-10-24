@@ -10,6 +10,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum DependencyType {
+  EXACT_ANSWER
+  OPTION_SELECTED
+  MIN_SELECTED
+}
+
 enum PageType {
   ITEMS
   SUBPROTOCOL
@@ -74,7 +80,7 @@ model ApplicationAnswer {
   itemAnswerGroups ItemAnswerGroup[]
 
   userId        Int
-  user          User        @relation(fields: [userId], references: [id])
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   applicationId Int
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   addressId     Int?
@@ -91,7 +97,7 @@ model ItemAnswer {
   files File[]
 
   itemId  Int
-  item    Item            @relation(fields: [itemId], references: [id])
+  item    Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
   groupId Int
   group   ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
@@ -117,11 +123,11 @@ model OptionAnswer {
   text String
 
   itemId   Int
-  item     Item            @relation(fields: [itemId], references: [id])
+  item     Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
   groupId  Int
   group    ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   optionId Int
-  option   ItemOption      @relation(fields: [optionId], references: [id])
+  option   ItemOption      @relation(fields: [optionId], references: [id], onDelete: Cascade)
 }
 
 model TableAnswer {
@@ -132,11 +138,11 @@ model TableAnswer {
   text String
 
   itemId   Int
-  item     Item            @relation(fields: [itemId], references: [id])
+  item     Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
   groupId  Int
   group    ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   columnId Int
-  column   TableColumn     @relation(fields: [columnId], references: [id])
+  column   TableColumn     @relation(fields: [columnId], references: [id], onDelete: Cascade)
 }
 
 model Institution {
@@ -213,7 +219,7 @@ model Protocol {
   enabled     Boolean
 
   pages        Page[]
-  owners        User[]
+  owners       User[]
   applications Application[]
 }
 
@@ -225,10 +231,11 @@ model Page {
   type      PageType
   placement Int
 
-  itemGroups ItemGroup[]
+  itemGroups   ItemGroup[]
+  dependencies PageDependencyRule[]
 
   protocolId Int
-  protocol   Protocol @relation(fields: [protocolId], references: [id])
+  protocol   Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
 }
 
 model ItemGroup {
@@ -242,9 +249,10 @@ model ItemGroup {
 
   tableColumns TableColumn[]
   items        Item[]
+  dependencies ItemGroupDependencyRule[]
 
   pageId Int
-  page   Page @relation(fields: [pageId], references: [id])
+  page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
 }
 
 model Item {
@@ -258,14 +266,16 @@ model Item {
   placement   Int
   enabled     Boolean
 
-  itemOptions   ItemOption[]
-  itemAnswers   ItemAnswer[]
-  optionAnswers OptionAnswer[]
-  tableAnswers  TableAnswer[]
-  files         File[]
+  itemOptions           ItemOption[]
+  itemAnswers           ItemAnswer[]
+  optionAnswers         OptionAnswer[]
+  tableAnswers          TableAnswer[]
+  files                 File[]
+  pageDependencies      PageDependencyRule[]
+  itemGroupDependencies ItemGroupDependencyRule[]
 
   groupId   Int
-  itemGroup ItemGroup @relation(fields: [groupId], references: [id])
+  itemGroup ItemGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model ItemOption {
@@ -280,7 +290,7 @@ model ItemOption {
   files         File[]
 
   itemId Int
-  item   Item @relation(fields: [itemId], references: [id])
+  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
 
 model TableColumn {
@@ -294,7 +304,7 @@ model TableColumn {
   answers TableAnswer[]
 
   groupId   Int
-  itemGroup ItemGroup @relation(fields: [groupId], references: [id])
+  itemGroup ItemGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model File {
@@ -310,4 +320,34 @@ model File {
   itemOption   ItemOption? @relation(fields: [itemOptionId], references: [id], onDelete: Cascade)
   itemAnswerId Int?
   itemAnswer   ItemAnswer? @relation(fields: [itemAnswerId], references: [id], onDelete: Cascade)
+}
+
+model ItemGroupDependencyRule {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+
+  type          DependencyType
+  argument      String
+  customMessage String?
+
+  itemGroupId Int
+  itemGroup   ItemGroup @relation(fields: [itemGroupId], references: [id], onDelete: Cascade)
+  itemId      Int
+  item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+}
+
+model PageDependencyRule {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+
+  type          DependencyType
+  argument      String
+  customMessage String?
+
+  pageId Int
+  page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  itemId Int
+  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
