@@ -7,10 +7,16 @@ import {
     getApplication,
     deleteApplication,
 } from '../controllers/applicationController';
+import passport from '../services/passportAuth';
 
 /**
  * @swagger
  * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
  *   schemas:
  *     Application:
  *      type: object
@@ -59,6 +65,8 @@ const router = express.Router();
  *   post:
  *     summary: Create a new application
  *     tags: [Application]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -88,7 +96,7 @@ const router = express.Router();
  *               type: string
  *               description: Error message
  */
-router.post('/createApplication', uploader.none(), createApplication);
+router.post('/createApplication', passport.authenticate('jwt', { session: false }), uploader.none(), createApplication);
 
 /**
  * @swagger
@@ -96,6 +104,8 @@ router.post('/createApplication', uploader.none(), createApplication);
  *   put:
  *     summary: Update an existing application by id. All the fields are optional. The nested connected fields must be passed entirely, since all the existing connected objects that are not passed will be disconnected.
  *     tags: [Application]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: applicationId
@@ -132,33 +142,35 @@ router.post('/createApplication', uploader.none(), createApplication);
  *               type: string
  *               description: Error message
  */
-router.put('/updateApplication/:applicationId', uploader.none(), updateApplication);
+router.put('/updateApplication/:applicationId', passport.authenticate('jwt', { session: false }), uploader.none(), updateApplication);
 
 /**
  * @swagger
  * /api/application/getAllApplications:
  *   get:
- *     summary: Get all application s
+ *     summary: Get all applications
  *     tags: [Application]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: The list of application s was successfully retrieved
+ *         description: The list of applications was successfully retrieved
  *         content:
  *           application/json:
- *             message: All application s found.
+ *             message: All applications found.
  *             data:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Application'
  *       500:
- *         description: An error occurred while retrieving the list of application s
+ *         description: An error occurred while retrieving the list of applications
  *         content:
  *           application/json:
  *             error:
  *               type: string
  *               description: Error message
  */
-router.get('/getAllApplications', uploader.none(), getAllApplications);
+router.get('/getAllApplications', passport.authenticate('jwt', { session: false }), uploader.none(), getAllApplications);
 
 /**
  * @swagger
@@ -166,6 +178,8 @@ router.get('/getAllApplications', uploader.none(), getAllApplications);
  *   get:
  *     summary: Get an application by id
  *     tags: [Application]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: applicationId
@@ -196,7 +210,7 @@ router.get('/getAllApplications', uploader.none(), getAllApplications);
  *               type: string
  *               description: Error message
  */
-router.get('/getApplication/:applicationId', uploader.none(), getApplication);
+router.get('/getApplication/:applicationId', passport.authenticate('jwt', { session: false }), uploader.none(), getApplication);
 
 /**
  * @swagger
@@ -204,6 +218,8 @@ router.get('/getApplication/:applicationId', uploader.none(), getApplication);
  *   delete:
  *     summary: Delete an application by id
  *     tags: [Application]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: applicationId
@@ -234,6 +250,6 @@ router.get('/getApplication/:applicationId', uploader.none(), getApplication);
  *               type: string
  *               description: Error message
  */
-router.delete('/deleteApplication/:applicationId', uploader.none(), deleteApplication);
+router.delete('/deleteApplication/:applicationId', passport.authenticate('jwt', { session: false }), uploader.none(), deleteApplication);
 
 export default router;
