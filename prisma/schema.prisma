@@ -164,7 +164,7 @@ model User {
   hash     String
   role     UserRole
 
-  protocols            ProtocolOwner[]
+  protocols            Protocol[]
   answeredApplications ApplicationAnswer[]
   applications         Application[]       @relation(name: "Applicator")
   visibleApplications  Application[]       @relation(name: "ViewersUser")
@@ -213,7 +213,7 @@ model Protocol {
   enabled     Boolean
 
   pages        Page[]
-  owner        ProtocolOwner[]
+  owners        User[]
   applications Application[]
 }
 
@@ -229,17 +229,6 @@ model Page {
 
   protocolId Int
   protocol   Protocol @relation(fields: [protocolId], references: [id])
-}
-
-model ProtocolOwner {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
-
-  protocol_id Int
-  protocol    Protocol @relation(fields: [protocol_id], references: [id])
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
 }
 
 model ItemGroup {
