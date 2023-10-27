@@ -105,4 +105,6 @@ describe('Address tests', () => {
     }
 });
 
-prismaClient.$disconnect();
+afterAll(async () => {
+    await prismaClient.$disconnect();
+});
