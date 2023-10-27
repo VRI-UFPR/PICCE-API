@@ -17,18 +17,6 @@ CREATE TYPE "UserRole" AS ENUM ('USER', 'APLICATOR', 'PUBLISHER', 'COORDINATOR',
 CREATE TYPE "VisibilityMode" AS ENUM ('PUBLIC', 'RESTRICT');
 
 -- CreateTable
-CREATE TABLE "Address" (
-    "id" SERIAL NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updateAt" TIMESTAMP(3) NOT NULL,
-    "city" TEXT NOT NULL,
-    "state" TEXT NOT NULL,
-    "country" TEXT NOT NULL,
-
-    CONSTRAINT "Address_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "ApplicationAnswer" (
     "id" SERIAL NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -166,7 +154,7 @@ CREATE TABLE "ProtocolOwner" (
     "id" SERIAL NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updateAt" TIMESTAMP(3) NOT NULL,
-    "protocolId" INTEGER NOT NULL,
+    "protocol_id" INTEGER NOT NULL,
     "userId" INTEGER NOT NULL,
 
     CONSTRAINT "ProtocolOwner_pkey" PRIMARY KEY ("id")
@@ -225,19 +213,6 @@ CREATE TABLE "TableColumn" (
 );
 
 -- CreateTable
-CREATE TABLE "File" (
-    "id" SERIAL NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updateAt" TIMESTAMP(3) NOT NULL,
-    "path" TEXT NOT NULL,
-    "itemId" INTEGER,
-    "itemOptionId" INTEGER,
-    "itemAnswerId" INTEGER,
-
-    CONSTRAINT "File_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "_ClassroomToUser" (
     "A" INTEGER NOT NULL,
     "B" INTEGER NOT NULL
@@ -254,9 +229,6 @@ CREATE TABLE "_ViewersUser" (
     "A" INTEGER NOT NULL,
     "B" INTEGER NOT NULL
 );
-
--- CreateIndex
-CREATE UNIQUE INDEX "Address_city_state_country_key" ON "Address"("city", "state", "country");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "_ClassroomToUser_AB_unique" ON "_ClassroomToUser"("A", "B");
@@ -331,7 +303,7 @@ ALTER TABLE "Application" ADD CONSTRAINT "Application_applicatorId_fkey" FOREIGN
 ALTER TABLE "Page" ADD CONSTRAINT "Page_protocolId_fkey" FOREIGN KEY ("protocolId") REFERENCES "Protocol"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ProtocolOwner" ADD CONSTRAINT "ProtocolOwner_protocolId_fkey" FOREIGN KEY ("protocolId") REFERENCES "Protocol"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ProtocolOwner" ADD CONSTRAINT "ProtocolOwner_protocol_id_fkey" FOREIGN KEY ("protocol_id") REFERENCES "Protocol"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ProtocolOwner" ADD CONSTRAINT "ProtocolOwner_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -347,15 +319,6 @@ ALTER TABLE "ItemOption" ADD CONSTRAINT "ItemOption_itemId_fkey" FOREIGN KEY ("i
 
 -- AddForeignKey
 ALTER TABLE "TableColumn" ADD CONSTRAINT "TableColumn_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "ItemGroup"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "File" ADD CONSTRAINT "File_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "Item"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "File" ADD CONSTRAINT "File_itemOptionId_fkey" FOREIGN KEY ("itemOptionId") REFERENCES "ItemOption"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "File" ADD CONSTRAINT "File_itemAnswerId_fkey" FOREIGN KEY ("itemAnswerId") REFERENCES "ItemAnswer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_ClassroomToUser" ADD CONSTRAINT "_ClassroomToUser_A_fkey" FOREIGN KEY ("A") REFERENCES "Classroom"("id") ON DELETE CASCADE ON UPDATE CASCADE;
