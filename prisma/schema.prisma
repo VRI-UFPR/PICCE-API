@@ -164,7 +164,7 @@ model User {
   hash     String
   role     UserRole
 
-  protocols            ProtocolOwner[]
+  protocols            Protocol[]
   answeredApplications ApplicationAnswer[]
   applications         Application[]       @relation(name: "Applicator")
   visibleApplications  Application[]       @relation(name: "ViewersUser")
@@ -213,7 +213,7 @@ model Protocol {
   enabled     Boolean
 
   pages        Page[]
-  owner        ProtocolOwner[]
+  owners        User[]
   applications Application[]
 }
 
@@ -228,18 +228,7 @@ model Page {
   itemGroups ItemGroup[]
 
   protocolId Int
-  protocol   Protocol @relation(fields: [protocolId], references: [id])
-}
-
-model ProtocolOwner {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
-
-  protocol_id Int
-  protocol    Protocol @relation(fields: [protocol_id], references: [id])
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
+  protocol   Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
 }
 
 model ItemGroup {
@@ -255,7 +244,7 @@ model ItemGroup {
   items        Item[]
 
   pageId Int
-  page   Page @relation(fields: [pageId], references: [id])
+  page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
 }
 
 model Item {
@@ -276,7 +265,7 @@ model Item {
   files         File[]
 
   groupId   Int
-  itemGroup ItemGroup @relation(fields: [groupId], references: [id])
+  itemGroup ItemGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model ItemOption {
@@ -291,7 +280,7 @@ model ItemOption {
   files         File[]
 
   itemId Int
-  item   Item @relation(fields: [itemId], references: [id])
+  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
 
 model TableColumn {
