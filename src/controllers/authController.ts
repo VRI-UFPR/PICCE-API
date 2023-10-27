@@ -3,6 +3,7 @@ import { User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import jwt from 'jsonwebtoken';
+import errorFormatter from '../services/errorFormatter';
 
 export const signUp = async (req: Request, res: Response) => {
     try {
@@ -39,7 +40,7 @@ export const signUp = async (req: Request, res: Response) => {
 
         res.status(201).json({ message: 'User signed up.', data: { id: createdUser.id, token: token } });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
@@ -71,6 +72,6 @@ export const signIn = async (req: Request, res: Response) => {
 
         res.status(200).json({ message: 'User signed in.', data: { id: user.id, token: token } });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
