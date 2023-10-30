@@ -1,5 +1,5 @@
 import { Response, Request } from 'express';
-import { Protocol, ItemType, ItemGroupType, PageType } from '@prisma/client';
+import { Protocol, ItemType, ItemGroupType, PageType, ItemValidationType } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 
@@ -13,6 +13,16 @@ export const createProtocol = async (req: Request, res: Response) => {
             })
             .noUnknown();
 
+        const itemValidationsSchema = yup
+            .object()
+            .shape({
+                type: yup.string().oneOf(Object.values(ItemValidationType)).required(),
+                argument: yup.string().required(),
+                customMessage: yup.string().required(),
+                itemId: yup.number().required(),
+            })
+            .noUnknown();
+
         const itemsSchema = yup
             .object()
             .shape({
@@ -22,6 +32,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                 type: yup.string().oneOf(Object.values(ItemType)).required(),
                 placement: yup.number().min(1).required(),
                 itemOptions: yup.array().of(itemOptionsSchema).default([]),
+                itemValidations: yup.array().of(itemValidationsSchema).default([]),
             })
             .noUnknown();
 
@@ -107,6 +118,16 @@ export const createProtocol = async (req: Request, res: Response) => {
                                 },
                             });
                         }
+                        for (const [itemValidationId, itemValidation] of item.itemValidations.entries()) {
+                            const createdItemValidation = await prisma.itemValidation.create({
+                                data: {
+                                    type: itemValidation.type,
+                                    argument: itemValidation.argument,
+                                    customMessage: itemValidation.customMessage,
+                                    itemId: createdItem.id,
+                                },
+                            });
+                        }
                     }
                 }
             }
@@ -136,6 +157,17 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             })
             .noUnknown();
 
+        const updateItemValidationsSchema = yup
+            .object()
+            .shape({
+                id: yup.number(),
+                type: yup.string().oneOf(Object.values(ItemValidationType)),
+                argument: yup.string(),
+                customMessage: yup.string(),
+                itemId: yup.number(),
+            })
+            .noUnknown();
+
         const updateItemsSchema = yup
             .object()
             .shape({
@@ -147,6 +179,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 type: yup.string().oneOf(Object.values(ItemType)),
                 placement: yup.number().min(1),
                 itemOptions: yup.array().of(updateItemOptionsSchema).default([]),
+                itemValidations: yup.array().of(updateItemValidationsSchema).default([]),
             })
             .noUnknown();
 
@@ -315,6 +348,37 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                           itemId: upsertedItem.id as number,
                                       },
                                   });
+                        }
+                        for (const [itemValidationId, itemValidation] of item.itemValidations.entries()) {
+                            const upsertedItemValidation = itemValidation.id
+                                ? await prisma.itemValidation.update({
+                                      where: {
+                                          id: itemValidation.id,
+                                      },
+                                      data: {
+                                          type: itemValidation.type,
+                                          argument: itemValidation.argument,
+                                          customMessage: itemValidation.customMessage,
+                                          itemId: upsertedItem.id,
+                                      },
+                                  })
+                                : await prisma.itemValidation.create({
+                                      data: {
+                                          type: itemValidation.type as ItemValidationType,
+                                          argument: itemValidation.argument as string,
+                                          customMessage: itemValidation.customMessage as string,
+                                          itemId: upsertedItem.id as number,
+                                      },
+                                  });
+                            prisma.itemValidation.deleteMany({
+                                where: {
+                                    id: {
+                                        notIn: item.itemValidations
+                                            .filter((itemValidation) => itemValidation.id)
+                                            .map((itemValidation) => itemValidation.id as number),
+                                    },
+                                },
+                            });
                         }
                     }
                 }
