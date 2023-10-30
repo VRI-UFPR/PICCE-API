@@ -49,6 +49,13 @@ enum VisibilityMode {
   RESTRICT
 }
 
+enum ItemValidationType {
+  MANDATORY
+  MIN
+  MAX
+  MAX_ANSWERS
+}
+
 model Address {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
@@ -263,9 +270,23 @@ model Item {
   optionAnswers OptionAnswer[]
   tableAnswers  TableAnswer[]
   files         File[]
+  itemValidations   ItemValidation[]
 
   groupId   Int
   itemGroup ItemGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
+
+model ItemValidation {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+
+  type   ItemValidationType
+  argument String
+  customMessage String
+
+  itemId       Int
+  item         Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
 
 model ItemOption {
