@@ -5,6 +5,7 @@ import prismaClient from '../services/prismaClient';
 
 export const createProtocol = async (req: Request, res: Response) => {
     try {
+        // Yup schemas
         const itemOptionsSchema = yup
             .object()
             .shape({
@@ -66,8 +67,13 @@ export const createProtocol = async (req: Request, res: Response) => {
             })
             .noUnknown();
 
+        //Yup parsing/validation
         const protocol = await createProtocolSchema.validate(req.body);
 
+        //Multer files
+        const files = req.files as Express.Multer.File[];
+
+        // Prisma transaction
         const createdProtocol = await prismaClient.$transaction(async (prisma) => {
             const createdProtocol = await prisma.protocol.create({
                 data: {
@@ -81,6 +87,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                     },
                 },
             });
+            // Create nested pages as well as nested itemGroups, items, itemOptions and itemValidations
             for (const [pageId, page] of protocol.pages.entries()) {
                 const createdPage = await prisma.page.create({
                     data: {
@@ -99,6 +106,11 @@ export const createProtocol = async (req: Request, res: Response) => {
                         },
                     });
                     for (const [itemId, item] of itemGroup.items.entries()) {
+                        const itemFiles = files
+                            .filter((file) => file.fieldname === `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][files]`)
+                            .map((file) => {
+                                return { path: file.path };
+                            });
                         const createdItem = await prisma.item.create({
                             data: {
                                 text: item.text,
@@ -107,14 +119,30 @@ export const createProtocol = async (req: Request, res: Response) => {
                                 groupId: createdItemGroup.id,
                                 type: item.type,
                                 placement: item.placement,
+                                files: {
+                                    create: itemFiles,
+                                },
                             },
                         });
                         for (const [itemOptionId, itemOption] of item.itemOptions.entries()) {
+                            const itemOptionFiles = files
+                                .filter(
+                                    (file) =>
+                                        file.fieldname ===
+                                        `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][itemOptions][${itemOptionId}][files]`
+                                )
+                                .map((file) => {
+                                    return { path: file.path };
+                                });
+
                             const createdItemOption = await prisma.itemOption.create({
                                 data: {
                                     text: itemOption.text,
                                     placement: itemOption.placement,
                                     itemId: createdItem.id,
+                                    files: {
+                                        create: itemOptionFiles,
+                                    },
                                 },
                             });
                         }
@@ -131,9 +159,31 @@ export const createProtocol = async (req: Request, res: Response) => {
                     }
                 }
             }
+            // Return the created application answer with nested content included
             return await prisma.protocol.findUnique({
                 where: {
                     id: createdProtocol.id,
+                },
+                include: {
+                    pages: {
+                        include: {
+                            itemGroups: {
+                                include: {
+                                    items: {
+                                        include: {
+                                            itemOptions: {
+                                                include: {
+                                                    files: true,
+                                                },
+                                            },
+                                            itemValidations: true,
+                                            files: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
                 },
             });
         });
@@ -145,8 +195,10 @@ export const createProtocol = async (req: Request, res: Response) => {
 
 export const updateProtocol = async (req: Request, res: Response): Promise<void> => {
     try {
+        // ID from params
         const id: number = parseInt(req.params.protocolId);
 
+        // Yup schemas
         const updateItemOptionsSchema = yup
             .object()
             .shape({
@@ -154,6 +206,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 text: yup.string().min(3).max(255),
                 placement: yup.number().min(1),
                 itemId: yup.number(),
+                filesIds: yup.array().of(yup.number()).default([]),
             })
             .noUnknown();
 
@@ -180,6 +233,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 placement: yup.number().min(1),
                 itemOptions: yup.array().of(updateItemOptionsSchema).default([]),
                 itemValidations: yup.array().of(updateItemValidationsSchema).default([]),
+                filesIds: yup.array().of(yup.number()).default([]),
             })
             .noUnknown();
 
@@ -217,9 +271,15 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             })
             .noUnknown();
 
+        //Yup parsing/validation
         const protocol = await updateProtocolSchema.validate(req.body);
 
+        //Multer files
+        const files = req.files as Express.Multer.File[];
+
+        // Prisma transaction
         const upsertedProtocol = await prismaClient.$transaction(async (prisma) => {
+            // Update protocol
             await prisma.protocol.update({
                 where: {
                     id: id,
@@ -236,6 +296,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                     },
                 },
             });
+            // Remove pages that are not in the updated protocol
             prisma.page.deleteMany({
                 where: {
                     id: {
@@ -244,6 +305,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 },
             });
             for (const [pageId, page] of protocol.pages.entries()) {
+                // Update existing pages or create new ones
                 const upsertedPage = page.id
                     ? await prisma.page.update({
                           where: {
@@ -262,6 +324,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                               type: page.type as PageType,
                           },
                       });
+                // Remove itemGroups that are not in the updated page
                 prisma.itemGroup.deleteMany({
                     where: {
                         id: {
@@ -270,6 +333,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                     },
                 });
                 for (const [itemGroupId, itemGroup] of page.itemGroups.entries()) {
+                    // Update existing itemGroups or create new ones
                     const upsertedItemGroup = itemGroup.id
                         ? await prisma.itemGroup.update({
                               where: {
@@ -290,6 +354,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                   type: itemGroup.type as ItemGroupType,
                               },
                           });
+                    // Remove items that are not in the updated itemGroup
                     prisma.item.deleteMany({
                         where: {
                             id: {
@@ -298,6 +363,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                         },
                     });
                     for (const [itemId, item] of itemGroup.items.entries()) {
+                        // Update existing items or create new ones
                         const upsertedItem = item.id
                             ? await prisma.item.update({
                                   where: {
@@ -322,6 +388,25 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                       placement: item.placement as number,
                                   },
                               });
+                        // Remove files that are not in the updated item
+                        await prisma.file.deleteMany({
+                            where: {
+                                id: {
+                                    notIn: item.filesIds as number[],
+                                },
+                            },
+                        });
+                        const itemFiles = files
+                            .filter((file) => file.fieldname === `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][files]`)
+                            .map((file) => {
+                                return { path: file.path, itemId: upsertedItem.id };
+                            });
+
+                        // Create new files (updating files is not supported)
+                        await prisma.file.createMany({
+                            data: itemFiles,
+                        });
+                        // Remove itemOptions that are not in the updated item
                         prisma.itemOption.deleteMany({
                             where: {
                                 id: {
@@ -330,6 +415,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                             },
                         });
                         for (const [itemOptionId, itemOption] of item.itemOptions.entries()) {
+                            // Update existing itemOptions or create new ones
                             const upsertedItemOption = itemOption.id
                                 ? await prisma.itemOption.update({
                                       where: {
@@ -348,8 +434,40 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                           itemId: upsertedItem.id as number,
                                       },
                                   });
+                            // Remove files that are not in the updated itemOption
+                            await prisma.file.deleteMany({
+                                where: {
+                                    id: {
+                                        notIn: itemOption.filesIds as number[],
+                                    },
+                                },
+                            });
+                            const itemOptionFiles = files
+                                .filter(
+                                    (file) =>
+                                        file.fieldname ===
+                                        `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][itemOptions][${itemOptionId}][files]`
+                                )
+                                .map((file) => {
+                                    return { path: file.path, itemOptionId: upsertedItemOption.id };
+                                });
+                            // Create new files (updating files is not supported)
+                            await prisma.file.createMany({
+                                data: itemOptionFiles,
+                            });
                         }
+                        // Remove itemValidations that are not in the updated item
+                        await prisma.itemValidation.deleteMany({
+                            where: {
+                                id: {
+                                    notIn: item.itemValidations
+                                        .filter((itemValidation) => itemValidation.id)
+                                        .map((itemValidation) => itemValidation.id as number),
+                                },
+                            },
+                        });
                         for (const [itemValidationId, itemValidation] of item.itemValidations.entries()) {
+                            // Update existing itemValidations or create new ones
                             const upsertedItemValidation = itemValidation.id
                                 ? await prisma.itemValidation.update({
                                       where: {
@@ -370,15 +488,6 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                           itemId: upsertedItem.id as number,
                                       },
                                   });
-                            prisma.itemValidation.deleteMany({
-                                where: {
-                                    id: {
-                                        notIn: item.itemValidations
-                                            .filter((itemValidation) => itemValidation.id)
-                                            .map((itemValidation) => itemValidation.id as number),
-                                    },
-                                },
-                            });
                         }
                     }
                 }
@@ -386,6 +495,27 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             return await prisma.protocol.findUnique({
                 where: {
                     id: id,
+                },
+                include: {
+                    pages: {
+                        include: {
+                            itemGroups: {
+                                include: {
+                                    items: {
+                                        include: {
+                                            itemOptions: {
+                                                include: {
+                                                    files: true,
+                                                },
+                                            },
+                                            itemValidations: true,
+                                            files: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
                 },
             });
         });
