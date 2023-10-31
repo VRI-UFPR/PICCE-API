@@ -297,7 +297,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 },
             });
             // Remove pages that are not in the updated protocol
-            prisma.page.deleteMany({
+            await prisma.page.deleteMany({
                 where: {
                     id: {
                         notIn: protocol.pages.filter((page) => page.id).map((page) => page.id as number),
@@ -325,7 +325,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                           },
                       });
                 // Remove itemGroups that are not in the updated page
-                prisma.itemGroup.deleteMany({
+                await prisma.itemGroup.deleteMany({
                     where: {
                         id: {
                             notIn: page.itemGroups.filter((itemGroup) => itemGroup.id).map((itemGroup) => itemGroup.id as number),
@@ -355,7 +355,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                               },
                           });
                     // Remove items that are not in the updated itemGroup
-                    prisma.item.deleteMany({
+                    await prisma.item.deleteMany({
                         where: {
                             id: {
                                 notIn: itemGroup.items.filter((item) => item.id).map((item) => item.id as number),
@@ -407,7 +407,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                             data: itemFiles,
                         });
                         // Remove itemOptions that are not in the updated item
-                        prisma.itemOption.deleteMany({
+                        await prisma.itemOption.deleteMany({
                             where: {
                                 id: {
                                     notIn: item.itemOptions.filter((itemOption) => item.id).map((itemOption) => itemOption.id as number),
@@ -492,6 +492,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                     }
                 }
             }
+            // Return the updated application answer with nested content included
             return await prisma.protocol.findUnique({
                 where: {
                     id: id,
@@ -527,7 +528,30 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
 
 export const getAllProtocols = async (req: Request, res: Response): Promise<void> => {
     try {
-        const protocol: Protocol[] = await prismaClient.protocol.findMany();
+        // Get all protocols with nested content included
+        const protocol: Protocol[] = await prismaClient.protocol.findMany({
+            include: {
+                pages: {
+                    include: {
+                        itemGroups: {
+                            include: {
+                                items: {
+                                    include: {
+                                        itemOptions: {
+                                            include: {
+                                                files: true,
+                                            },
+                                        },
+                                        itemValidations: true,
+                                        files: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
         res.status(200).json({ message: 'All protocols found.', data: protocol });
     } catch (error: any) {
         res.status(400).json({ error: error });
@@ -536,11 +560,34 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
 
 export const getProtocol = async (req: Request, res: Response): Promise<void> => {
     try {
+        // ID from params
         const id: number = parseInt(req.params.protocolId);
 
+        // Get protocol with nested content included
         const protocol: Protocol = await prismaClient.protocol.findUniqueOrThrow({
             where: {
                 id,
+            },
+            include: {
+                pages: {
+                    include: {
+                        itemGroups: {
+                            include: {
+                                items: {
+                                    include: {
+                                        itemOptions: {
+                                            include: {
+                                                files: true,
+                                            },
+                                        },
+                                        itemValidations: true,
+                                        files: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             },
         });
 
@@ -552,8 +599,10 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
 
 export const deleteProtocol = async (req: Request, res: Response): Promise<void> => {
     try {
+        // ID from params
         const id: number = parseInt(req.params.protocolId);
 
+        // Delete protocol
         const deletedProtocol: Protocol = await prismaClient.protocol.delete({
             where: {
                 id,
