@@ -68,7 +68,7 @@ export const createProtocol = async (req: Request, res: Response) => {
             .noUnknown();
 
         //Yup parsing/validation
-        const protocol = await createProtocolSchema.validate(req.body);
+        const protocol = await createProtocolSchema.validate(req.body, { stripUnknown: true });
 
         //Multer files
         const files = req.files as Express.Multer.File[];
@@ -272,7 +272,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             .noUnknown();
 
         //Yup parsing/validation
-        const protocol = await updateProtocolSchema.validate(req.body);
+        const protocol = await updateProtocolSchema.validate(req.body, { stripUnknown: true });
 
         //Multer files
         const files = req.files as Express.Multer.File[];
@@ -302,6 +302,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                     id: {
                         notIn: protocol.pages.filter((page) => page.id).map((page) => page.id as number),
                     },
+                    protocolId: id,
                 },
             });
             for (const [pageId, page] of protocol.pages.entries()) {
@@ -310,9 +311,9 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                     ? await prisma.page.update({
                           where: {
                               id: page.id,
+                              protocolId: id,
                           },
                           data: {
-                              protocolId: id,
                               placement: page.placement,
                               type: page.type,
                           },
@@ -330,6 +331,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                         id: {
                             notIn: page.itemGroups.filter((itemGroup) => itemGroup.id).map((itemGroup) => itemGroup.id as number),
                         },
+                        pageId: upsertedPage.id,
                     },
                 });
                 for (const [itemGroupId, itemGroup] of page.itemGroups.entries()) {
@@ -338,11 +340,11 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                         ? await prisma.itemGroup.update({
                               where: {
                                   id: itemGroup.id,
+                                  pageId: upsertedPage.id,
                               },
                               data: {
                                   placement: itemGroup.placement,
                                   isRepeatable: itemGroup.isRepeatable,
-                                  pageId: upsertedPage.id,
                                   type: itemGroup.type,
                               },
                           })
@@ -360,6 +362,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                             id: {
                                 notIn: itemGroup.items.filter((item) => item.id).map((item) => item.id as number),
                             },
+                            groupId: upsertedItemGroup.id,
                         },
                     });
                     for (const [itemId, item] of itemGroup.items.entries()) {
@@ -368,12 +371,12 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                             ? await prisma.item.update({
                                   where: {
                                       id: item.id,
+                                      groupId: upsertedItemGroup.id,
                                   },
                                   data: {
                                       text: item.text,
                                       description: item.description,
                                       enabled: item.enabled,
-                                      groupId: upsertedItemGroup.id,
                                       type: item.type,
                                       placement: item.placement,
                                   },
@@ -394,6 +397,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                 id: {
                                     notIn: item.filesIds as number[],
                                 },
+                                itemId: upsertedItem.id,
                             },
                         });
                         const itemFiles = files
@@ -412,6 +416,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                 id: {
                                     notIn: item.itemOptions.filter((itemOption) => item.id).map((itemOption) => itemOption.id as number),
                                 },
+                                itemId: upsertedItem.id,
                             },
                         });
                         for (const [itemOptionId, itemOption] of item.itemOptions.entries()) {
@@ -420,11 +425,11 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                 ? await prisma.itemOption.update({
                                       where: {
                                           id: itemOption.id,
+                                          itemId: upsertedItem.id,
                                       },
                                       data: {
                                           text: itemOption.text,
                                           placement: itemOption.placement,
-                                          itemId: upsertedItem.id,
                                       },
                                   })
                                 : await prisma.itemOption.create({
@@ -440,6 +445,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                     id: {
                                         notIn: itemOption.filesIds as number[],
                                     },
+                                    itemOptionId: upsertedItemOption.id,
                                 },
                             });
                             const itemOptionFiles = files
@@ -464,6 +470,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                         .filter((itemValidation) => itemValidation.id)
                                         .map((itemValidation) => itemValidation.id as number),
                                 },
+                                itemId: upsertedItem.id,
                             },
                         });
                         for (const [itemValidationId, itemValidation] of item.itemValidations.entries()) {
@@ -472,12 +479,12 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                 ? await prisma.itemValidation.update({
                                       where: {
                                           id: itemValidation.id,
+                                          itemId: upsertedItem.id,
                                       },
                                       data: {
                                           type: itemValidation.type,
                                           argument: itemValidation.argument,
                                           customMessage: itemValidation.customMessage,
-                                          itemId: upsertedItem.id,
                                       },
                                   })
                                 : await prisma.itemValidation.create({
