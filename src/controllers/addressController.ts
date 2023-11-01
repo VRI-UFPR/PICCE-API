@@ -8,9 +8,10 @@ export const createAddress = async (req: Request, res: Response) => {
         const createAddressSchema = yup
             .object()
             .shape({
-                city: yup.string().min(1).required(),
-                state: yup.string().min(1).required(),
-                country: yup.string().min(1).required(),
+                id: yup.number(),
+                city: yup.string().min(3).max(255).required(),
+                state: yup.string().min(3).max(255).required(),
+                country: yup.string().min(3).max(255).required(),
             })
             .noUnknown();
 
