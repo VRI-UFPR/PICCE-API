@@ -22,12 +22,13 @@ describe('Address tests', () => {
                 },
             };
 
-            const response = await request(app)
-                .post('/api/address/createAddress')
-                .field('id', address.original.id)
-                .field('city', address.original.city)
-                .field('state', address.original.state)
-                .field('country', address.original.country);
+            const req = request(app).post('/api/address/createAddress');
+
+            for (const [key, value] of Object.entries(address.original)) {
+                req.field(key, value);
+            }
+
+            const response = await req;
 
             expect(response.status).toBe(201);
             expect(response.body).toEqual(expectedResponse);
@@ -43,11 +44,13 @@ describe('Address tests', () => {
                 },
             };
 
-            const response = await request(app)
-                .put(`/api/address/updateAddress/${address.original.id}`)
-                .field('city', address.updated.city)
-                .field('state', address.updated.state)
-                .field('country', address.updated.country);
+            const req = request(app).put(`/api/address/updateAddress/${address.original.id}`);
+
+            for (const [key, value] of Object.entries(address.updated)) {
+                req.field(key, value);
+            }
+
+            const response = await req;
 
             expect(response.status).toBe(200);
             expect(response.body).toEqual(expectedResponse);
