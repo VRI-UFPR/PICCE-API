@@ -8,9 +8,9 @@ export const createAddress = async (req: Request, res: Response) => {
         const createAddressSchema = yup
             .object()
             .shape({
-                city: yup.string().min(3).max(255).required(),
-                state: yup.string().min(3).max(255).required(),
-                country: yup.string().min(3).max(255).required(),
+                city: yup.string().min(1).required(),
+                state: yup.string().min(1).required(),
+                country: yup.string().min(1).required(),
             })
             .noUnknown();
 
@@ -30,24 +30,27 @@ export const updateAddress = async (req: Request, res: Response): Promise<void> 
     try {
         const id: number = parseInt(req.params.addressId);
 
-        const createAddressSchema = yup
+        const updateAddressSchema = yup
             .object()
             .shape({
-                city: yup.string().min(3).max(255),
-                state: yup.string().min(3).max(255),
-                country: yup.string().min(3).max(255),
+                city: yup.string().min(1),
+                state: yup.string().min(1),
+                country: yup.string().min(1),
             })
             .noUnknown();
 
-        const address = await createAddressSchema.validate(req.body);
+        const address = await updateAddressSchema.validate(req.body);
 
         const updatedAddress: Address = await prismaClient.address.update({
             where: {
                 id,
             },
-            data: address,
+            data: {
+                city: address.city,
+                state: address.state,
+                country: address.country,
+            },
         });
-
         res.status(200).json({ message: 'Address updated.', data: updatedAddress });
     } catch (error: any) {
         res.status(400).json({ error: error });
@@ -71,8 +74,10 @@ export const getAddress = async (req: Request, res: Response): Promise<void> => 
             where: {
                 id,
             },
+            include: {
+                institutions: true,
+            },
         });
-
         res.status(200).json({ message: 'Address found.', data: address });
     } catch (error: any) {
         res.status(400).json({ error: error });
@@ -88,7 +93,6 @@ export const deleteAddress = async (req: Request, res: Response): Promise<void> 
                 id,
             },
         });
-
         res.status(200).json({ message: 'Address deleted.', data: deletedAddress });
     } catch (error: any) {
         res.status(400).json({ error: error });
