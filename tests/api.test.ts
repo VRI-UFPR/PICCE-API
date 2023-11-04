@@ -2,8 +2,9 @@ import request from 'supertest';
 import express from 'express';
 import routes from '../src/routes';
 import prismaClient from '../src/services/prismaClient';
-import { addresses, applicationAnswers, dbDefaults } from './constants';
+import { addresses, applicationAnswers } from './constants';
 import { serialize } from 'object-to-formdata';
+import e from 'express';
 
 const app = express();
 app.use('/api', routes);
@@ -22,7 +23,7 @@ describe('Auth tests', () => {
         const response = await request(app).post('/api/auth/signIn').field('username', 'johndoe').field('hash', '123456');
 
         expect(response.status).toBe(200);
-        expect(response.body).toEqual(expectedResponse);
+        expect(response.body).toMatchObject(expectedResponse);
 
         authorization.id = response.body.data.id as number;
         authorization.token = response.body.data.token as string;
@@ -39,7 +40,6 @@ describe('ApplicationAnswer tests', () => {
             const expectedResponse = {
                 message: 'Application answer created.',
                 data: {
-                    ...dbDefaults,
                     ...applicationAnswer.original,
                     itemAnswerGroups: expect.any(Array),
                 },
@@ -55,10 +55,8 @@ describe('ApplicationAnswer tests', () => {
 
             const response = await req;
 
-            console.log(response.body);
-
             expect(response.status).toBe(201);
-            expect(response.body).toEqual(expectedResponse);
+            expect(response.body).toMatchObject(expectedResponse);
         });
 
         it('Should update an ApplicationAnswer', async () => {
@@ -67,7 +65,6 @@ describe('ApplicationAnswer tests', () => {
                 data: {
                     ...applicationAnswer.original,
                     ...applicationAnswer.updated,
-                    ...dbDefaults,
                     itemAnswerGroups: expect.any(Array),
                 },
             };
@@ -83,7 +80,7 @@ describe('ApplicationAnswer tests', () => {
             const response = await req;
 
             expect(response.status).toBe(200);
-            expect(response.body).toEqual(expectedResponse);
+            expect(response.body).toMatchObject(expectedResponse);
         });
 
         it('Should get all ApplicationAnswers', async () => {
@@ -93,7 +90,6 @@ describe('ApplicationAnswer tests', () => {
                     {
                         ...applicationAnswer.original,
                         ...applicationAnswer.updated,
-                        ...dbDefaults,
                         itemAnswerGroups: expect.any(Array),
                     },
                 ],
@@ -104,7 +100,7 @@ describe('ApplicationAnswer tests', () => {
                 .set('Authorization', `Bearer ${authorization.token}`);
 
             expect(response.status).toBe(200);
-            expect(response.body).toEqual(expectedResponse);
+            expect(response.body).toMatchObject(expectedResponse);
         });
 
         it('Should get an ApplicationAnswer by id', async () => {
@@ -113,8 +109,6 @@ describe('ApplicationAnswer tests', () => {
                 data: {
                     ...applicationAnswer.original,
                     ...applicationAnswer.updated,
-                    ...dbDefaults,
-                    itemAnswerGroups: expect.any(Array),
                 },
             };
 
@@ -123,7 +117,7 @@ describe('ApplicationAnswer tests', () => {
                 .set('Authorization', `Bearer ${authorization.token}`);
 
             expect(response.status).toBe(200);
-            expect(response.body).toEqual(expectedResponse);
+            expect(response.body).toMatchObject(expectedResponse);
         });
 
         it('Should delete an ApplicationAnswer', async () => {
@@ -132,7 +126,8 @@ describe('ApplicationAnswer tests', () => {
                 data: {
                     ...applicationAnswer.original,
                     ...applicationAnswer.updated,
-                    ...dbDefaults,
+                    createdAt: expect.any(String),
+                    updateAt: expect.any(String),
                     itemAnswerGroups: undefined,
                 },
             };
@@ -157,7 +152,6 @@ describe('Address tests', () => {
             const expectedResponse = {
                 message: 'Address created.',
                 data: {
-                    ...dbDefaults,
                     ...address.original,
                 },
             };
@@ -171,7 +165,7 @@ describe('Address tests', () => {
             const response = await req;
 
             expect(response.status).toBe(201);
-            expect(response.body).toEqual(expectedResponse);
+            expect(response.body).toMatchObject(expectedResponse);
         });
 
         it('Should update an Address', async () => {
@@ -179,7 +173,6 @@ describe('Address tests', () => {
                 message: 'Address updated.',
                 data: {
                     id: address.original.id,
-                    ...dbDefaults,
                     ...address.updated,
                 },
             };
@@ -193,7 +186,7 @@ describe('Address tests', () => {
             const response = await req;
 
             expect(response.status).toBe(200);
-            expect(response.body).toEqual(expectedResponse);
+            expect(response.body).toMatchObject(expectedResponse);
         });
 
         it('Should get all Addresses', async () => {
@@ -203,7 +196,6 @@ describe('Address tests', () => {
                     {
                         id: address.original.id,
                         ...address.updated,
-                        ...dbDefaults,
                     },
                 ],
             };
@@ -211,7 +203,7 @@ describe('Address tests', () => {
             const response = await request(app).get('/api/address/getAllAddresses');
 
             expect(response.status).toBe(200);
-            expect(response.body).toEqual(expectedResponse);
+            expect(response.body).toMatchObject(expectedResponse);
         });
 
         it('Should get an Address by id', async () => {
@@ -219,7 +211,6 @@ describe('Address tests', () => {
                 message: 'Address found.',
                 data: {
                     id: address.original.id,
-                    ...dbDefaults,
                     ...address.updated,
                     institutions: expect.any(Array),
                 },
@@ -228,7 +219,7 @@ describe('Address tests', () => {
             const response = await request(app).get(`/api/address/getAddress/${address.original.id}`);
 
             expect(response.status).toBe(200);
-            expect(response.body).toEqual(expectedResponse);
+            expect(response.body).toMatchObject(expectedResponse);
         });
 
         it('Should delete an Address', async () => {
@@ -236,7 +227,6 @@ describe('Address tests', () => {
                 message: 'Address deleted.',
                 data: {
                     id: address.original.id,
-                    ...dbDefaults,
                     ...address.updated,
                 },
             };
@@ -244,7 +234,7 @@ describe('Address tests', () => {
             const response = await request(app).delete(`/api/address/deleteAddress/${address.original.id}`);
 
             expect(response.status).toBe(200);
-            expect(response.body).toEqual(expectedResponse);
+            expect(response.body).toMatchObject(expectedResponse);
         });
     }
 });

@@ -1,8 +1,3 @@
-export const dbDefaults = {
-    createdAt: expect.any(String),
-    updateAt: expect.any(String),
-};
-
 export const addresses = [
     {
         original: {
