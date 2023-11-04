@@ -128,6 +128,7 @@ describe('ApplicationAnswer tests', () => {
                     ...applicationAnswer.updated,
                     createdAt: expect.any(String),
                     updateAt: expect.any(String),
+                    userId: expect.any(Number),
                     itemAnswerGroups: undefined,
                 },
             };

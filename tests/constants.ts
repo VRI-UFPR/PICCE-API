@@ -19,7 +19,6 @@ export const applicationAnswers = [
         original: {
             id: 1,
             date: '2021-01-01T03:00:00.000Z',
-            userId: 1,
             applicationId: 1,
             addressId: 1,
             itemAnswerGroups: [
