@@ -2,6 +2,7 @@ import { Response, Request } from 'express';
 import { ApplicationAnswer, User } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
+import errorFormatter from '../services/errorFormatter';
 
 export const createApplicationAnswer = async (req: Request, res: Response) => {
     try {
@@ -178,7 +179,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         });
         res.status(201).json({ message: 'Application answer created.', data: createdApplicationAnswer });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
@@ -462,7 +463,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
         });
         res.status(200).json({ message: 'Application answer updated.', data: upsertedApplicationAnswer });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
@@ -508,7 +509,7 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
                   });
         res.status(200).json({ message: 'All application answers found.', data: applicationAnswers });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
@@ -563,7 +564,7 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
 
         res.status(200).json({ message: 'Application answer found.', data: applicationAnswer });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
@@ -592,6 +593,6 @@ export const deleteApplicationAnswer = async (req: Request, res: Response): Prom
 
         res.status(200).json({ message: 'Application answer deleted.', data: deletedApplicationAnswer });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };

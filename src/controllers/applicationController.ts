@@ -2,6 +2,7 @@ import { Response, Request } from 'express';
 import { Application, User, VisibilityMode } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
+import errorFormatter from '../services/errorFormatter';
 
 export const createApplication = async (req: Request, res: Response) => {
     try {
@@ -17,7 +18,7 @@ export const createApplication = async (req: Request, res: Response) => {
             .noUnknown();
 
         // Yup parsing/validation
-        const application = await createApplicationSchema.validate(req.body);
+        const application = await createApplicationSchema.validate(req.body, { stripUnknown: false });
 
         // User from Passport-JWT
         const user = req.user as User;
@@ -43,7 +44,7 @@ export const createApplication = async (req: Request, res: Response) => {
 
         res.status(201).json({ message: 'Application created.', data: createdApplication });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
@@ -64,7 +65,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
             .noUnknown();
 
         // Yup parsing/validation
-        const application = await updateApplicationSchema.validate(req.body);
+        const application = await updateApplicationSchema.validate(req.body, { stripUnknown: false });
 
         // User from Passport-JWT
         const user = req.user as User;
@@ -104,7 +105,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
 
         res.status(200).json({ message: 'Application updated.', data: updatedApplication });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
@@ -133,7 +134,7 @@ export const getAllApplications = async (req: Request, res: Response): Promise<v
                   });
         res.status(200).json({ message: 'All applicationes found.', data: applicationes });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
@@ -170,7 +171,7 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
 
         res.status(200).json({ message: 'Application found.', data: application });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
@@ -199,6 +200,6 @@ export const deleteApplication = async (req: Request, res: Response): Promise<vo
 
         res.status(200).json({ message: 'Application deleted.', data: deletedApplication });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
