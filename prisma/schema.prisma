@@ -167,7 +167,7 @@ model User {
   updateAt  DateTime @updatedAt
 
   name     String
-  username String
+  username String @unique
   hash     String
   role     UserRole
 
@@ -177,8 +177,8 @@ model User {
   visibleApplications  Application[]       @relation(name: "ViewersUser")
   classrooms           Classroom[]
 
-  institutionId Int
-  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  institutionId Int?
+  institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
 }
 
 model Classroom {
