@@ -3,6 +3,7 @@ import express from 'express';
 import routes from '../src/routes';
 import prismaClient from '../src/services/prismaClient';
 import { addresses, dbDefaults } from './constants';
+import { serialize } from 'object-to-formdata';
 
 const app = express();
 app.use('/api', routes);
@@ -24,8 +25,8 @@ describe('Address tests', () => {
 
             const req = request(app).post('/api/address/createAddress');
 
-            for (const [key, value] of Object.entries(address.original)) {
-                req.field(key, value);
+            for (const [name, value] of serialize(address.original, { indices: true })) {
+                req.field(name, value.toString());
             }
 
             const response = await req;
@@ -46,8 +47,8 @@ describe('Address tests', () => {
 
             const req = request(app).put(`/api/address/updateAddress/${address.original.id}`);
 
-            for (const [key, value] of Object.entries(address.updated)) {
-                req.field(key, value);
+            for (const [name, value] of serialize(address.updated, { indices: true })) {
+                req.field(name, value.toString());
             }
 
             const response = await req;
@@ -68,7 +69,7 @@ describe('Address tests', () => {
                 ],
             };
 
-            const response = await request(app).get('/api/address/getAllAddresss');
+            const response = await request(app).get('/api/address/getAllAddresses');
 
             expect(response.status).toBe(200);
             expect(response.body).toEqual(expectedResponse);
@@ -81,6 +82,7 @@ describe('Address tests', () => {
                     id: address.original.id,
                     ...dbDefaults,
                     ...address.updated,
+                    institutions: expect.any(Array),
                 },
             };
 
