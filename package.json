@@ -5,8 +5,7 @@
     "main": "index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "start": "nodemon --watch 'src/' --exec 'ts-node src/app.ts' -e ts",
-        "prettier": "prettier --config .prettierrc --write \"src/**/*.{js,ts}\""
+        "start": "nodemon --watch 'src/' --exec 'ts-node src/app.ts' -e ts"
     },
     "repository": {
         "type": "git",
