@@ -1,7 +1,8 @@
 import { Response, Request } from 'express';
-import { ApplicationAnswer, ItemAnswer, OptionAnswer, TableAnswer } from '@prisma/client';
+import { ApplicationAnswer, User } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
+import errorFormatter from '../services/errorFormatter';
 
 export const createApplicationAnswer = async (req: Request, res: Response) => {
     try {
@@ -57,6 +58,43 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
 
         // Multer files
         const files = req.files as Express.Multer.File[];
+
+        // User from Passport-JWT
+        const user = req.user as User;
+
+        // Check if user is allowed to answer this application
+        if (user.role !== 'ADMIN') {
+            await prismaClient.application.findUniqueOrThrow({
+                where: {
+                    id: applicationAnswer.applicationId,
+                    OR: [
+                        {
+                            viewersClassroom: {
+                                some: {
+                                    users: {
+                                        some: {
+                                            id: user.id,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            viewersUser: {
+                                some: {
+                                    id: user.id,
+                                },
+                            },
+                        },
+                        {
+                            applicator: {
+                                id: user.id,
+                            },
+                        },
+                    ],
+                },
+            });
+        }
 
         // Prisma transaction
         const createdApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
@@ -141,7 +179,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         });
         res.status(201).json({ message: 'Application answer created.', data: createdApplicationAnswer });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
@@ -208,6 +246,19 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
         // Multer files
         const files = req.files as Express.Multer.File[];
 
+        // User from Passport-JWT
+        const user = req.user as User;
+
+        // Check if user is allowed to update the application answer
+        if (user.role !== 'ADMIN') {
+            await prismaClient.applicationAnswer.findUniqueOrThrow({
+                where: {
+                    id: id,
+                    userId: user.id,
+                },
+            });
+        }
+
         // Prisma transaction
         const upsertedApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
             // Update application answer
@@ -230,6 +281,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                             .filter((itemAnswerGroup) => itemAnswerGroup.id)
                             .map((itemAnswerGroup) => itemAnswerGroup.id as number),
                     },
+                    applicationAnswerId: id,
                 },
             });
             for (const [itemAnswerGroupIndex, itemAnswerGroup] of applicationAnswer.itemAnswerGroups.entries()) {
@@ -238,6 +290,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                     ? await prisma.itemAnswerGroup.update({
                           where: {
                               id: itemAnswerGroup.id,
+                              applicationAnswerId: id,
                           },
                           data: {
                               applicationAnswerId: id,
@@ -256,13 +309,21 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                                 .filter((itemAnswer) => itemAnswer.id)
                                 .map((itemAnswer) => itemAnswer.id as number),
                         },
+                        group: {
+                            applicationAnswerId: id,
+                        },
                     },
                 });
                 for (const [itemAnswerIndex, itemAnswer] of itemAnswerGroup.itemAnswers.entries()) {
                     // Update existing item answers or create new ones
                     const upsertedItemAnswer = itemAnswer.id
                         ? await prisma.itemAnswer.update({
-                              where: { id: itemAnswer.id },
+                              where: {
+                                  id: itemAnswer.id,
+                                  group: {
+                                      applicationAnswerId: id,
+                                  },
+                              },
                               data: {
                                   text: itemAnswer.text,
                                   itemId: itemAnswer.itemId,
@@ -281,6 +342,11 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                         where: {
                             id: {
                                 notIn: itemAnswer.filesIds.filter((fileId) => fileId).map((fileId) => fileId as number),
+                            },
+                            itemAnswer: {
+                                group: {
+                                    applicationAnswerId: id,
+                                },
                             },
                         },
                     });
@@ -304,6 +370,9 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                                 .filter((optionAnswer) => optionAnswer.id)
                                 .map((optionAnswer) => optionAnswer.id as number),
                         },
+                        group: {
+                            applicationAnswerId: id,
+                        },
                     },
                 });
                 for (const optionAnswer of itemAnswerGroup.optionAnswers) {
@@ -312,6 +381,9 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                         ? await prisma.optionAnswer.update({
                               where: {
                                   id: optionAnswer.id,
+                                  group: {
+                                      applicationAnswerId: id,
+                                  },
                               },
                               data: {
                                   text: optionAnswer.text,
@@ -337,6 +409,9 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                                 .filter((tableAnswer) => tableAnswer.id)
                                 .map((tableAnswer) => tableAnswer.id as number),
                         },
+                        group: {
+                            applicationAnswerId: id,
+                        },
                     },
                 });
                 for (const tableAnswer of itemAnswerGroup.tableAnswers) {
@@ -345,6 +420,9 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                         ? await prisma.tableAnswer.update({
                               where: {
                                   id: tableAnswer.id,
+                                  group: {
+                                      applicationAnswerId: id,
+                                  },
                               },
                               data: {
                                   text: tableAnswer.text,
@@ -385,79 +463,136 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
         });
         res.status(200).json({ message: 'Application answer updated.', data: upsertedApplicationAnswer });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
 export const getAllApplicationAnswers = async (req: Request, res: Response): Promise<void> => {
     try {
-        // Get all application answers with nested content included
-        const applicationAnswers: ApplicationAnswer[] = await prismaClient.applicationAnswer.findMany({
-            include: {
-                itemAnswerGroups: {
-                    include: {
-                        itemAnswers: {
-                            include: {
-                                files: true,
-                            },
-                        },
-                        optionAnswers: true,
-                        tableAnswers: true,
-                    },
-                },
-            },
-        });
+        const user = req.user as User;
+
+        // Get all application answers with nested content included (only those that the user is allowed to view)
+        const applicationAnswers: ApplicationAnswer[] =
+            user.role === 'ADMIN'
+                ? await prismaClient.applicationAnswer.findMany({
+                      include: {
+                          itemAnswerGroups: {
+                              include: {
+                                  itemAnswers: {
+                                      include: {
+                                          files: true,
+                                      },
+                                  },
+                                  optionAnswers: true,
+                                  tableAnswers: true,
+                              },
+                          },
+                      },
+                  })
+                : await prismaClient.applicationAnswer.findMany({
+                      where: {
+                          userId: user.id,
+                      },
+                      include: {
+                          itemAnswerGroups: {
+                              include: {
+                                  itemAnswers: {
+                                      include: {
+                                          files: true,
+                                      },
+                                  },
+                                  optionAnswers: true,
+                                  tableAnswers: true,
+                              },
+                          },
+                      },
+                  });
         res.status(200).json({ message: 'All application answers found.', data: applicationAnswers });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
 export const getApplicationAnswer = async (req: Request, res: Response): Promise<void> => {
     try {
+        // User from Passport-JWT
+        const user = req.user as User;
+
         // ID from params
         const id: number = parseInt(req.params.applicationAnswerId);
 
-        // Get application answer with nested content included
-        const applicationAnswer: ApplicationAnswer = await prismaClient.applicationAnswer.findUniqueOrThrow({
-            where: {
-                id,
-            },
-            include: {
-                itemAnswerGroups: {
-                    include: {
-                        itemAnswers: {
-                            include: {
-                                files: true,
-                            },
-                        },
-                        optionAnswers: true,
-                        tableAnswers: true,
-                    },
-                },
-            },
-        });
+        // Get application answer with nested content included (only if user is allowed to view it or is admin)
+        const applicationAnswer: ApplicationAnswer =
+            user.role === 'ADMIN'
+                ? await prismaClient.applicationAnswer.findUniqueOrThrow({
+                      where: {
+                          id,
+                      },
+                      include: {
+                          itemAnswerGroups: {
+                              include: {
+                                  itemAnswers: {
+                                      include: {
+                                          files: true,
+                                      },
+                                  },
+                                  optionAnswers: true,
+                                  tableAnswers: true,
+                              },
+                          },
+                      },
+                  })
+                : await prismaClient.applicationAnswer.findUniqueOrThrow({
+                      where: {
+                          id,
+                          userId: user.id,
+                      },
+                      include: {
+                          itemAnswerGroups: {
+                              include: {
+                                  itemAnswers: {
+                                      include: {
+                                          files: true,
+                                      },
+                                  },
+                                  optionAnswers: true,
+                                  tableAnswers: true,
+                              },
+                          },
+                      },
+                  });
 
         res.status(200).json({ message: 'Application answer found.', data: applicationAnswer });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
 export const deleteApplicationAnswer = async (req: Request, res: Response): Promise<void> => {
     try {
+        // User from Passport-JWT
+        const user = req.user as User;
+
         // ID from params
         const id: number = parseInt(req.params.applicationAnswerId);
 
-        // Delete application answer
-        const deletedApplicationAnswer: ApplicationAnswer = await prismaClient.applicationAnswer.delete({
-            where: {
-                id: id,
-            },
-        });
+        // Delete application answer (only if user is allowed to delete it or is admin)
+        const deletedApplicationAnswer: ApplicationAnswer =
+            user.role === 'ADMIN'
+                ? await prismaClient.applicationAnswer.delete({
+                      where: {
+                          id: id,
+                      },
+                  })
+                : await prismaClient.applicationAnswer.delete({
+                      where: {
+                          id: id,
+                          userId: user.id,
+                      },
+                  });
 
         res.status(200).json({ message: 'Application answer deleted.', data: deletedApplicationAnswer });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
