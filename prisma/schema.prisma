@@ -139,11 +139,11 @@ model TableAnswer {
   text String
 
   itemId   Int
-  item     Item            @relation(fields: [itemId], references: [id])
+  item     Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
   groupId  Int
   group    ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   columnId Int
-  column   TableColumn     @relation(fields: [columnId], references: [id])
+  column   TableColumn     @relation(fields: [columnId], references: [id], onDelete: Cascade)
 }
 
 model Institution {
@@ -315,7 +315,7 @@ model TableColumn {
   answers TableAnswer[]
 
   groupId   Int
-  itemGroup ItemGroup @relation(fields: [groupId], references: [id])
+  itemGroup ItemGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model File {

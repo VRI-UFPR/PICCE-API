@@ -67,7 +67,7 @@ async function main() {
             name: 'John Doe',
             username: 'johndoe',
             hash: '123456',
-            role: 'USER' as UserRole,
+            role: 'ADMIN' as UserRole,
             institutionId: 1,
             classrooms: [],
         },

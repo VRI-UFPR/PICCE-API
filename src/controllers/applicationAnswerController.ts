@@ -10,6 +10,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         const createItemAnswerSchema = yup
             .object()
             .shape({
+                id: yup.number(),
                 text: yup.string().min(3).max(255).required(),
                 itemId: yup.number().required(),
             })
@@ -18,6 +19,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         const createOptionAnswerSchema = yup
             .object()
             .shape({
+                id: yup.number(),
                 text: yup.string().min(3).max(255).required(),
                 itemId: yup.number().required(),
                 optionId: yup.number().required(),
@@ -27,6 +29,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         const createTableAnswerSchema = yup
             .object()
             .shape({
+                id: yup.number(),
                 text: yup.string().min(3).max(255).required(),
                 itemId: yup.number().required(),
                 columnId: yup.number().required(),
@@ -36,6 +39,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         const createItemAnswerGroupSchema = yup
             .object()
             .shape({
+                id: yup.number(),
                 itemAnswers: yup.array().of(createItemAnswerSchema).min(1).required(),
                 tableAnswers: yup.array().of(createTableAnswerSchema).min(1).required(),
                 optionAnswers: yup.array().of(createOptionAnswerSchema).min(1).required(),
@@ -45,6 +49,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         const createApplicationAnswerSchema = yup
             .object()
             .shape({
+                id: yup.number(),
                 date: yup.date().required(),
                 userId: yup.number().required(),
                 applicationId: yup.number().required(),
@@ -100,6 +105,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         const createdApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
             const createdApplicationAnswer: ApplicationAnswer = await prisma.applicationAnswer.create({
                 data: {
+                    id: applicationAnswer.id,
                     date: applicationAnswer.date,
                     userId: applicationAnswer.userId,
                     applicationId: applicationAnswer.applicationId,
@@ -110,11 +116,13 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
             for (const [itemAnswerGroupIndex, itemAnswerGroup] of applicationAnswer.itemAnswerGroups.entries()) {
                 const createdItemAnswerGroup = await prisma.itemAnswerGroup.create({
                     data: {
+                        id: itemAnswerGroup.id,
                         applicationAnswerId: createdApplicationAnswer.id,
                         optionAnswers: {
                             createMany: {
                                 data: itemAnswerGroup.optionAnswers.map((optionAnswer) => {
                                     return {
+                                        id: optionAnswer.id,
                                         text: optionAnswer.text,
                                         itemId: optionAnswer.itemId,
                                         optionId: optionAnswer.optionId,
@@ -126,6 +134,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                             createMany: {
                                 data: itemAnswerGroup.tableAnswers.map((tableAnswer) => {
                                     return {
+                                        id: tableAnswer.id,
                                         text: tableAnswer.text,
                                         itemId: tableAnswer.itemId,
                                         columnId: tableAnswer.columnId,
@@ -145,6 +154,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                         });
                     await prisma.itemAnswer.create({
                         data: {
+                            id: itemAnswer.id,
                             text: itemAnswer.text,
                             itemId: itemAnswer.itemId,
                             groupId: createdItemAnswerGroup.id,
