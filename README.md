@@ -65,11 +65,11 @@ The forms contain one kind of components indicating for the user what to do, how
 -   After executing this command, it is expected that a message similar to the one shown will be displayed:
 
 ```
-Environment variables loaded from .env
-Prisma schema loaded from prisma/schema.prisma
-Datasource "db": PostgreSQL database "database_name", schema "public" at "localhost:5432"
+    Environment variables loaded from .env
+    Prisma schema loaded from prisma/schema.prisma
+    Datasource "db": PostgreSQL database "database_name", schema "public" at "localhost:5432"
 
-🚀  Your database is now in sync with your Prisma schema.
+    🚀  Your database is now in sync with your Prisma schema.
 ```
 
 ### 5. Start the API:
