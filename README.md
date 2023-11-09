@@ -58,7 +58,7 @@ The forms contain one kind of components indicating for the user what to do, how
 -   To synchronize the database with the models defined in the Prisma schema, run the following command:
 
 ```
-	# This will apply any pending migrations.
+	# This will create the necessary tables in the database.
 	npx prisma db push
 ```
 
@@ -77,7 +77,8 @@ The forms contain one kind of components indicating for the user what to do, how
 -   Start the API running with nodemon, using the following command:
 
 ```
-	npm start
+    # This will start the API.
+    npm start
 ```
 
 -   Your API should now be up and running, accessible locally, if the message `Server running on port 3000` was displayed.
@@ -91,11 +92,13 @@ The forms contain one kind of components indicating for the user what to do, how
 -   The database can be seeded with test data by running the following command:
 
 ```
+    # This will seed the database with test data.
     npx prisma db seed
 ```
 
 -   You can also run pre-configured tests by running the following command:
 
 ```
+    # This will run the defined unit and integration tests.
     npm t
 ```
