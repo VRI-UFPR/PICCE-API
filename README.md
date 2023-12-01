@@ -26,7 +26,7 @@ The forms contain one kind of components indicating for the user what to do, how
 
 ### 2. Configure environment variables:
 
--   In the directory of the API source code you downloaded, you should find a `.env-example` file. Copy the contents of this file to an `.env` file and change the necessary settings according to your database (your Postgres `username`, `password` and the `name of the database` that will be used). Other information does not need to be changed.
+-   In the directory of the API source code you downloaded, you should find a `.env-example` file. Copy the contents of this file to an `.env` file and change the necessary settings: `DATABASE_URL` according to your database (your Postgres `username`, `password` and the `name of the database` that will be used) and `JWT_SECRET` with your generated key ([you can use OpenSSL rand command to do this](https://www.openssl.org/docs/man1.1.1/man1/rand.html)). Other information does not need to be changed.
 
 ```
 	# Create a copy of .env-example as .env
@@ -55,23 +55,50 @@ The forms contain one kind of components indicating for the user what to do, how
 
 -   After executing this command, it is expected that a message similar to `✔ Generated Prisma Client` will be shown.
 
--   To create database tables based on Prisma models, run the following command:
+-   To synchronize the database with the models defined in the Prisma schema, run the following command:
 
 ```
-	# This will apply any pending migrations.
-	npx prisma migrate dev
+	# This will create the necessary tables in the database.
+	npx prisma db push
 ```
 
--   After executing this command, it is expected that a message similar to the one shown will be displayed: `Environment variables loaded from .env
-Prisma schema loaded from prisma/schema.prisma
-Datasource "db": PostgreSQL database "vri_picce", schema "public" at "localhost:5432"`.
+-   After executing this command, it is expected that a message similar to the one shown will be displayed:
+
+```
+    Environment variables loaded from .env
+    Prisma schema loaded from prisma/schema.prisma
+    Datasource "db": PostgreSQL database "database_name", schema "public" at "localhost:5432"
+
+    🚀  Your database is now in sync with your Prisma schema.
+```
 
 ### 5. Start the API:
 
 -   Start the API running with nodemon, using the following command:
 
 ```
-	npm start
+    # This will start the API.
+    npm start
 ```
 
 -   Your API should now be up and running, accessible locally, if the message `Server running on port 3000` was displayed.
+
+### 6. API endpoints:
+
+-   The API endpoints are documented using Swagger. To access the documentation, start the API and access the following URL in your browser: http://localhost:3000/api-docs/.
+
+### 7. Running tests:
+
+-   The database can be seeded with test data by running the following command:
+
+```
+    # This will seed the database with test data.
+    npx prisma db seed
+```
+
+-   You can also run pre-configured tests by running the following command:
+
+```
+    # This will run the defined unit and integration tests.
+    npm t
+```

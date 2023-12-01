@@ -80,12 +80,12 @@ model ApplicationAnswer {
 
   itemAnswerGroups ItemAnswerGroup[]
 
-  userId        Int
-  user          User        @relation(fields: [userId], references: [id])
+  userId        Int?
+  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
   applicationId Int
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   addressId     Int?
-  address       Address?    @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  address       Address?    @relation(fields: [addressId], references: [id], onDelete: SetNull)
 }
 
 model ItemAnswer {
@@ -98,7 +98,7 @@ model ItemAnswer {
   files File[]
 
   itemId  Int
-  item    Item            @relation(fields: [itemId], references: [id])
+  item    Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
   groupId Int
   group   ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
@@ -124,11 +124,11 @@ model OptionAnswer {
   text String
 
   itemId   Int
-  item     Item            @relation(fields: [itemId], references: [id])
+  item     Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
   groupId  Int
   group    ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   optionId Int
-  option   ItemOption      @relation(fields: [optionId], references: [id])
+  option   ItemOption      @relation(fields: [optionId], references: [id], onDelete: Cascade)
 }
 
 model TableAnswer {
@@ -157,8 +157,8 @@ model Institution {
   users      User[]
   classrooms Classroom[]
 
-  addressId Int
-  address   Address @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  addressId Int?
+  address   Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
 }
 
 model User {
@@ -170,6 +170,7 @@ model User {
   username String @unique
   hash     String
   role     UserRole
+  acceptedTerms Boolean @default(false)
 
   protocols            Protocol[]
   answeredApplications ApplicationAnswer[]
@@ -178,7 +179,7 @@ model User {
   classrooms           Classroom[]
 
   institutionId Int?
-  institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
 }
 
 model Classroom {
@@ -218,6 +219,7 @@ model Protocol {
   title       String
   description String?
   enabled     Boolean
+  applicable  Boolean @default(false)
 
   pages        Page[]
   owners        User[]
