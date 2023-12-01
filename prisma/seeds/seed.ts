@@ -16,6 +16,7 @@ import {
     Page,
     PageType,
     Protocol,
+    TableColumn,
     User,
     UserRole,
     VisibilityMode,
@@ -66,7 +67,7 @@ async function main() {
             name: 'John Doe',
             username: 'johndoe',
             hash: '123456',
-            role: 'USER' as UserRole,
+            role: 'ADMIN' as UserRole,
             institutionId: 1,
             classrooms: [],
         },
@@ -325,6 +326,21 @@ async function main() {
         },
     ];
 
+    const tableColums: Omit<TableColumn, 'createdAt' | 'updateAt'>[] = [
+        {
+            id: 1,
+            text: 'Column 1',
+            placement: 1,
+            groupId: 1,
+        },
+        {
+            id: 2,
+            text: 'Column 2',
+            placement: 2,
+            groupId: 1,
+        },
+    ];
+
     await prismaClient.optionAnswer.deleteMany();
     await prismaClient.itemAnswer.deleteMany();
     await prismaClient.itemAnswerGroup.deleteMany();
@@ -339,6 +355,7 @@ async function main() {
     await prismaClient.classroom.deleteMany();
     await prismaClient.institution.deleteMany();
     await prismaClient.address.deleteMany();
+    await prismaClient.tableColumn.deleteMany();
 
     await prismaClient.address.createMany({
         data: addresses,
@@ -378,6 +395,10 @@ async function main() {
 
     await prismaClient.itemGroup.createMany({
         data: itemGroups,
+    });
+
+    await prismaClient.tableColumn.createMany({
+        data: tableColums,
     });
 
     await prismaClient.item.createMany({

@@ -10,6 +10,7 @@ export const signUp = async (req: Request, res: Response) => {
         const signUpSchema = yup
             .object()
             .shape({
+                id: yup.number(),
                 name: yup.string().min(1).max(255).required(),
                 username: yup.string().min(3).max(16).required(),
                 hash: yup.string().required(),
@@ -23,6 +24,7 @@ export const signUp = async (req: Request, res: Response) => {
 
         const createdUser = await prismaClient.user.create({
             data: {
+                id: signingUser.id,
                 name: signingUser.name,
                 username: signingUser.username,
                 hash: signingUser.hash,

@@ -36,10 +36,6 @@ import {
  *          type: integer
  *          description: The id of the item that the answer is for
  *          example: 1
- *        groupId:
- *          type: integer
- *          description: The id of the group that the answer belongs to
- *          example: 1
  *        files:
  *          type: array
  *          items:
@@ -71,10 +67,6 @@ import {
  *          type: integer
  *          description: The id of the item option that the answer selects
  *          example: 1
- *        groupId:
- *          type: integer
- *          description: The id of the group that the answer belongs to
- *          example: 1
  *      example:
  *        itemId: 1
  *        optionId: 1
@@ -100,10 +92,6 @@ import {
  *          type: integer
  *          description: The id of the table column that the answer is for
  *          example: 1
- *        groupId:
- *          type: integer
- *          description: The id of the group that the answer belongs to
- *          example: 1
  *      example:
  *        itemId: 1
  *        columnId: 1
@@ -113,10 +101,6 @@ import {
  *        id:
  *          type: integer
  *          description: The auto-generated id of the address
- *          example: 1
- *        applicationId:
- *          type: integer
- *          description: The id of the application that the answer group belongs to
  *          example: 1
  *        itemAnswers:
  *          type: array
@@ -134,9 +118,9 @@ import {
  *      type: object
  *      required:
  *        - date
- *        - userId
  *        - applicationId
  *        - addressId
+ *        - itemAnswerGroups
  *      properties:
  *        id:
  *          type: integer
@@ -150,6 +134,7 @@ import {
  *          type: integer
  *          description: The id of the user that submitted the answer
  *          example: 1
+ *          readOnly: true
  *        applicationId:
  *          type: integer
  *          description: The id of the application that the answer is for
@@ -160,6 +145,7 @@ import {
  *          example: 1
  *        itemAnswerGroups:
  *          type: array
+ *          description: The groups of item, option and table answers that belongs to the application answer
  *          items:
  *            $ref: '#/components/schemas/ItemAnswerGroup'
  *      example:
