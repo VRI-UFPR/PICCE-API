@@ -70,6 +70,7 @@ async function main() {
             role: 'ADMIN' as UserRole,
             institutionId: 1,
             classrooms: [],
+            acceptedTerms: true,
         },
         {
             id: 2,
@@ -79,6 +80,7 @@ async function main() {
             role: 'ADMIN' as UserRole,
             institutionId: 1,
             classrooms: [],
+            acceptedTerms: true,
         },
         {
             id: 3,
@@ -88,6 +90,7 @@ async function main() {
             role: 'USER' as UserRole,
             institutionId: 2,
             classrooms: [1],
+            acceptedTerms: true,
         },
         {
             id: 4,
@@ -97,6 +100,7 @@ async function main() {
             role: 'USER' as UserRole,
             institutionId: 2,
             classrooms: [1],
+            acceptedTerms: true,
         },
     ];
 
@@ -106,12 +110,14 @@ async function main() {
             title: 'Protocol 1',
             description: 'Protocol 1 description',
             enabled: true,
+            applicable: true,
         },
         {
             id: 2,
             title: 'Protocol 2',
             description: 'Protocol 2 description',
             enabled: true,
+            applicable: true,
         },
     ];
 
