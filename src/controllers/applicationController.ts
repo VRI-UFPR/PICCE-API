@@ -115,7 +115,7 @@ export const getAllApplications = async (req: Request, res: Response): Promise<v
         const user = req.user as User;
 
         // Get all applications that the user is allowed to see
-        const applicationes: Application[] =
+        const applications: Application[] =
             user.role === 'ADMIN'
                 ? await prismaClient.application.findMany({
                       include: {
@@ -132,7 +132,38 @@ export const getAllApplications = async (req: Request, res: Response): Promise<v
                           viewersClassroom: true,
                       },
                   });
-        res.status(200).json({ message: 'All applicationes found.', data: applicationes });
+        res.status(200).json({ message: 'All applications found.', data: applications });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const getAllApplicationsWithProtocol = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // User from Passport-JWT
+        const user = req.user as User;
+
+        // Get all applications that the user is allowed to see
+        const applications: Application[] =
+            user.role === 'ADMIN'
+                ? await prismaClient.application.findMany({
+                      include: {
+                          viewersUser: true,
+                          viewersClassroom: true,
+                          protocol: true,
+                      },
+                  })
+                : await prismaClient.application.findMany({
+                      where: {
+                          applicatorId: user.id,
+                      },
+                      include: {
+                          viewersUser: true,
+                          viewersClassroom: true,
+                          protocol: true,
+                      },
+                  });
+        res.status(200).json({ message: 'All applications found.', data: applications });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -156,6 +187,7 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
                       include: {
                           viewersUser: true,
                           viewersClassroom: true,
+                          protocol: true,
                       },
                   })
                 : await prismaClient.application.findUniqueOrThrow({
@@ -166,6 +198,7 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
                       include: {
                           viewersUser: true,
                           viewersClassroom: true,
+                          protocol: true,
                       },
                   });
 
