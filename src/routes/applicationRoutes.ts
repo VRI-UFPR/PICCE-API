@@ -7,6 +7,7 @@ import {
     getApplication,
     deleteApplication,
     getAllApplicationsWithProtocol,
+    getApplicationWithProtocol,
 } from '../controllers/applicationController';
 import passport from '../services/passportAuth';
 
@@ -245,6 +246,51 @@ router.get(
  *               description: Error message
  */
 router.get('/getApplication/:applicationId', passport.authenticate('jwt', { session: false }), uploader.none(), getApplication);
+
+/**
+ * @swagger
+ * /api/application/getApplicationWithProtocol/{applicationId}:
+ *   get:
+ *     summary: Get an application by id with nested protocol
+ *     tags: [Application]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: applicationId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: The id of the application to retrieve
+ *     responses:
+ *       200:
+ *         description: The application was successfully retrieved
+ *         content:
+ *           application/json:
+ *             message: Application found.
+ *             data:
+ *               $ref: '#/components/schemas/Application'
+ *       400:
+ *         description: An application with the specified id was not found
+ *         content:
+ *           application/json:
+ *             error:
+ *               type: string
+ *               description: Error message
+ *       500:
+ *         description: An error occurred while retrieving the application
+ *         content:
+ *           application/json:
+ *             error:
+ *               type: string
+ *               description: Error message
+ */
+router.get(
+    '/getApplicationWithProtocol/:applicationId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    getApplicationWithProtocol
+);
 
 /**
  * @swagger

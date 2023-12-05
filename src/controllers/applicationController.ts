@@ -187,7 +187,6 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
                       include: {
                           viewersUser: true,
                           viewersClassroom: true,
-                          protocol: true,
                       },
                   })
                 : await prismaClient.application.findUniqueOrThrow({
@@ -198,7 +197,89 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
                       include: {
                           viewersUser: true,
                           viewersClassroom: true,
-                          protocol: true,
+                      },
+                  });
+
+        res.status(200).json({ message: 'Application found.', data: application });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const getApplicationWithProtocol = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // ID from params
+        const id: number = parseInt(req.params.applicationId);
+
+        // User from Passport-JWT
+        const user = req.user as User;
+
+        // Get the application if the user is allowed to see it
+        const application: Application =
+            user.role === 'ADMIN'
+                ? await prismaClient.application.findUniqueOrThrow({
+                      where: {
+                          id: id,
+                      },
+                      include: {
+                          viewersUser: true,
+                          viewersClassroom: true,
+                          protocol: {
+                              include: {
+                                  pages: {
+                                      include: {
+                                          itemGroups: {
+                                              include: {
+                                                  items: {
+                                                      include: {
+                                                          itemOptions: {
+                                                              include: {
+                                                                  files: true,
+                                                              },
+                                                          },
+                                                          itemValidations: true,
+                                                          files: true,
+                                                      },
+                                                  },
+                                              },
+                                          },
+                                      },
+                                  },
+                              },
+                          },
+                      },
+                  })
+                : await prismaClient.application.findUniqueOrThrow({
+                      where: {
+                          id: id,
+                          applicatorId: user.id,
+                      },
+                      include: {
+                          viewersUser: true,
+                          viewersClassroom: true,
+                          protocol: {
+                              include: {
+                                  pages: {
+                                      include: {
+                                          itemGroups: {
+                                              include: {
+                                                  items: {
+                                                      include: {
+                                                          itemOptions: {
+                                                              include: {
+                                                                  files: true,
+                                                              },
+                                                          },
+                                                          itemValidations: true,
+                                                          files: true,
+                                                      },
+                                                  },
+                                              },
+                                          },
+                                      },
+                                  },
+                              },
+                          },
                       },
                   });
 
