@@ -205,7 +205,7 @@ async function main() {
             groupId: 3,
             placement: 1,
             enabled: true,
-            type: 'SCALE' as ItemType,
+            type: 'SELECT' as ItemType,
         },
         {
             id: 4,
@@ -233,12 +233,24 @@ async function main() {
         },
         {
             id: 3,
+            text: 'Option 3.1',
+            placement: 1,
+            itemId: 3,
+        },
+        {
+            id: 4,
+            text: 'Option 3.2',
+            placement: 2,
+            itemId: 3,
+        },
+        {
+            id: 5,
             text: 'Option 4.1',
             placement: 1,
             itemId: 4,
         },
         {
-            id: 4,
+            id: 6,
             text: 'Option 4.2',
             placement: 2,
             itemId: 4,
