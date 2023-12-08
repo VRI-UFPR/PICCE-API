@@ -53,7 +53,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
             .object()
             .shape({
                 id: yup.number(),
-                text: yup.string().min(3).max(255).required(),
+                text: yup.string().max(255),
                 itemId: yup.number().required(),
                 optionId: yup.number().required(),
             })
@@ -63,7 +63,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
             .object()
             .shape({
                 id: yup.number(),
-                text: yup.string().min(3).max(255).required(),
+                text: yup.string().max(255),
                 itemId: yup.number().required(),
                 columnId: yup.number().required(),
             })
@@ -73,9 +73,9 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
             .object()
             .shape({
                 id: yup.number(),
-                itemAnswers: yup.array().of(createItemAnswerSchema).required(),
-                tableAnswers: yup.array().of(createTableAnswerSchema).required(),
-                optionAnswers: yup.array().of(createOptionAnswerSchema).required(),
+                itemAnswers: yup.array().of(createItemAnswerSchema).default([]),
+                tableAnswers: yup.array().of(createTableAnswerSchema).default([]),
+                optionAnswers: yup.array().of(createOptionAnswerSchema).default([]),
             })
             .noUnknown();
 
@@ -195,21 +195,21 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
 
         const updateOptionAnswerSchema = yup
             .object()
-            .shape({ id: yup.number(), text: yup.string().min(3).max(255), itemId: yup.number().min(1), optionId: yup.number().min(1) })
+            .shape({ id: yup.number(), text: yup.string().max(255), itemId: yup.number().min(1), optionId: yup.number().min(1) })
             .noUnknown();
 
         const updateTableAnswerSchema = yup
             .object()
-            .shape({ id: yup.number(), text: yup.string().min(3).max(255), itemId: yup.number().min(1), columnId: yup.number().min(1) })
+            .shape({ id: yup.number(), text: yup.string().max(255), itemId: yup.number().min(1), columnId: yup.number().min(1) })
             .noUnknown();
 
         const updateItemAnswerGroupSchema = yup
             .object()
             .shape({
                 id: yup.number(),
-                itemAnswers: yup.array().of(updateItemAnswerSchema).required(),
-                tableAnswers: yup.array().of(updateTableAnswerSchema).required(),
-                optionAnswers: yup.array().of(updateOptionAnswerSchema).required(),
+                itemAnswers: yup.array().of(updateItemAnswerSchema).default([]),
+                tableAnswers: yup.array().of(updateTableAnswerSchema).default([]),
+                optionAnswers: yup.array().of(updateOptionAnswerSchema).default([]),
             })
             .noUnknown();
 
