@@ -6,6 +6,8 @@ import {
     getAllApplications,
     getApplication,
     deleteApplication,
+    getAllApplicationsWithProtocol,
+    getApplicationWithProtocol,
 } from '../controllers/applicationController';
 import passport from '../services/passportAuth';
 
@@ -174,6 +176,39 @@ router.get('/getAllApplications', passport.authenticate('jwt', { session: false 
 
 /**
  * @swagger
+ * /api/application/getAllApplicationsWithProtocol:
+ *   get:
+ *     summary: Get all applications with nested protocols
+ *     tags: [Application]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: The list of applications was successfully retrieved
+ *         content:
+ *           application/json:
+ *             message: All applications found.
+ *             data:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Application'
+ *       500:
+ *         description: An error occurred while retrieving the list of applications
+ *         content:
+ *           application/json:
+ *             error:
+ *               type: string
+ *               description: Error message
+ */
+router.get(
+    '/getAllApplicationsWithProtocol',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    getAllApplicationsWithProtocol
+);
+
+/**
+ * @swagger
  * /api/application/getApplication/{applicationId}:
  *   get:
  *     summary: Get an application by id
@@ -211,6 +246,51 @@ router.get('/getAllApplications', passport.authenticate('jwt', { session: false 
  *               description: Error message
  */
 router.get('/getApplication/:applicationId', passport.authenticate('jwt', { session: false }), uploader.none(), getApplication);
+
+/**
+ * @swagger
+ * /api/application/getApplicationWithProtocol/{applicationId}:
+ *   get:
+ *     summary: Get an application by id with nested protocol
+ *     tags: [Application]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: applicationId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: The id of the application to retrieve
+ *     responses:
+ *       200:
+ *         description: The application was successfully retrieved
+ *         content:
+ *           application/json:
+ *             message: Application found.
+ *             data:
+ *               $ref: '#/components/schemas/Application'
+ *       400:
+ *         description: An application with the specified id was not found
+ *         content:
+ *           application/json:
+ *             error:
+ *               type: string
+ *               description: Error message
+ *       500:
+ *         description: An error occurred while retrieving the application
+ *         content:
+ *           application/json:
+ *             error:
+ *               type: string
+ *               description: Error message
+ */
+router.get(
+    '/getApplicationWithProtocol/:applicationId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    getApplicationWithProtocol
+);
 
 /**
  * @swagger
