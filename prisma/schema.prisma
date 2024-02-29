@@ -121,7 +121,7 @@ model OptionAnswer {
   createdAt DateTime @default(now())
   updateAt  DateTime @updatedAt
 
-  text String
+  text String?
 
   itemId   Int
   item     Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
@@ -136,7 +136,7 @@ model TableAnswer {
   createdAt DateTime @default(now())
   updateAt  DateTime @updatedAt
 
-  text String
+  text String?
 
   itemId   Int
   item     Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
