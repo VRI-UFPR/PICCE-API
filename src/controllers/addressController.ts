@@ -1,11 +1,21 @@
 import { Response, Request } from 'express';
-import { Address } from '@prisma/client';
+import { Address, User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 
+const checkAuthorization = (user: User) => {
+    if (user.role !== UserRole.ADMIN) {
+        throw new Error('This user is not authorized to perform this action');
+    }
+};
+
 export const createAddress = async (req: Request, res: Response) => {
     try {
+        const user = req.user as User;
+
+        checkAuthorization(user);
+
         const createAddressSchema = yup
             .object()
             .shape({
@@ -31,6 +41,10 @@ export const createAddress = async (req: Request, res: Response) => {
 export const updateAddress = async (req: Request, res: Response): Promise<void> => {
     try {
         const id: number = parseInt(req.params.addressId);
+
+        const user = req.user as User;
+
+        checkAuthorization(user);
 
         const updateAddressSchema = yup
             .object()
@@ -89,6 +103,10 @@ export const getAddress = async (req: Request, res: Response): Promise<void> => 
 export const deleteAddress = async (req: Request, res: Response): Promise<void> => {
     try {
         const id: number = parseInt(req.params.addressId);
+
+        const user = req.user as User;
+
+        checkAuthorization(user);
 
         const deletedAddress: Address = await prismaClient.address.delete({
             where: {
