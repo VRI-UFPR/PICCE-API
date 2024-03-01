@@ -1,6 +1,7 @@
 import express from 'express';
 import uploader from '../services/multerUploader';
 import { createUser, updateUser, getAllUsers, getUser, deleteUser } from '../controllers/userController';
+import passport from '../services/passportAuth';
 
 /**
  * @swagger
@@ -80,7 +81,7 @@ const router = express.Router();
  *              data:
  *                $ref: '#/components/schemas/User'
  */
-router.post('/createUser', uploader.none(), createUser);
+router.post('/createUser', passport.authenticate('jwt', { session: false }), uploader.none(), createUser);
 
 /**
  * @swagger
@@ -126,7 +127,7 @@ router.post('/createUser', uploader.none(), createUser);
  *              data:
  *                $ref: '#/components/schemas/User'
  */
-router.put('/updateUser/:userId', uploader.none(), updateUser);
+router.put('/updateUser/:userId', passport.authenticate('jwt', { session: false }), uploader.none(), updateUser);
 
 /**
  * @swagger
@@ -149,7 +150,7 @@ router.put('/updateUser/:userId', uploader.none(), updateUser);
  *             error:
  *               message: error message
  */
-router.get('/getAllUsers', uploader.none(), getAllUsers);
+router.get('/getAllUsers', passport.authenticate('jwt', { session: false }), uploader.none(), getAllUsers);
 
 /**
  * @swagger
@@ -187,7 +188,7 @@ router.get('/getAllUsers', uploader.none(), getAllUsers);
  *               type: string
  *               description: Error message
  */
-router.get('/getUser/:userId', uploader.none(), getUser);
+router.get('/getUser/:userId', passport.authenticate('jwt', { session: false }), uploader.none(), getUser);
 
 /**
  * @swagger
@@ -227,6 +228,6 @@ router.get('/getUser/:userId', uploader.none(), getUser);
  *              data:
  *                $ref: '#/components/schemas/User'
  */
-router.delete('/deleteUser/:userId', uploader.none(), deleteUser);
+router.delete('/deleteUser/:userId', passport.authenticate('jwt', { session: false }), uploader.none(), deleteUser);
 
 export default router;
