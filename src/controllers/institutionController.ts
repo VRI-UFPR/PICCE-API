@@ -4,6 +4,7 @@ import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 
+// Fields to be selected from the database to the response
 const fieldsWithNesting = {
     id: true,
     name: true,
@@ -25,14 +26,16 @@ const fieldsWithNesting = {
     updateAt: true,
 };
 
-const checkAuthorization = (user: User, id: number) => {
-    if (user.role !== 'ADMIN' && (user.institutionId !== id || user.role !== 'COORDINATOR')) {
+// Only admins or the coordinator of the institution can perform -RUD operations on institutions
+const checkAuthorization = (user: User, institutionId: number) => {
+    if (user.role !== 'ADMIN' && (user.institutionId !== institutionId || user.role !== 'COORDINATOR')) {
         throw new Error('This user is not authorized to perform this action');
     }
 };
 
 export const createInstitution = async (req: Request, res: Response) => {
     try {
+        // Yup schemas
         const createInstitutionSchema = yup
             .object()
             .shape({
@@ -43,21 +46,20 @@ export const createInstitution = async (req: Request, res: Response) => {
             })
             .noUnknown();
 
+        // Yup parsing/validation
         const institution = await createInstitutionSchema.validate(req.body);
 
+        // User from Passport-JWT
         const user = req.user as User;
 
+        // Check if user is authorized to create an institution
         if (user.role !== 'ADMIN') {
             throw new Error('This user is not authorized to perform this action');
         }
 
+        // Prisma operation
         const createdInstitution = await prismaClient.institution.create({
-            data: {
-                id: institution.id,
-                name: institution.name,
-                type: institution.type,
-                addressId: institution.addressId,
-            },
+            data: { id: institution.id, name: institution.name, type: institution.type, addressId: institution.addressId },
             select: fieldsWithNesting,
         });
 
@@ -69,8 +71,10 @@ export const createInstitution = async (req: Request, res: Response) => {
 
 export const updateInstitution = async (req: Request, res: Response): Promise<void> => {
     try {
+        // ID from params
         const id: number = parseInt(req.params.institutionId);
 
+        // Yup schemas
         const updateInstitutionSchema = yup
             .object()
             .shape({
@@ -80,21 +84,19 @@ export const updateInstitution = async (req: Request, res: Response): Promise<vo
             })
             .noUnknown();
 
+        // Yup parsing/validation
         const institution = await updateInstitutionSchema.validate(req.body);
 
+        // User from Passport-JWT
         const user = req.user as User;
 
+        // Check if user is authorized to update an institution
         checkAuthorization(user, id);
 
+        // Prisma operation
         const updatedInstitution = await prismaClient.institution.update({
-            where: {
-                id,
-            },
-            data: {
-                name: institution.name,
-                type: institution.type,
-                addressId: institution.addressId,
-            },
+            where: { id },
+            data: { name: institution.name, type: institution.type, addressId: institution.addressId },
             select: fieldsWithNesting,
         });
 
@@ -106,12 +108,15 @@ export const updateInstitution = async (req: Request, res: Response): Promise<vo
 
 export const getAllInstitutions = async (req: Request, res: Response): Promise<void> => {
     try {
+        // User from Passport-JWT
         const user = req.user as User;
 
+        // Check if user is authorized to get all institutions (only admins)
         if (user.role !== 'ADMIN') {
             throw new Error('This user is not authorized to perform this action');
         }
 
+        // Prisma operation
         const institutions = await prismaClient.institution.findMany({ select: fieldsWithNesting });
 
         res.status(200).json({ message: 'All institutions found.', data: institutions });
@@ -122,18 +127,17 @@ export const getAllInstitutions = async (req: Request, res: Response): Promise<v
 
 export const getInstitution = async (req: Request, res: Response): Promise<void> => {
     try {
+        // ID from params
         const id: number = parseInt(req.params.institutionId);
 
+        // User from Passport-JWT
         const user = req.user as User;
 
+        // Check if user is authorized to get an institution
         checkAuthorization(user, id);
 
-        const institution = await prismaClient.institution.findUniqueOrThrow({
-            where: {
-                id,
-            },
-            select: fieldsWithNesting,
-        });
+        // Prisma operation
+        const institution = await prismaClient.institution.findUniqueOrThrow({ where: { id }, select: fieldsWithNesting });
 
         res.status(200).json({ message: 'Institution found.', data: institution });
     } catch (error: any) {
@@ -143,16 +147,17 @@ export const getInstitution = async (req: Request, res: Response): Promise<void>
 
 export const deleteInstitution = async (req: Request, res: Response): Promise<void> => {
     try {
+        // ID from params
         const id: number = parseInt(req.params.institutionId);
 
+        // User from Passport-JWT
         const user = req.user as User;
 
+        // Check if user is authorized to delete an institution
         checkAuthorization(user, id);
 
-        const deletedInstitution = await prismaClient.institution.delete({
-            where: { id },
-            select: { id: true },
-        });
+        // Prisma operation
+        const deletedInstitution = await prismaClient.institution.delete({ where: { id }, select: { id: true } });
 
         res.status(200).json({ message: 'Institution deleted.', data: deletedInstitution });
     } catch (error: any) {
