@@ -7,6 +7,7 @@ import {
     getInstitution,
     deleteInstitution,
 } from '../controllers/institutionController';
+import passport from '../services/passportAuth';
 
 /**
  * @swagger
@@ -73,7 +74,7 @@ const router = express.Router();
  *             error:
  *               message: error message
  */
-router.post('/createInstitution', uploader.none(), createInstitution);
+router.post('/createInstitution', passport.authenticate('jwt', { session: false }), uploader.none(), createInstitution);
 
 /**
  * @swagger
@@ -115,7 +116,7 @@ router.post('/createInstitution', uploader.none(), createInstitution);
  *             error:
  *               message: error message
  */
-router.put('/updateInstitution/:institutionId', uploader.none(), updateInstitution);
+router.put('/updateInstitution/:institutionId', passport.authenticate('jwt', { session: false }), uploader.none(), updateInstitution);
 
 /**
  * @swagger
@@ -140,7 +141,7 @@ router.put('/updateInstitution/:institutionId', uploader.none(), updateInstituti
  *             error:
  *               message: error message
  */
-router.get('/getAllInstitutions', uploader.none(), getAllInstitutions);
+router.get('/getAllInstitutions', passport.authenticate('jwt', { session: false }), uploader.none(), getAllInstitutions);
 
 /**
  * @swagger
@@ -174,7 +175,7 @@ router.get('/getAllInstitutions', uploader.none(), getAllInstitutions);
  *           application/json:
  *             message: error message
  */
-router.get('/getInstitution/:institutionId', uploader.none(), getInstitution);
+router.get('/getInstitution/:institutionId', passport.authenticate('jwt', { session: false }), uploader.none(), getInstitution);
 
 /**
  * @swagger
@@ -208,6 +209,6 @@ router.get('/getInstitution/:institutionId', uploader.none(), getInstitution);
  *           application/json:
  *             message: error message
  */
-router.delete('/deleteInstitution/:institutionId', uploader.none(), deleteInstitution);
+router.delete('/deleteInstitution/:institutionId', passport.authenticate('jwt', { session: false }), uploader.none(), deleteInstitution);
 
 export default router;

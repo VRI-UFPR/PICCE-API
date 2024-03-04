@@ -23,7 +23,7 @@ const checkAuthorizationToAnswer = async (user: User, applicationId: number) => 
     }
 };
 
-const selectedFieldsWithNested = {
+const fieldsWithNesting = {
     id: true,
     date: true,
     userId: true,
@@ -53,7 +53,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
             .object()
             .shape({
                 id: yup.number(),
-                text: yup.string().min(3).max(255).required(),
+                text: yup.string().max(255),
                 itemId: yup.number().required(),
                 optionId: yup.number().required(),
             })
@@ -63,7 +63,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
             .object()
             .shape({
                 id: yup.number(),
-                text: yup.string().min(3).max(255).required(),
+                text: yup.string().max(255),
                 itemId: yup.number().required(),
                 columnId: yup.number().required(),
             })
@@ -73,9 +73,9 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
             .object()
             .shape({
                 id: yup.number(),
-                itemAnswers: yup.array().of(createItemAnswerSchema).required(),
-                tableAnswers: yup.array().of(createTableAnswerSchema).required(),
-                optionAnswers: yup.array().of(createOptionAnswerSchema).required(),
+                itemAnswers: yup.array().of(createItemAnswerSchema).default([]),
+                tableAnswers: yup.array().of(createTableAnswerSchema).default([]),
+                optionAnswers: yup.array().of(createOptionAnswerSchema).default([]),
             })
             .noUnknown();
 
@@ -167,7 +167,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
             // Return the created application answer with nested content included
             return await prisma.applicationAnswer.findUnique({
                 where: { id: createdApplicationAnswer.id },
-                select: selectedFieldsWithNested,
+                select: fieldsWithNesting,
             });
         });
 
@@ -195,21 +195,21 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
 
         const updateOptionAnswerSchema = yup
             .object()
-            .shape({ id: yup.number(), text: yup.string().min(3).max(255), itemId: yup.number().min(1), optionId: yup.number().min(1) })
+            .shape({ id: yup.number(), text: yup.string().max(255), itemId: yup.number().min(1), optionId: yup.number().min(1) })
             .noUnknown();
 
         const updateTableAnswerSchema = yup
             .object()
-            .shape({ id: yup.number(), text: yup.string().min(3).max(255), itemId: yup.number().min(1), columnId: yup.number().min(1) })
+            .shape({ id: yup.number(), text: yup.string().max(255), itemId: yup.number().min(1), columnId: yup.number().min(1) })
             .noUnknown();
 
         const updateItemAnswerGroupSchema = yup
             .object()
             .shape({
                 id: yup.number(),
-                itemAnswers: yup.array().of(updateItemAnswerSchema).required(),
-                tableAnswers: yup.array().of(updateTableAnswerSchema).required(),
-                optionAnswers: yup.array().of(updateOptionAnswerSchema).required(),
+                itemAnswers: yup.array().of(updateItemAnswerSchema).default([]),
+                tableAnswers: yup.array().of(updateTableAnswerSchema).default([]),
+                optionAnswers: yup.array().of(updateOptionAnswerSchema).default([]),
             })
             .noUnknown();
 
@@ -356,7 +356,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 }
             }
             // Return the updated application answer with nested content included
-            return await prisma.applicationAnswer.findUnique({ where: { id }, select: selectedFieldsWithNested });
+            return await prisma.applicationAnswer.findUnique({ where: { id }, select: fieldsWithNesting });
         });
         res.status(200).json({ message: 'Application answer updated.', data: upsertedApplicationAnswer });
     } catch (error: any) {
@@ -372,8 +372,8 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
         // Get all application answers with nested content included (only those that the user is allowed to view)
         const applicationAnswers: ApplicationAnswer[] =
             user.role === 'ADMIN'
-                ? await prismaClient.applicationAnswer.findMany({ select: selectedFieldsWithNested })
-                : await prismaClient.applicationAnswer.findMany({ where: { userId: user.id }, select: selectedFieldsWithNested });
+                ? await prismaClient.applicationAnswer.findMany({ select: fieldsWithNesting })
+                : await prismaClient.applicationAnswer.findMany({ where: { userId: user.id }, select: fieldsWithNesting });
 
         res.status(200).json({ message: 'All application answers found.', data: applicationAnswers });
     } catch (error: any) {
@@ -392,10 +392,10 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
         // Get application answer with nested content included (only if user is allowed to view it or is admin)
         const applicationAnswer: ApplicationAnswer =
             user.role === 'ADMIN'
-                ? await prismaClient.applicationAnswer.findUniqueOrThrow({ where: { id }, select: selectedFieldsWithNested })
+                ? await prismaClient.applicationAnswer.findUniqueOrThrow({ where: { id }, select: fieldsWithNesting })
                 : await prismaClient.applicationAnswer.findUniqueOrThrow({
                       where: { id, userId: user.id },
-                      select: selectedFieldsWithNested,
+                      select: fieldsWithNesting,
                   });
 
         res.status(200).json({ message: 'Application answer found.', data: applicationAnswer });

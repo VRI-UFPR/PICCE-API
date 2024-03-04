@@ -1,6 +1,7 @@
 import express from 'express';
 import uploader from '../services/multerUploader';
 import { createClassroom, updateClassroom, getAllClassrooms, getClassroom, deleteClassroom } from '../controllers/classroomController';
+import passport from '../services/passportAuth';
 
 /**
  * @swagger
@@ -64,7 +65,7 @@ const router = express.Router();
  *               data:
  *                 $ref: '#/components/schemas/Classroom'
  */
-router.post('/createClassroom', uploader.none(), createClassroom);
+router.post('/createClassroom', passport.authenticate('jwt', { session: false }), uploader.none(), createClassroom);
 
 /**
  * @swagger
@@ -110,7 +111,7 @@ router.post('/createClassroom', uploader.none(), createClassroom);
  *               data:
  *                 $ref: '#/components/schemas/Classroom'
  */
-router.put('/updateClassroom/:classroomId', uploader.none(), updateClassroom);
+router.put('/updateClassroom/:classroomId', passport.authenticate('jwt', { session: false }), uploader.none(), updateClassroom);
 
 /**
  * @swagger
@@ -134,7 +135,7 @@ router.put('/updateClassroom/:classroomId', uploader.none(), updateClassroom);
  *            data:
  *              $ref: '#/components/schemas/Classroom'
  */
-router.get('/getAllClassrooms', uploader.none(), getAllClassrooms);
+router.get('/getAllClassrooms', passport.authenticate('jwt', { session: false }), uploader.none(), getAllClassrooms);
 
 /**
  * @swagger
@@ -174,7 +175,7 @@ router.get('/getAllClassrooms', uploader.none(), getAllClassrooms);
  *              data:
  *                $ref: '#/components/schemas/Classroom'
  */
-router.get('/getClassroom/:classroomId', uploader.none(), getClassroom);
+router.get('/getClassroom/:classroomId', passport.authenticate('jwt', { session: false }), uploader.none(), getClassroom);
 
 /**
  * @swagger
@@ -214,6 +215,6 @@ router.get('/getClassroom/:classroomId', uploader.none(), getClassroom);
  *              data:
  *                $ref: '#/components/schemas/Classroom'
  */
-router.delete('/deleteClassroom/:classroomId', uploader.none(), deleteClassroom);
+router.delete('/deleteClassroom/:classroomId', passport.authenticate('jwt', { session: false }), uploader.none(), deleteClassroom);
 
 export default router;
