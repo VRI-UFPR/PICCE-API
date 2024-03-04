@@ -32,6 +32,7 @@ enum ItemType {
   DATEBOX
   NUMBERBOX
   TIMEBOX
+  LOCATIONBOX
 }
 
 enum InstitutionType {
