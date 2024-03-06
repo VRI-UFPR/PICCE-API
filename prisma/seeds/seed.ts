@@ -544,7 +544,7 @@ async function main() {
         {
             id: 6,
             groupId: 5,
-            text: 'EXPOSIÇÃO AO MARKETING E SUA INFLUÊNCIA NO PADRÃO DE CONSUMO DE DROGAS - GUIA DE CAMPO',
+            text: '[EXPOSIÇÃO AO MARKETING E SUA INFLUÊNCIA NO PADRÃO DE CONSUMO DE DROGAS - GUIA DE CAMPO](https://drive.google.com/file/d/1q3SO-ntPXUQw3FX4Oi16Vvvj5y1ibKi8/view?usp=drive_link)',
             description: '',
             placement: 2,
             enabled: true,
@@ -1399,7 +1399,7 @@ async function main() {
         {
             id: 102,
             groupId: 6,
-            text: 'A DISPONIBILIDADE DE ALIMENTOS NAS CANTINAS DE ESCOLAS - GUIA DE CAMPO',
+            text: '[A DISPONIBILIDADE DE ALIMENTOS NAS CANTINAS DE ESCOLAS - GUIA DE CAMPO](https://picce.ufpr.br/wp-content/uploads/2023/07/PICCE_Guia-de-campo-15_Disponibilidade_alimentos.pdf)',
             description: '',
             placement: 3,
             enabled: true,
@@ -1813,7 +1813,7 @@ async function main() {
         {
             id: 149,
             groupId: 7,
-            text: 'OBSERVANDO E IDENTIFICANDO INSETOS - GUIA DE CAMPO',
+            text: '[OBSERVANDO E IDENTIFICANDO INSETOS - GUIA DE CAMPO](https://drive.google.com/file/d/1TV2H68KK__mYR9EQHaDT010l9XDTyTqu/view?usp=sharing)',
             description: '',
             placement: 2,
             enabled: true,
@@ -2857,7 +2857,7 @@ async function main() {
         {
             id: 265,
             groupId: 8,
-            text: 'DIVERSIDADE DA MEGAFAUNA MARINHA NO LITORAL DO PARANÁ - GUIA DE CAMPO',
+            text: '[DIVERSIDADE DA MEGAFAUNA MARINHA NO LITORAL DO PARANÁ - GUIA DE CAMPO](https://drive.google.com/file/d/1JZrbXT09kICfHv850dSHUD8_YIgM6yqh/view?usp=sharing)',
             description: '',
             placement: 1,
             enabled: true,
@@ -4063,7 +4063,7 @@ async function main() {
         {
             id: 400,
             groupId: 9,
-            text: 'ARAUCÁRIA HUNTERS - GUIA DE CAMPO',
+            text: '[ARAUCÁRIA HUNTERS - GUIA DE CAMPO](https://drive.google.com/file/d/1DwT92XJlmcuKaioUhsXxhcMg8hwvneYw/view?usp=sharing)',
             description: '',
             placement: 2,
             enabled: true,
@@ -4261,7 +4261,7 @@ async function main() {
         {
             id: 422,
             groupId: 10,
-            text: 'MONITORAMENTO DA QUALIDADE DA ÁGUA - GUIA DE CAMPO',
+            text: '[MONITORAMENTO DA QUALIDADE DA ÁGUA - GUIA DE CAMPO](https://drive.google.com/file/d/11QVzGWKjry8LeR-txSqfgG7VSPZGnZSS/view?usp=sharing)',
             description: '',
             placement: 1,
             enabled: true,
@@ -4774,7 +4774,7 @@ async function main() {
         {
             id: 481,
             groupId: 11,
-            text: 'Link Guia de Campo',
+            text: '[Link Guia de Campo](https://drive.google.com/file/d/10s_pyyXJvHhtAt67jRBUrmKW8rLTPQZP/view?usp=drive_link)',
             description: '',
             placement: 5,
             enabled: true,
@@ -4963,7 +4963,7 @@ async function main() {
         {
             id: 503,
             groupId: 12,
-            text: 'CARACTERIZAÇÃO DO SOLO - GUIA DE CAMPO',
+            text: '[CARACTERIZAÇÃO DO SOLO - GUIA DE CAMPO](https://drive.google.com/file/d/1vqQVFx9q-IuDAY6scOudgoKnG8IYTrF4/view?usp=sharing)',
             description: '',
             placement: 2,
             enabled: true,
@@ -5440,7 +5440,7 @@ async function main() {
         {
             id: 556,
             groupId: 12,
-            text: 'Caso não esteja com o aplicativo em mãos, utilize a carta de Munsell impressa ou na tela do seu celular, disponível no link: https://nenc.gov.ua/old/GLOBE/Other/Munsell%20soil%20colour%20chart.pdf',
+            text: 'Caso não esteja com o aplicativo em mãos, utilize a carta de Munsell impressa ou na tela do seu celular, disponível no [link](https://nenc.gov.ua/old/GLOBE/Other/Munsell%20soil%20colour%20chart.pdf)',
             description: '',
             placement: 55,
             enabled: true,
@@ -5539,7 +5539,7 @@ async function main() {
         {
             id: 567,
             groupId: 12,
-            text: 'Tem um vídeo mostrando a determinação da dureza do solo no link a seguir: https://youtu.be/9cnD2vHFj84?t=87',
+            text: 'Tem um vídeo mostrando a determinação da dureza do solo no [link](https://youtu.be/9cnD2vHFj84?t=87)',
             description: '',
             placement: 66,
             enabled: true,
@@ -5872,7 +5872,7 @@ async function main() {
         {
             id: 604,
             groupId: 13,
-            text: 'PLANTAS MEDICINAIS, AROMÁTICAS E ALIMENTÍCIAS NÃO CONVENCIONAIS - GUIA DE CAMPO',
+            text: '[PLANTAS MEDICINAIS, AROMÁTICAS E ALIMENTÍCIAS NÃO CONVENCIONAIS - GUIA DE CAMPO](https://picce.ufpr.br/wp-content/uploads/2023/07/PICCE_Guia-de-campo-07_Plantas_aromaticas.pdf)',
             description: '',
             placement: 1,
             enabled: true,
@@ -7114,7 +7114,7 @@ async function main() {
         {
             id: 743,
             groupId: 14,
-            text: 'Para acessar o formulário completo, clique aqui.',
+            text: '[Para acessar o formulário completo, clique aqui.](https://forms.gle/vjuZ1cgs6agRndHM6)',
             description: '',
             placement: 1,
             enabled: true,
@@ -7123,7 +7123,7 @@ async function main() {
         {
             id: 745,
             groupId: 15,
-            text: 'EFICIÊNCIA ENERGÉTICA NAS ESCOLAS - GUIA DE CAMPO',
+            text: '[EFICIÊNCIA ENERGÉTICA NAS ESCOLAS - GUIA DE CAMPO](https://drive.google.com/file/d/1HcQKk6znUhSikM39gtpZbtqowIeDzNvP/view?usp=sharing)',
             description: '',
             placement: 2,
             enabled: true,
@@ -7807,7 +7807,7 @@ async function main() {
         {
             id: 822,
             groupId: 16,
-            text: 'SEGURANÇA NO TRÂNSITO NO ENTORNO ESCOLAR - GUIA DE CAMPO',
+            text: '[SEGURANÇA NO TRÂNSITO NO ENTORNO ESCOLAR - GUIA DE CAMPO](https://drive.google.com/file/d/1tzcT-bzzUQEhsl4ZlXa9nvMC0omZi_Zj/view?usp=sharing)',
             description: '',
             placement: 2,
             enabled: true,
@@ -8356,7 +8356,7 @@ async function main() {
         {
             id: 884,
             groupId: 17,
-            text: 'LIXO NA PRAIA E LIXO NOS RIOS - GUIA DE CAMPO',
+            text: '[LIXO NA PRAIA E LIXO NOS RIOS - GUIA DE CAMPO](https://drive.google.com/file/d/1UMTX_GL83Qj3Mv26M1qx3O8lNh6lJaXt/view?usp=sharing)',
             description: '',
             placement: 2,
             enabled: true,
@@ -9445,7 +9445,7 @@ async function main() {
         {
             id: 1006,
             groupId: 18,
-            text: 'POLINIZADORES - GUIA DE CAMPO',
+            text: '[POLINIZADORES - GUIA DE CAMPO](https://drive.google.com/file/d/1LOqx0HUGPIUI0jcV3axcodVJyxAVIfKF/view?usp=drive_link)',
             description: '',
             placement: 2,
             enabled: true,
@@ -9814,7 +9814,7 @@ async function main() {
         {
             id: 1048,
             groupId: 19,
-            text: 'COBERTURA DO SOLO - GUIA DE CAMPO',
+            text: '[COBERTURA DO SOLO - GUIA DE CAMPO](https://picce.ufpr.br/wp-content/uploads/2023/07/PICCE_Guia-de-campo-01_Cobertura_solo.pdf)',
             description: '',
             placement: 2,
             enabled: true,
@@ -10805,23 +10805,9 @@ async function main() {
 
     const picceFiles: Omit<File, 'createdAt' | 'updateAt'>[] = [
         {
-            id: 1,
-            path: 'https://drive.google.com/file/d/1q3SO-ntPXUQw3FX4Oi16Vvvj5y1ibKi8/view?usp=drive_link',
-            itemId: 6,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
             id: 2,
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694538817/PICCE/bngbv1c6wp0ejugoulby.png',
             itemId: 19,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
-            id: 3,
-            path: 'https://picce.ufpr.br/wp-content/uploads/2023/07/PICCE_Guia-de-campo-15_Disponibilidade_alimentos.pdf',
-            itemId: 102,
             itemOptionId: null,
             itemAnswerId: null,
         },
@@ -10871,13 +10857,6 @@ async function main() {
             id: 10,
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694540191/PICCE/Imagem_12_xdhqlq.jpg',
             itemId: 138,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
-            id: 11,
-            path: 'https://drive.google.com/file/d/1TV2H68KK__mYR9EQHaDT010l9XDTyTqu/view?usp=sharing',
-            itemId: 149,
             itemOptionId: null,
             itemAnswerId: null,
         },
@@ -11435,13 +11414,6 @@ async function main() {
             itemAnswerId: null,
         },
         {
-            id: 91,
-            path: 'https://drive.google.com/file/d/1JZrbXT09kICfHv850dSHUD8_YIgM6yqh/view?usp=sharing',
-            itemId: 265,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
             id: 92,
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345615/ic/t5/cwtsla7fqvarrnx12vih.jpg',
             itemId: 275,
@@ -11764,20 +11736,6 @@ async function main() {
             itemAnswerId: null,
         },
         {
-            id: 138,
-            path: 'https://drive.google.com/file/d/1DwT92XJlmcuKaioUhsXxhcMg8hwvneYw/view?usp=sharing',
-            itemId: 400,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
-            id: 139,
-            path: 'https://drive.google.com/file/d/11QVzGWKjry8LeR-txSqfgG7VSPZGnZSS/view?usp=sharing',
-            itemId: 422,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
             id: 140,
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700265998/ic/t11%20agua/glj2tuwusxcmwsv5z2hk.jpg',
             itemId: 427,
@@ -11921,20 +11879,6 @@ async function main() {
             id: 160,
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700266020/ic/t11%20agua/u6gsc6qudhvtk7gchcgj.jpg',
             itemId: 470,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
-            id: 161,
-            path: 'https://drive.google.com/file/d/10s_pyyXJvHhtAt67jRBUrmKW8rLTPQZP/view?usp=drive_link',
-            itemId: 481,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
-            id: 162,
-            path: 'https://drive.google.com/file/d/1vqQVFx9q-IuDAY6scOudgoKnG8IYTrF4/view?usp=sharing',
-            itemId: 503,
             itemOptionId: null,
             itemAnswerId: null,
         },
@@ -12264,13 +12208,6 @@ async function main() {
             id: 209,
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693708/ic/uafqhvrxvrc3jewb8a4a.jpg',
             itemId: 597,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
-            id: 210,
-            path: 'https://picce.ufpr.br/wp-content/uploads/2023/07/PICCE_Guia-de-campo-07_Plantas_aromaticas.pdf',
-            itemId: 604,
             itemOptionId: null,
             itemAnswerId: null,
         },
@@ -12996,20 +12933,6 @@ async function main() {
             itemAnswerId: null,
         },
         {
-            id: 314,
-            path: 'https://forms.gle/vjuZ1cgs6agRndHM6',
-            itemId: 743,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
-            id: 315,
-            path: 'https://drive.google.com/file/d/1HcQKk6znUhSikM39gtpZbtqowIeDzNvP/view?usp=sharing',
-            itemId: 745,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
             id: 316,
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694468735/PICCE/sala._ecuppf.jpg',
             itemId: 747,
@@ -13062,13 +12985,6 @@ async function main() {
             id: 323,
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694467450/PICCE/PICCE_Guia-de-campo-13_Eficiencia_energetica-19_ua3ky6.jpg',
             itemId: 820,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
-            id: 324,
-            path: 'https://drive.google.com/file/d/1tzcT-bzzUQEhsl4ZlXa9nvMC0omZi_Zj/view?usp=sharing',
-            itemId: 822,
             itemOptionId: null,
             itemAnswerId: null,
         },
@@ -13139,13 +13055,6 @@ async function main() {
             id: 334,
             path: 'https://lh5.googleusercontent.com/dexcTGgDscLYHtEuEYJ0KS4mlIJcNqbWYYHwjsTLtw6J3OCQdqjtM3Ov59P7bT9vv-J7sRcOct3BLdgovpiyVPLZ8rBwhTZk4CoUFPk3iJkIt8rxABecr5eRKnu2PRtxwg=w740',
             itemId: 875,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
-            id: 335,
-            path: 'https://drive.google.com/file/d/1UMTX_GL83Qj3Mv26M1qx3O8lNh6lJaXt/view?usp=sharing',
-            itemId: 884,
             itemOptionId: null,
             itemAnswerId: null,
         },
@@ -13332,13 +13241,6 @@ async function main() {
             itemAnswerId: null,
         },
         {
-            id: 362,
-            path: 'https://drive.google.com/file/d/1LOqx0HUGPIUI0jcV3axcodVJyxAVIfKF/view?usp=drive_link',
-            itemId: 1006,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
             id: 363,
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695339631/PICCE/lxdoynuuxjlgnenk2p44.png',
             itemId: 1015,
@@ -13447,13 +13349,6 @@ async function main() {
             id: 378,
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699844313/ic/t9/uxkjw69uijrepphwlrhj.jpg',
             itemId: 1031,
-            itemOptionId: null,
-            itemAnswerId: null,
-        },
-        {
-            id: 379,
-            path: 'https://picce.ufpr.br/wp-content/uploads/2023/07/PICCE_Guia-de-campo-01_Cobertura_solo.pdf',
-            itemId: 1048,
             itemOptionId: null,
             itemAnswerId: null,
         },
