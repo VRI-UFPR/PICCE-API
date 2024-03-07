@@ -40,6 +40,7 @@ const fieldsWithNesting = {
             id: true,
         },
     },
+    acceptedTerms: true,
     createdAt: true,
     updateAt: true,
 };
@@ -116,6 +117,9 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         checkAuthorization(curUser, id);
 
         // Check if user is authorized to update a user with the given role
+        checkHierarchy(curUser, user.role as UserRole);
+
+        // Prisma operation
         const updatedUser = await prismaClient.user.update({
             where: { id },
             data: {
@@ -130,6 +134,32 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         });
 
         res.status(200).json({ message: 'User updated.', data: updatedUser });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const acceptTermsUser = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // ID from params
+        const id: number = parseInt(req.params.userId);
+
+        // User from Passport-JWT
+        const curUser = req.user as User;
+
+        // Check if user is authorized to update the user
+        checkAuthorization(curUser, id);
+
+        // Check if user is authorized to update a user with the given role
+        const updatedUser = await prismaClient.user.update({
+            where: { id },
+            data: {
+                acceptedTerms: true,
+            },
+            select: fieldsWithNesting,
+        });
+
+        res.status(200).json({ message: 'User accepted terms.', data: updatedUser });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
