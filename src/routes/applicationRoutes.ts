@@ -3,9 +3,11 @@ import uploader from '../services/multerUploader';
 import {
     createApplication,
     updateApplication,
-    getAllApplications,
+    getMyApplications,
+    getVisibleApplications,
     getApplication,
     deleteApplication,
+    getApplicationWithProtocol,
 } from '../controllers/applicationController';
 import passport from '../services/passportAuth';
 
@@ -146,9 +148,9 @@ router.put('/updateApplication/:applicationId', passport.authenticate('jwt', { s
 
 /**
  * @swagger
- * /api/application/getAllApplications:
+ * /api/application/getMyApplications:
  *   get:
- *     summary: Get all applications
+ *     summary: Get all applications created by the user
  *     tags: [Application]
  *     security:
  *       - bearerAuth: []
@@ -170,7 +172,35 @@ router.put('/updateApplication/:applicationId', passport.authenticate('jwt', { s
  *               type: string
  *               description: Error message
  */
-router.get('/getAllApplications', passport.authenticate('jwt', { session: false }), uploader.none(), getAllApplications);
+router.get('/getMyApplications', passport.authenticate('jwt', { session: false }), uploader.none(), getMyApplications);
+
+/**
+ * @swagger
+ * /api/application/getVisibleApplications:
+ *   get:
+ *     summary: Get all applications that are visible to the user
+ *     tags: [Application]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: The list of applications was successfully retrieved
+ *         content:
+ *           application/json:
+ *             message: All applications found.
+ *             data:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Application'
+ *       500:
+ *         description: An error occurred while retrieving the list of applications
+ *         content:
+ *           application/json:
+ *             error:
+ *               type: string
+ *               description: Error message
+ */
+router.get('/getVisibleApplications', passport.authenticate('jwt', { session: false }), uploader.none(), getVisibleApplications);
 
 /**
  * @swagger
@@ -211,6 +241,51 @@ router.get('/getAllApplications', passport.authenticate('jwt', { session: false 
  *               description: Error message
  */
 router.get('/getApplication/:applicationId', passport.authenticate('jwt', { session: false }), uploader.none(), getApplication);
+
+/**
+ * @swagger
+ * /api/application/getApplicationWithProtocol/{applicationId}:
+ *   get:
+ *     summary: Get an application by id with nested protocol
+ *     tags: [Application]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: applicationId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: The id of the application to retrieve
+ *     responses:
+ *       200:
+ *         description: The application was successfully retrieved
+ *         content:
+ *           application/json:
+ *             message: Application found.
+ *             data:
+ *               $ref: '#/components/schemas/Application'
+ *       400:
+ *         description: An application with the specified id was not found
+ *         content:
+ *           application/json:
+ *             error:
+ *               type: string
+ *               description: Error message
+ *       500:
+ *         description: An error occurred while retrieving the application
+ *         content:
+ *           application/json:
+ *             error:
+ *               type: string
+ *               description: Error message
+ */
+router.get(
+    '/getApplicationWithProtocol/:applicationId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    getApplicationWithProtocol
+);
 
 /**
  * @swagger
