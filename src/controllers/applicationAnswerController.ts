@@ -477,45 +477,41 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
                         item.itemAnswers[answer.group.applicationAnswerId][answer.group.id].push({ text: answer.text });
                     }
 
-                    item.optionAnswers = {};
-                    const optionAnswers = await prismaClient.optionAnswer.findMany({
-                        where: {
-                            group: {
-                                applicationAnswerId: {
-                                    in: applicationWithAnswers.answers.map((answer: any) => answer.id),
+                    for (const option of item.itemOptions) {
+                        option.optionAnswers = {};
+                        const optionAnswers = await prismaClient.optionAnswer.findMany({
+                            where: {
+                                group: {
+                                    applicationAnswerId: {
+                                        in: applicationWithAnswers.answers.map((answer: any) => answer.id),
+                                    },
+                                },
+                                optionId: option.id,
+                            },
+                            select: {
+                                text: true,
+                                group: {
+                                    select: {
+                                        id: true,
+                                        applicationAnswerId: true,
+                                    },
                                 },
                             },
-                            itemId: item.id,
-                        },
-                        select: {
-                            text: true,
-                            group: {
-                                select: {
-                                    id: true,
-                                    applicationAnswerId: true,
-                                },
-                            },
-                            option: {
-                                select: {
-                                    text: true,
-                                },
-                            },
-                        },
-                    });
-
-                    for (const answer of optionAnswers) {
-                        if (!item.optionAnswers[answer.group.applicationAnswerId]) {
-                            item.optionAnswers[answer.group.applicationAnswerId] = {};
-                        }
-
-                        if (!item.optionAnswers[answer.group.applicationAnswerId][answer.group.id]) {
-                            item.optionAnswers[answer.group.applicationAnswerId][answer.group.id] = [];
-                        }
-
-                        item.optionAnswers[answer.group.applicationAnswerId][answer.group.id].push({
-                            option: answer.option.text,
-                            text: answer.text,
                         });
+
+                        for (const answer of optionAnswers) {
+                            if (!option.optionAnswers[answer.group.applicationAnswerId]) {
+                                option.optionAnswers[answer.group.applicationAnswerId] = {};
+                            }
+
+                            if (!option.optionAnswers[answer.group.applicationAnswerId][answer.group.id]) {
+                                option.optionAnswers[answer.group.applicationAnswerId][answer.group.id] = [];
+                            }
+
+                            option.optionAnswers[answer.group.applicationAnswerId][answer.group.id].push({
+                                text: answer.text,
+                            });
+                        }
                     }
                 }
             }
