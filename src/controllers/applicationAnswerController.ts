@@ -46,7 +46,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         // Yup schemas
         const createItemAnswerSchema = yup
             .object()
-            .shape({ id: yup.number(), text: yup.string().min(3).max(255).required(), itemId: yup.number().required() })
+            .shape({ id: yup.number(), text: yup.string().max(255).required(), itemId: yup.number().required() })
             .noUnknown();
 
         const createOptionAnswerSchema = yup
@@ -187,7 +187,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
             .object()
             .shape({
                 id: yup.number().min(1),
-                text: yup.string().min(3).max(255),
+                text: yup.string().max(255),
                 itemId: yup.number().min(1),
                 filesIds: yup.array().of(yup.number()).default([]),
             })
