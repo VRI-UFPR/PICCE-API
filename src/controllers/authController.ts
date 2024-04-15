@@ -94,3 +94,12 @@ export const renewSignIn = async (req: Request, res: Response) => {
         res.status(400).json(errorFormatter(error));
     }
 };
+
+export const checkSignIn = async (req: Request, res: Response) => {
+    try {
+        const user = req.user as User;
+        res.status(200).json({ message: 'User currently signed in.', data: { id: user.id } });
+    } catch (error) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
