@@ -37,10 +37,13 @@ export const signUp = async (req: Request, res: Response) => {
         });
 
         const token = jwt.sign({ id: createdUser.id, username: createdUser.username }, process.env.JWT_SECRET as string, {
-            expiresIn: 1800,
+            expiresIn: process.env.JWT_EXPIRATION,
         });
 
-        res.status(201).json({ message: 'User signed up.', data: { id: createdUser.id, token: token, expiresIn: 1800 } });
+        res.status(201).json({
+            message: 'User signed up.',
+            data: { id: createdUser.id, token: token, expiresIn: process.env.JWT_EXPIRATION },
+        });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -69,10 +72,10 @@ export const signIn = async (req: Request, res: Response) => {
         }
 
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET as string, {
-            expiresIn: 1800,
+            expiresIn: process.env.JWT_EXPIRATION,
         });
 
-        res.status(200).json({ message: 'User signed in.', data: { id: user.id, token: token, expiresIn: 1800 } });
+        res.status(200).json({ message: 'User signed in.', data: { id: user.id, token: token, expiresIn: process.env.JWT_EXPIRATION } });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -83,10 +86,10 @@ export const renewSignIn = async (req: Request, res: Response) => {
         const user = req.user as User;
 
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET as string, {
-            expiresIn: 1800,
+            expiresIn: process.env.JWT_EXPIRATION,
         });
 
-        res.status(200).json({ message: 'User signed in.', data: { id: user.id, token: token, expiresIn: 1800 } });
+        res.status(200).json({ message: 'User signed in.', data: { id: user.id, token: token, expiresIn: process.env.JWT_EXPIRATION } });
     } catch (error) {
         res.status(400).json(errorFormatter(error));
     }
