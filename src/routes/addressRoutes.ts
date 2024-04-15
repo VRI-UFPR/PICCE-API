@@ -1,6 +1,7 @@
 import express from 'express';
 import uploader from '../services/multerUploader';
 import { createAddress, updateAddress, getAllAddresses, getAddress, deleteAddress } from '../controllers/addressController';
+import passport from '../services/passportAuth';
 
 const router = express.Router();
 
@@ -68,7 +69,7 @@ const router = express.Router();
  *               type: string
  *               description: Error message
  */
-router.post('/createAddress', uploader.none(), createAddress);
+router.post('/createAddress', passport.authenticate('jwt', { session: false }), uploader.none(), createAddress);
 
 /**
  * @swagger
@@ -112,7 +113,7 @@ router.post('/createAddress', uploader.none(), createAddress);
  *               type: string
  *               description: Error message
  */
-router.put('/updateAddress/:addressId', uploader.none(), updateAddress);
+router.put('/updateAddress/:addressId', passport.authenticate('jwt', { session: false }), uploader.none(), updateAddress);
 
 /**
  * @swagger
@@ -138,7 +139,7 @@ router.put('/updateAddress/:addressId', uploader.none(), updateAddress);
  *               type: string
  *               description: Error message
  */
-router.get('/getAllAddresses', uploader.none(), getAllAddresses);
+router.get('/getAllAddresses', passport.authenticate('jwt', { session: false }), uploader.none(), getAllAddresses);
 
 /**
  * @swagger
@@ -176,7 +177,7 @@ router.get('/getAllAddresses', uploader.none(), getAllAddresses);
  *               type: string
  *               description: Error message
  */
-router.get('/getAddress/:addressId', uploader.none(), getAddress);
+router.get('/getAddress/:addressId', passport.authenticate('jwt', { session: false }), uploader.none(), getAddress);
 
 /**
  * @swagger
@@ -214,6 +215,6 @@ router.get('/getAddress/:addressId', uploader.none(), getAddress);
  *               type: string
  *               description: Error message
  */
-router.delete('/deleteAddress/:addressId', uploader.none(), deleteAddress);
+router.delete('/deleteAddress/:addressId', passport.authenticate('jwt', { session: false }), uploader.none(), deleteAddress);
 
 export default router;

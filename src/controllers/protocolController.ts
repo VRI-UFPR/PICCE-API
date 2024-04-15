@@ -27,8 +27,8 @@ export const createProtocol = async (req: Request, res: Response) => {
         const itemsSchema = yup
             .object()
             .shape({
-                text: yup.string().min(3).max(255).required(),
-                description: yup.string().min(3).max(255).notRequired(),
+                text: yup.string().min(3).max(3000).required(),
+                description: yup.string().max(3000).notRequired(),
                 enabled: yup.boolean().required(),
                 type: yup.string().oneOf(Object.values(ItemType)).required(),
                 placement: yup.number().min(1).required(),
@@ -59,8 +59,8 @@ export const createProtocol = async (req: Request, res: Response) => {
         const createProtocolSchema = yup
             .object()
             .shape({
-                title: yup.string().min(3).max(255).required(),
-                description: yup.string().min(3).max(255).notRequired(),
+                title: yup.string().min(3).max(3000).required(),
+                description: yup.string().max(3000).notRequired(),
                 enabled: yup.boolean().required(),
                 pages: yup.array().of(pagesSchema).min(1).required(),
                 owners: yup.array().of(yup.number()).min(1).required(),
@@ -225,8 +225,8 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             .object()
             .shape({
                 id: yup.number(),
-                text: yup.string().min(3).max(255),
-                description: yup.string().min(3).max(255).notRequired(),
+                text: yup.string().min(3).max(3000),
+                description: yup.string().max(3000).notRequired(),
                 enabled: yup.boolean(),
                 groupId: yup.number(),
                 type: yup.string().oneOf(Object.values(ItemType)),
@@ -263,8 +263,8 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
         const updateProtocolSchema = yup
             .object()
             .shape({
-                title: yup.string().min(3).max(255),
-                description: yup.string().min(3).max(255).notRequired(),
+                title: yup.string().min(3).max(3000),
+                description: yup.string().max(3000).notRequired(),
                 enabled: yup.boolean(),
                 pages: yup.array().of(updatePagesSchema).min(1).required(),
                 owners: yup.array().of(yup.number()).min(1).required(),
