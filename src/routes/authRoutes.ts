@@ -1,6 +1,7 @@
 import express from 'express';
 import uploader from '../services/multerUploader';
-import { signIn, signUp } from '../controllers/authController';
+import passport from '../services/passportAuth';
+import { signIn, signUp, renewSignIn } from '../controllers/authController';
 
 /**
  * @swagger
@@ -147,5 +148,7 @@ router.post('/signIn', uploader.none(), signIn);
  *               description: Error message
  */
 router.post('/signUp', uploader.none(), signUp);
+
+router.post('/renewSignIn', passport.authenticate('jwt', { session: false }), uploader.none(), renewSignIn);
 
 export default router;
