@@ -4,6 +4,7 @@ import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import jwt from 'jsonwebtoken';
 import errorFormatter from '../services/errorFormatter';
+import ms from 'ms';
 
 export const signUp = async (req: Request, res: Response) => {
     try {
@@ -75,7 +76,10 @@ export const signIn = async (req: Request, res: Response) => {
             expiresIn: process.env.JWT_EXPIRATION,
         });
 
-        res.status(200).json({ message: 'User signed in.', data: { id: user.id, token: token, expiresIn: process.env.JWT_EXPIRATION } });
+        res.status(200).json({
+            message: 'User signed in.',
+            data: { id: user.id, token: token, expiresIn: ms(process.env.JWT_EXPIRATION as string) },
+        });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -89,7 +93,10 @@ export const renewSignIn = async (req: Request, res: Response) => {
             expiresIn: process.env.JWT_EXPIRATION,
         });
 
-        res.status(200).json({ message: 'User signed in.', data: { id: user.id, token: token, expiresIn: process.env.JWT_EXPIRATION } });
+        res.status(200).json({
+            message: 'User signed in.',
+            data: { id: user.id, token: token, expiresIn: ms(process.env.JWT_EXPIRATION as string) },
+        });
     } catch (error) {
         res.status(400).json(errorFormatter(error));
     }
