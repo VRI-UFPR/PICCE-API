@@ -78,7 +78,7 @@ export const signIn = async (req: Request, res: Response) => {
 
         res.status(200).json({
             message: 'User signed in.',
-            data: { id: user.id, token: token, expiresIn: ms(process.env.JWT_EXPIRATION as string) },
+            data: { id: user.id, acceptedTerms: user.acceptedTerms, token: token, expiresIn: ms(process.env.JWT_EXPIRATION as string) },
         });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
@@ -127,6 +127,29 @@ export const checkSignIn = async (req: Request, res: Response) => {
     try {
         const user = req.user as User;
         res.status(200).json({ message: 'User currently signed in.', data: { id: user.id } });
+    } catch (error) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const acceptTerms = async (req: Request, res: Response) => {
+    try {
+        const user = req.user as User;
+
+        if (user.id === 1) {
+            throw new Error('Cannot accept terms as anonymous user.');
+        }
+
+        const updatedUser = await prismaClient.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                acceptedTerms: true,
+            },
+        });
+
+        res.status(200).json({ message: 'Terms accepted.', data: { id: updatedUser.id, acceptedTerms: updatedUser.acceptedTerms } });
     } catch (error) {
         res.status(400).json(errorFormatter(error));
     }
