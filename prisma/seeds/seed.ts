@@ -232,7 +232,10 @@ async function main() {
             description:
                 'O marketing é definido como uma atividade que procura satisfazer necessidades e interesses dos consumidores através da comercialização de produtos ou serviços (OLIVEIRA, 2007). Através de processos de troca, o marketing envolve diretamente nesta ação, uma empresa, um produto e o próprio consumidor (OLIVEIRA, 2007). Portanto, o marketing também faz parte da nossa rotina, isto é, de processos que nos rodeiam.\n\nMas afinal, qual seria a relação entre as tecnologias, internet, rádio, TV e o marketing? Como podemos associá-los? Sobretudo, pensando no uso da internet que possibilita a execução de aplicativos que oferecem subsídios para o desenvolvimento, acesso e divulgação de pequenas e grandes marcas. Você já parou para pensar nessas questões? E no quanto estamos e/ou podemos estar expostos a esses processos que por fim, nos direcionam ao consumo?\n\nDICA: Neste momento da leitura você pode realizar um debate com seu professor e seus colegas sobre essas questões mencionadas, isso poderá te ajudar a compreender melhor a relação entre esses dois conceitos.\n\n[Cheque o guia de campo para detalhes completos.](https://drive.google.com/file/d/1q3SO-ntPXUQw3FX4Oi16Vvvj5y1ibKi8/view?usp=drive_link)\n\n### Instruções para realização da atividade\n\nA partir de agora você será convidado a realizar a seguinte atividade que lhe representará frente às possíveis exposições que as propagandas podem proporcionar em sua rotina. Para a realização da atividade proposta você precisará:\n\n - Caneta ou lápis e borracha;\n - Confira se o material recebido está completo;\n - As questões devem ser respondidas individualmente e de acordo com seus conhecimentos prévios;\n - Leia com atenção as questões atribuídas, sendo criterioso com as respostas;\n\nO questionário consiste em 15 perguntas atribuídas em 3 partes:\n\n - Inicialmente, na parte 1 tem-se por objetivo realizar um mapeamento do seu perfil, como a idade, qual o gênero que se identifica, dados sobre a sua escola, o ano em que estuda. Após isso, será perguntado qual o meio de comunicação e informação que mais utiliza em seu dia a dia (internet, televisão, rádio) e ainda, se possui redes sociais;\n - Na parte 2 é abordado os produtos que você poderá ou não identificar ao redor da escola em que você estuda.\n - Na parte 3 do questionário, você fará uma análise do perfil das propagandas identificadas ao redor da escola. A partir de agora você será convidado a realizar a seguinte atividade que lhe representará frente às possíveis exposições que as tecnologias e o marketing podem proporcionar em sua rotina.',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 2,
@@ -240,7 +243,10 @@ async function main() {
             description:
                 'Este material é um guia de campo que o acompanhará na aplicação da pesquisa nas escolas do estado do Paraná, buscando descrever o passo a passo de como realizar a coleta dos dados.\n\nEste trabalho faz parte do Programa Interinstitucional de Ciência Cidadã na Escola – PICCE e aborda o tema “A disponibilidade de alimentos nas cantinas e refeitórios de escolas e sua relação com a alimentação saudável”, o qual conta com os professores para orientarem e com os estudantes para atuarem como pesquisadores.\n\nDessa forma, é possível coletar informações acerca da disponibilidade e variedade dos alimentos apresentados nos ambientes que costumam frequentar enquanto estão nas escolas, por meio do preenchimento do formulário desenvolvido pela equipe. Além disso, a análise, discussão e reflexão do tema pode ser facilitada com o uso do Ebook pelo professor e com o jogo Super Trunfo Alimentos. Bons estudos!\n\n### Como enviar os dados\n\nPara você enviar os dados deste protocolo, leia atentamente o [Guia de Campo](https://picce.ufpr.br/wp-content/uploads/2023/07/PICCE_Guia-de-campo-15_Disponibilidade_alimentos.pdf) e siga todas as instruções. Organize todos os materiais necessários para o processo de coleta de dados antes de iniciar a atividade. Em caso de dúvidas ao longo da coleta dos dados, consulte o Guia de Campo.\n\n### Instruções para a coleta dos dados\n\nPara iniciar a aplicação deste protocolo de Ciência Cidadã na Escola é importante que você tenha em mãos todos os materiais necessários para o desenvolvimento das atividades propostas. Seu professor já realizou a leitura do *E-book* com informações e poderá utilizar as aulas propostas para estimular as conversas com os alunos sobre a temática da Alimentação Saudável na adolescência e o método científico. Seu professor irá realizar:\n\n 1. Distribuição dos formulários aos alunos (ou orientação quanto ao uso do aplicativo de celular) e encaminhamento para a coleta de dados;\n\n2. Após coletados os dados, os alunos devem devolver ao professor os formulários, e os encaminhará para a equipe de pesquisa;\n\n3. A equipe de pesquisa irá tratar desses dados estatisticamente e visualmente (gráficos) e fará a devolução ao professor ou à professora;\n\n4. Por fim, seu(ua) professor(a) irá apresentar a análise realizada para a turma e vocês poderão fazer uma discussão sobre os resultados na sala de aula.\n\n### Caracterização do ambiente da coleta de dados\n- Escola: A escola é um espaço em que ações educativas sobre alimentação saudável na adolescência podem ser desenvolvidas. A rede escolar tem o dever de ofertar uma alimentação de qualidade e que possa suprir as necessidades nutricionais dos estudantes *(FNDE, 2017)*. Nesta etapa do protocolo você deverá registrar através do formulário as informações coletadas na escola em que se encontra, identificando seu tamanho, número de estudantes atendidos, se possui pontos alternativos de venda de alimentos. Principalmente, nos refeitórios e onde aconteça a venda e/ou distribuição de alimentos (cantina ou vendedores ambulantes no espaço externo). Todos esses ambientes devem ser observados e os dados, coletados. Lembre-se você deve anotar quais são os alimentos disponíveis (*in natura*, minimamente processados e ultraprocessados).',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 3,
@@ -248,7 +254,10 @@ async function main() {
             description:
                 'Quais e onde as diferentes ordens de insetos podem ser encontradas?\n\nO protocolo “Observando e Identificando Insetos” tem como objetivo fornecer uma ferramenta de auxílio ao trabalho de professores em atividades práticas, bem como para a utilização direta por estudantes ou qualquer outra pessoa que tenha interesse pelo tema.\n\nSeguindo as informações disponibilizadas, o utilizador poderá rapidamente e de maneira científica, identificar qual a ordem taxonômica do inseto visualizado.\n\nTambém permitirá fazer associações com o problema de pesquisa, sobre quais e onde as diferentes ordens de insetos podem ser encontradas e quais possuem maior interação com o ser humano.\n\n[Veja o guia completo aqui.](https://drive.google.com/file/d/1TV2H68KK__mYR9EQHaDT010l9XDTyTqu/view?usp=sharing)',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 4,
@@ -256,7 +265,10 @@ async function main() {
             description:
                 'O protocolo de amostragem em campo referente ao Monitoramento da megafauna no ambiente costeiro (MEGACOST), traz informações que permitem conhecer as espécies e a diversidade da megafauna que ocorre na zona costeira do litoral do Paraná.\n\nAfinal, quais são as principais espécies que ocorrem nesta zona costeira? Quais são os ambientes em que as espécies podem ser avistadas? Existe diferenças no número de indivíduos e quais são as espécies que ocorrem em diferentes épocas do ano? Há ocorrência de espécies ameaçadas de extinção?\n\n[Veja o guia de campo completo aqui.](https://drive.google.com/file/d/1JZrbXT09kICfHv850dSHUD8_YIgM6yqh/view)',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 5,
@@ -264,7 +276,10 @@ async function main() {
             description:
                 'Este guia de campo objetiva formar Araucária Hunters! Para que você possa entender e ter acesso a este título é necessário seguir alguns passos e também conhecer alguns conceitos principais.\n\nEla é conhecida cientificamente pelo nome de Araucaria angustifolia, e é uma das árvores símbolos do estado do Paraná, devido sua grande importância para o progresso econômico do estado.\n\nAlém disso, a Araucária pode ser conhecida também por outros nomes, como Pinheiro-do-Paraná e Pinheiro-Brasileiro, sendo classificada como uma gimnosperma, isto é, as primeiras plantas a definitivamente conquistar o ambiente terrestre. A semente da Araucária, conhecida como pinhão, é um produto de inverno muito esperado para consumo pela população, ela apresenta uma grande reserva de carboidratos, sendo um bom fornecedor de energia.\n\nO protocolo Araucária Hunters, visa responder o problema da pesquisa “Qual a distribuição e o estado de conservação das Araucárias no estado do Paraná?”. Esse mapeamento se faz importante devido ao fato dela ter sido explorada, por meio do extrativismo indiscriminado, levando-a para a lista oficial das espécies da flora brasileira ameaçada de extinção, situada na categoria criticamente em perigo em nível global, segundo a Lista Vermelha de Espécies Ameaçadas da IUCN (International Union For Conservation of Nature).\n\nPara poder realizar a análise sobre a distribuição, concentração e crescimento de Araucárias é necessária à coleta de dados. Para que essa coleta seja realmente ativa, ser um ajudante apenas não basta, será vital uma atuação como pesquisadores que estejam dispostas/os a colaborar nessa missão; por isso, propomos que os ajudantes sejam caçadores de Araucárias ou Hunters, termo em inglês para caçadores.\n\nSe você está no processo de aceitar ser ou se já aceitou essa ideia de virar um Hunter, talvez possa estar se perguntando o porquê disso realmente ser importante.\n\nIsso representa a última instância de alerta antes de ser considerada extinta da natureza, em outras palavras, significa que a espécie pode desaparecer do planeta.\n\nA Araucária não é reconhecida à toa como um dos símbolos do estado do Paraná, isto, porque ela teve grande influência econômica com a exportação da madeira no século passado e também por ter sido cortada para o plantio de monoculturas nas últimas décadas.\n\nPor isso, seu mapeamento é importante, para ser possível identificar e analisar maneiras e manejos de plantio que possam ser realizados visando o desenvolvimento desta espécie.\n\nAlém disso, ao se dispor a se tornar um/a Hunter você também estará contribuindo para que esta pesquisa alcance seus objetivos:\n\n - Mapear as Araucárias no estado do Paraná e caracterizar métricas para a análise de conservação dessas gimnospermas.\n - Analisar como a coleta de dados pode ser interpretada em relação ao estado de conservação das Araucárias, no Paraná.\n\nPara o mapeamento ser concluído, portanto, serão necessárias algumas observações sobre as Araucárias da região em que você mora. Ao realizar essa coleta, você oficialmente será um Araucária Hunter e entrará para o time dos defensores da biodiversidade! E, se quiser se tornar ainda mais ativo nesta caçada, poderá contribuir com ideias e soluções de problemas que contribuam para que nossos objetivos sejam alcançados.\n\n[Veja o guia de campo completo aqui.](https://drive.google.com/file/d/1DwT92XJlmcuKaioUhsXxhcMg8hwvneYw/view?usp=sharing)',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 6,
@@ -272,7 +287,10 @@ async function main() {
             description:
                 'Prezado colega professor e/ou professora, estudantes da Educação Básica (Ensino Fundamental ou Ensino Médio), esse Guia de Campo é parte do Protocolo de **Monitoramento dos Ambientes de Águas Continentais**. O objetivo é apresentar um conjunto de informações para orientar as atividades pedagógicas durante o desenvolvimento de nossa proposta de ciência cidadã.\n\nCom este embasamento e após o estudo do Capítulo **Monitoramento dos Ambientes de Águas Continentais**, apresentamos a seguir nosso Guia de Campo com os contextos teóricos e os encaminhamentos para o desenvolvimento do protocolo sistematizado em dois contextos: em primeiro lugar o estudo das características gerais do ambiente e em segundo lugar o estudo das comunidades de bioindicadores (macrófitas e macroinvertebrados).\n\nEsse protocolo está principalmente articulado com dois dos Objetivos do Desenvolvimento Sustentável (ODS – Brasil, 2017): **objetivo 6. Água potável e Saneamento** - Implantar estratégias de gestão da água que sejam ambientalmente sustentáveis e economicamente benéficas na região hidrográfica onde atua e o **objetivo 14. Vida na água** - Pesquisa, desenvolve e implementa produtos, serviços e modelos de negócios que eliminam impactos nos ecossistemas oceânicos e colaboram para sua restauração.\n\nAlém disso, buscamos interagir com os objetivos propostos na **Base Nacional Comum Curricular - BNCC** (Brasil, 2018), em especial no âmbito do Ensino Fundamental na área das Ciências EF07CI07 (Caracterizar os principais ecossistemas brasileiros quanto à paisagem, à quantidade de água, ao tipo de solo, à disponibilidade de luz solar, à temperatura etc., correlacionando essas características à flora e fauna específicas), EF09CI13 (Propor iniciativas individuais e coletivas para a solução de problemas ambientais da cidade ou da comunidade, com base na análise de ações de consumo consciente e de sustentabilidade bem-sucedidas) e ainda no contexto do Ensino Médio na área das Ciências da Natureza e suas Tecnologias EMCNT206 (Discutir a importância da preservação e conservação da biodiversidade, considerando parâmetros qualitativos e quantitativos, e avaliar os efeitos da ação humana e das políticas ambientais para a garantia da sustentabilidade do planeta) utilizando protocolos da ciência cidadã.\n\nAo final do desenvolvimento das atividades, você obterá dados que vão lhe permitir avaliar a qualidade ambiental, num processo de biomonitoramento. De posse destes referenciais e ferramentas de aprendizagem você poderá refletir e discutir futuras pesquisas e novos encaminhamentos diante de sua realidade.\n\n[Clique aqui para acessar o guia de campo completo.](https://drive.google.com/file/d/11QVzGWKjry8LeR-txSqfgG7VSPZGnZSS/view)',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 7,
@@ -280,7 +298,10 @@ async function main() {
             description:
                 'A água é um recurso natural estratégico para a sobrevivência no planeta, uma vez que sustenta a vida, ciclos biogeológicos, produção de alimentos e demais atividades essenciais para a manutenção da sociedade. A dependência do recurso não impede que as sociedades humanas poluam e degradem tanto as águas superficiais como as subterrâneas.\n\nPara ser considerada própria para uso e consumo, a água tem que estar dentro dos parâmetros de qualidade pré-estabelecidos pelas agências de controle (IQA, ou instituições estaduais de controle).\n\nPartindo disso, o protocolo Parâmetros físico-químicos como indicadores de poluição, possui como problema de pesquisa o monitoramento da água e sua relação com a poluição de recursos hídricos. Seu objetivo é envolver a comunidade escolar na coleta de dados sobre a qualidade da água no território em que a escola está inserida, monitoramento parâmetros importantes para a gestão dos recursos hídricos. Além disso, essa abordagem pode fornecer uma oportunidade para os estudantes aprenderem sobre ciência e questões ambientais de forma prática e envolvente, desenvolvendo habilidades de pensamento crítico e resolução de problemas.\n\nO presente protocolo também pode auxiliar no engajamento da comunidade e na conscientização sobre a importância da qualidade da água e a necessidade de proteger e preservar nossos recursos hídricos.\n\n[Clique aqui para acessar o guia de campo completo.](https://drive.google.com/file/d/10s_pyyXJvHhtAt67jRBUrmKW8rLTPQZP/view)',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 8,
@@ -288,7 +309,10 @@ async function main() {
             description:
                 '### Introdução\n\nO solo é um recurso natural de grande valor econômico, social e ambiental. Podemos usá-lo com vegetação nativa, vegetação inserida pelo ser humano ou áreas construídas. Sua qualidade está relacionada a capacidade de se manter produção de animais e vegetais, além de manter ou melhorar a qualidade da água e do ar. E, ainda, o solo é o meio sobre o qual habitamos.\n\nComo o solo está presente no dia-a-dia, pode-se avaliar aspectos que conferem a qualidade do solo e, consequentemente, perceber aspectos que fazem perder a qualidade do solo. Mas comoencontrar essas informações no ambiente escolar?\n\nPor exemplo, quando muitas pessoas pisoteiam o solo, causa compactação e diminuição da qualidade do solo. Quando não tem cobertura no solo (grama e árvores, por exemplo) pode ocorrer erosão, outro ponto que também prejudica a qualidade do solo.\n\n### Instruções para realizar a atividade\n\nO protocolo de caracterização da qualidade dos solos pode ser realizado no ambiente das escolas e colégios, mas também em outros locais, por meio das metodologias descritas neste guia e registradas por meio de fotografias e anotações na ficha de coleta de dados.\n\nPara realização das atividades, serão necessários os seguintes materiais:\n\n - Cano de PVC com 100 mm de diâmetro e aproximadamente 30 cm de comprimento\n - Colher de sopa\n - Copos plásticos descartáveis de 200 mL\n - Este guia de campo (preferencialmente impresso)\n - Fitas de medição de pH ou bicarbonato de sódio e vinagre\n - Garrafa PET de 500 mL cheia de água\n - Lápis e/ou caneta\n - Lona, plástico ou papelão\n - Lupa\n - Martelo\n - Pá cortadeira (reta) ou enxada\n - Palitos de sorvete\n - Pedaço de madeira com mais ou menos 20 cm de comprimento\n - Pinça (se disponível)\n - Prancheta\n - Régua de 30 cm\n - Telefone celular',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 9,
@@ -296,7 +320,10 @@ async function main() {
             description:
                 'O ser humano, desde a antiguidade, utiliza-se de plantas como remédio para muitas doenças, e os conhecimentos produzidos sobre a ação dos vegetais vem sendo transmitido desde as antigas civilizações até os dias atuais. As plantas medicinais, antes restritas às zonas rurais e a locais que não tinham acesso à assistência médica, têm sido cada vez mais utilizadas também no meio urbano, como alternativa ou complemento no tratamento de doenças. Assim, todo este conhecimento foi inicialmente passado oralmente ao longo de gerações que, juntamente com mitos e rituais, formaram parte importante das culturas locais.\n\nQuais características definem uma planta? As principais características das plantas são:\n\n - Formadas por células eucariontes: núcleo delimitado por envoltório nuclear;\n - Seres autotróficos: produzem o seu próprio alimento pela fotossíntese;\n - Fotossintetizantes: realizam processo de conversão de energia luminosa em compostos orgânicos.\n\nPara tanto, os cientistas cidadãos que realizam pesquisas, relatam observações, realizam medições e compartilham seus saberes a respeito da temática, ao mesmo tempo que podem contribuir para a coleta de dados, auxiliam a responder as perguntas abaixo.\n\nTemos como questões de pesquisa:\n\n - Qual a diversidade de espécies de plantas medicinais no local de estudo?\n - Qual a formação e características fitogeográficas (distribuição geográfica dos vegetais) nas diferentes regiões do Estado do Paraná?\n - Qual a distribuição de espécies medicinais da lista RENISUS (Relação Nacional de Plantas Medicinais de Interesse ao Sistema Único de Saúde) em jardins, hortas e espaços não formais no Estado do Paraná?\n - Que tipos de plantas ocorrem na área de coleta?\n\n[Veja o guia de campo completo aqui.](https://picce.ufpr.br/wp-content/uploads/2023/07/PICCE_Guia-de-campo-07_Plantas_aromaticas.pdf)\n\n### Formulário de campo\n\n### Parte 1: Caracterização do ambiente da coleta de dados',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 10,
@@ -304,7 +331,10 @@ async function main() {
             description:
                 '[Este protocolo deve ser respondido via Google Forms. Clique aqui para acessar o formulário.](https://forms.gle/vjuZ1cgs6agRndHM6)',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 11,
@@ -312,7 +342,10 @@ async function main() {
             description:
                 'Este material foi produzido adequando-se aos objetivos propostos na Base Comum Curricular (BNCC) utilizando protocolos da ciência cidadã. A ciência cidadã é um movimento de integração entre a sociedade e cientista, através do conjunto de ações realizadas por cidadãos não cientistas, que auxiliam as pesquisas em todo o mundo.\n\nEste protocolo foi pensado para se adaptar à necessidade de a escola contribuir para atingir os Objetivos de Desenvolvimento Sustentável, proposto pela Organização das Nações Unidas. Neste caso, o objetivo que está aderente à este trabalho é o ODS 12: Consumo e produção responsáveis: Garantir padrões de consumo e de produção sustentáveis, em que afirma: “até 2030, garantir que as pessoas, em todos os lugares, tenham informação relevante e conscientização para o desenvolvimento sustentável e estilos de vida em harmonia com a natureza.” Com isso, o objetivo desse projeto será analisar, quantitativamente, o consumo de energia elétrica da escola para, a partir disso, buscarmos alternativas para um consumo mais consciente e eficiente.\n\nO protocolo está dividido em duas partes:\n\n - Parte 1 - coleta de informações a respeito dos equipamentos eletrônicos do ambiente; \n - Parte 2 - consumo de energia dos equipamentos eletrônicos.\n\nVamos começar nossa jornada cheios de energia?\n\n[Veja o guia de campo completo aqui.](https://drive.google.com/file/d/1HcQKk6znUhSikM39gtpZbtqowIeDzNvP/view?usp=sharing)',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 12,
@@ -320,7 +353,10 @@ async function main() {
             description:
                 'Todas as pessoas se encontram na posição de pedestre em algum momento de suas vidas. Segundo dados da Polícia Rodoviária Federal do Brasil os três maiores causadores de mortes no trânsito, em 2019, foram 17,2% por responsabilidade do pedestre, 21% por falta de atenção dos condutores, e 16,8% por conta da desobediência às normas de trânsito.\n\nEm especial, as crianças e os adolescentes se encontram em posição mais vulnerável. O trânsito é o principal causador de mortes em pessoas entre 10 e 29 anos (OMS, 2018). A vulnerabilidade das crianças e adolescentes é por diversos motivos: pela falta de atenção (muitas vezes dedicada ao celular), pela coordenação motora e a percepção ainda em desenvolvimento e pela falta de costume, além da falta de instrução a respeito do trânsito. Como muitas destas características são relativas e fazem parte desta fase de desenvolvimento, uma das formas de garantir uma prevenção efetiva desses acidentes é através da educação.\n\nO presente projeto faz parte da estratégia de ciência cidadã, que consiste na parceria entre cidadãos e cientistas no desenvolvimento e coleta de dados para pesquisas. Por isso, o seu entendimento do material e sua colaboração no preenchimento do formulário são extremamente importantes. Além disso, a sua contribuição ajuda a promover uma circulação mais segura por este ambiente.\n\nO projeto tem como principal objetivo descobrir como está o entorno das escolas quanto à segurança no trânsito. Esse é um passo fundamental para tornar esse ambiente de trânsito seguro para crianças e adolescentes. Participando deste projeto você estará colaborando para que o Brasil consiga atingir dois dos Objetivos do Desenvolvimento Sustentável (ODS) promulgados pela Organização das Nações Unidas (ONU) (Nações Unidas, 2015). Esses objetivos são o de diminuir as mortes no trânsito (ODS 3: Saúde e Bem-estar) e tornar as cidades mais inclusivas (ODS 11: Cidades e Comunidades Sustentáveis).\n\nO projeto é dividido em duas etapas: entorno da escola e cinto de segurança. Cada etapa tem o seu objetivo. Na etapa 1 (Entorno da escola), o objetivo é caracterizar o entorno da escola quanto à segurança no trânsito para crianças e adolescentes pedestres e na etapa 2 (cinto de segurança) é quantificar o uso do cinto de segurança entre a comunidade que circula nesse ambiente.\n\nOs problemas de pesquisa são as perguntas que os pesquisadores querem responder. Inicialmente vamos apresentar a pergunta principal de pesquisa (problema) de cada etapa. Depois dela serão apresentadas as perguntas específicas de pesquisa (subproblemas) que ajudarão você a responder a pergunta principal.\n\n[Clique aqui para acessar o guia de campo completo.](https://drive.google.com/file/d/1tzcT-bzzUQEhsl4ZlXa9nvMC0omZi_Zj/view?usp=sharing)',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 13,
@@ -328,7 +364,10 @@ async function main() {
             description:
                 'Atualmente, os resíduos descartados pela população, deixaram de ser apenas um problema dos centros urbanos, se tornando um dos grandes poluentes do ecossistema marinho. Estes resíduos podem ser despejados diretamente nos ambientes litorâneos ou percorrer longas distâncias até chegar aos oceanos, sendo denominado de lixo no mar.\n\nA maioria dos materiais encontrados nos oceanos são plásticos e seus derivados. Entre os principais fatores que contribuem para o agravamento dessa problemática é a utilização indiscriminada deste material, seu elevado tempo de decomposição e a inexistência ou ineficiência dos programas de gerenciamento de resíduos sólidos.\n\nEste protocolo tem como objetivo identificar a presença e das quantidades de lixo nas praias e nos rios do litoral do Paraná, tendo como parâmetro a presença de resíduos sólidos (microplásticos e macrolixos). Para elaboração deste material, utilizomos como seu principal referencial, os guias de campo do Programa de ciência cidadã, nomeado de Científicos de la Basura, que é integrado por pesquisadores da Universidad Católica del Norte (UCN, Coquimbo), escolas e professores de todo o Chile. Os guias foram adaptados para o contexto e a realidade do litoral do Paraná e outras regiões pela equipe do laboratório de Conservação e Manejo, do Campus Paranaguá do Istituto Federal do Paraná (IFPR).\n\nO material está dividido em três partes, sendo a primeira o protocolo referente ao microplástico na praia, a segunda parte referente ao macro lixo na praia e a terceira descreve a metodologia de coleta de lixo em rios. Cada protocolo pode ser realizado de maneira independente, conforme descrito a diante.\n\nAo finalizar as coletas e preencher os formulários de registros, você contribuirá para o Programa Interinstitucional de Ciência Cidadã na Escola e para estudos futuros que ajudem a solucionar o problema do lixo no mar e nos rios.\n\n[Clique aqui para acessar o guia de campo completo.](https://drive.google.com/file/d/1UMTX_GL83Qj3Mv26M1qx3O8lNh6lJaXt/view)',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 14,
@@ -336,7 +375,10 @@ async function main() {
             description:
                 '- Vamos iniciar nosso material de estudo falando sobre Biodiversidade. Você sabe o que é? Onde podemos encontrá-la?\n\nBiodiversidade é a diversidade de vida em todos os ecossiste- mas existentes. Pode ser na sua casa ou no topo de uma montanha. Além da diversidade de seres vivos, inclui também todas as relações ecológicas entre estes. A Biodiversidade é muito importante para nossa sobrevivência e, por isso, devemos preservá-la. Você sabe como podemos preservá-la?\n\nVocê já deve ter ouvido sobre algumas atitudes importantes para preservação, como não desmatar, reciclar, entre outros assuntos tão necessários para preservação do meio ambiente. Hoje eu gostaria de te contar sobre uma maneira muito importante de preservar a nossa biodiversidade.\n\nVocê já ouviu falar de polinização? Se não, deixa eu te contar um pouquinho sobre o que é: a polinização é o caminho que o pólen percorre de uma flor para outra, para que ocorra a reprodução da planta. Para isso acontecer, na maioria das vezes, são necessários os polinizadores. É fácil de identificar o pólen: são grãozinhos minús- culos, geralmente amarelinhos, que ficam na antera da flor, ou seja, em uma de suas estruturas reprodutivas.\n\n- Opa! Está começando a ficar difícil essa história.\n\nOs polinizadores são animais, em sua grande maioria insetos, que transportam grãos de pólen da parte masculina da flor para a parte feminina de outra flor da mesma espécie, realizando as- sim a polinização. Esse acontecimento permite que as plantas se reproduzam, formando sementes e frutos, ajudando a preservar a biodiversidade.\n\n- Uma curiosidade: Os polinizadores também podem ser a água e o vento, não só os animais!\n\nMas um polinizador não visita a flor com a intenção de polinizá- -la. Ele está em busca de alimentos para ele e/ou para sua prole, principalmente pólen e néctar. Além dos polinizadores, existem também outros visitantes florais. Como vamos saber se um inseto está polinizando, ou apenas visitando uma flor? Se o animal está em contato com o pólen, passando pelas partes reprodutivas de uma flor, a antera e o estigma, ele provavelmente é um polinizador. Muitas vezes, o polinizador possui estruturas no seu corpo que favorecem o transporte dos grãos de pólen, como os pequenos pelos de uma abelha, por exemplo.\n\n- Você já presenciou algum inseto em uma flor? O que será que ele estava fazendo?\n\nUm inseto pode visitar uma flor sem tocar suas estruturas reprodutivas. Ele pode, por exemplo, descansar sobre a pétala ou sobre uma folha próxima a flor. É preciso um pouco de atenção para ver se um animal pode ser um polinizador ou se é simplesmente um visitante floral. Diferenciá-los pode ser um trabalho difícil, mas contamos com a sua ajuda através do registro das visitas florais.\n\nO protocolo **biodiversidade - polinizadores** foi criado em atenção ao problema da redução de polinizadores e de sua diversidade. Nosso objetivos são conhecer melhor os polinizadores das regiões do Paraná, proporcionar aprendizado e promover a conservação desses animais tão importantes. Ao completar o protocolo e enviá-lo corretamente, você estará contribuindo para o estudo da biodiversidade no Paraná, além de estar fazendo parte da ciência cidadã!\n\n[Acesse o guia de campo completo aqui.](https://drive.google.com/file/d/1LOqx0HUGPIUI0jcV3axcodVJyxAVIfKF/view?usp=drive_link)',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 15,
@@ -344,7 +386,10 @@ async function main() {
             description:
                 '### Instruções\n\nPara você enviar os dados deste protocolo, leia atentamente o [Guia de Campo](https://picce.ufpr.br/wp-content/uploads/2023/07/PICCE_Guia-de-campo-01_Cobertura_solo.pdf) e siga todas as instruções. Organize todos os materiais necessários para o processo de coleta de dados antes de iniciar a atividade. Em caso de dúvidas ao longo da coleta dos dados, consulte o Guia de Campo.',
             enabled: true,
-            applicable: true,
+            replicable: false,
+            applicability: 'PUBLIC' as VisibilityMode,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answerVisibility: 'PUBLIC' as VisibilityMode,
         },
     ];
 
@@ -20090,126 +20135,111 @@ async function main() {
         },
     ];
 
-    const picceApplications: (Omit<Application, 'createdAt' | 'updatedAt'> & { viewersUser: number[]; viewersClassroom: number[] })[] = [
+    const picceApplications: Omit<Application, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             protocolId: 1,
-            applicatorId: 3,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 3,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 2,
             protocolId: 2,
-            applicatorId: 4,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 4,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 3,
             protocolId: 3,
-            applicatorId: 5,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 5,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 4,
             protocolId: 4,
-            applicatorId: 6,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 6,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 5,
             protocolId: 5,
-            applicatorId: 7,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 7,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 6,
             protocolId: 6,
-            applicatorId: 8,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 8,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 7,
             protocolId: 7,
-            applicatorId: 9,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 9,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 8,
             protocolId: 8,
-            applicatorId: 10,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 10,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 9,
             protocolId: 9,
-            applicatorId: 11,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 11,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 10,
             protocolId: 10,
-            applicatorId: 12,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 12,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 11,
             protocolId: 11,
-            applicatorId: 13,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 13,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 12,
             protocolId: 12,
-            applicatorId: 14,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 14,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 13,
             protocolId: 13,
-            applicatorId: 15,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 15,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 14,
             protocolId: 14,
-            applicatorId: 16,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 16,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
         {
             id: 15,
             protocolId: 15,
-            applicatorId: 17,
-            visibilityMode: 'PUBLIC' as VisibilityMode,
-            viewersUser: [],
-            viewersClassroom: [],
+            applierId: 17,
+            visibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
         },
     ];
 
@@ -20301,24 +20331,8 @@ async function main() {
     });
 
     await prismaClient.application.createMany({
-        data: picceApplications.map(({ viewersUser, viewersClassroom, ...application }) => application),
+        data: picceApplications,
     });
-
-    for (const application of picceApplications) {
-        await prismaClient.application.update({
-            where: {
-                id: application.id,
-            },
-            data: {
-                viewersUser: {
-                    connect: application.viewersUser.map((userId) => ({ id: userId })),
-                },
-                viewersClassroom: {
-                    connect: application.viewersClassroom.map((classroomId) => ({ id: classroomId })),
-                },
-            },
-        });
-    }
 }
 
 main()
