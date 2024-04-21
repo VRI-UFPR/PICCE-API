@@ -9,7 +9,7 @@ const checkAuthorizationToApply = async (user: User, protocolId: number) => {
         const protocol = await prismaClient.protocol.findUnique({
             where: {
                 id: protocolId,
-                applicable: true,
+                OR: [{ applicability: 'PUBLIC' }, { appliers: { some: { id: user.id } } }],
                 enabled: true,
             },
         });
@@ -21,13 +21,7 @@ const checkAuthorizationToApply = async (user: User, protocolId: number) => {
 };
 
 const validateVisibleFields = async (user: User, application: any) => {
-    if (user.role !== UserRole.ADMIN && application.applicatorId !== user.id) {
-        if (
-            !application.viewersUser.some((viewer: any) => viewer.id === user.id) &&
-            !application.viewersClassroom.some((viewer: any) => viewer.users.some((u: any) => u.id === user.id))
-        ) {
-            throw new Error('This user is not authorized to view this application.');
-        }
+    if (user.role !== UserRole.ADMIN && application.applierId !== user.id) {
         delete application.viewersUser;
         delete application.viewersClassroom;
 
@@ -40,7 +34,7 @@ const fieldsWithNesting = {
     id: true,
     protocol: { select: { id: true, title: true, description: true } },
     visibilityMode: true,
-    applicator: { select: { id: true, username: true } },
+    applier: { select: { id: true, username: true } },
     createdAt: true,
     updatedAt: true,
 };
@@ -97,9 +91,12 @@ export const createApplication = async (req: Request, res: Response) => {
             .object()
             .shape({
                 protocolId: yup.number().required(),
-                visibilityMode: yup.string().oneOf(Object.values(VisibilityMode)).required(),
-                viewersUser: yup.array().of(yup.number()).min(1).required(),
-                viewersClassroom: yup.array().of(yup.number()).min(1).required(),
+                visibility: yup.string().oneOf(Object.values(VisibilityMode)).required(),
+                answersVisibility: yup.string().oneOf(Object.values(VisibilityMode)).required(),
+                viewersUser: yup.array().of(yup.number()).required(),
+                viewersClassroom: yup.array().of(yup.number()).required(),
+                answersViewersUser: yup.array().of(yup.number()).required(),
+                answersViewersClassroom: yup.array().of(yup.number()).required(),
             })
             .noUnknown();
 
@@ -116,13 +113,20 @@ export const createApplication = async (req: Request, res: Response) => {
         const createdApplication = await prismaClient.application.create({
             data: {
                 protocolId: application.protocolId,
-                applicatorId: user.id,
-                visibilityMode: application.visibilityMode,
+                applierId: user.id,
+                visibility: application.visibility,
+                answersVisibility: application.answersVisibility,
                 viewersUser: {
                     connect: application.viewersUser.map((id) => ({ id: id })),
                 },
                 viewersClassroom: {
                     connect: application.viewersClassroom.map((id) => ({ id: id })),
+                },
+                answersViewersUser: {
+                    connect: application.answersViewersUser.map((id) => ({ id: id })),
+                },
+                answersViewersClassroom: {
+                    connect: application.answersViewersClassroom.map((id) => ({ id: id })),
                 },
             },
             select: fieldsWithViewers,
@@ -144,9 +148,12 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
             .object()
             .shape({
                 protocolId: yup.number(),
-                visibilityMode: yup.string().oneOf(Object.values(VisibilityMode)),
-                viewersUser: yup.array().of(yup.number()).min(1).required(),
-                viewersClassroom: yup.array().of(yup.number()).min(1).required(),
+                visibility: yup.string().oneOf(Object.values(VisibilityMode)),
+                answersVisibility: yup.string().oneOf(Object.values(VisibilityMode)),
+                viewersUser: yup.array().of(yup.number()).required(),
+                viewersClassroom: yup.array().of(yup.number()).required(),
+                answersViewersUser: yup.array().of(yup.number()).required(),
+                answersViewersClassroom: yup.array().of(yup.number()).required(),
             })
             .noUnknown();
 
@@ -161,7 +168,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
             await prismaClient.application.findUniqueOrThrow({
                 where: {
                     id: id,
-                    applicatorId: user.id,
+                    applierId: user.id,
                 },
             });
         }
@@ -173,7 +180,8 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
             },
             data: {
                 protocolId: application.protocolId,
-                visibilityMode: application.visibilityMode,
+                visibility: application.visibility,
+                answersVisibility: application.answersVisibility,
                 viewersUser: {
                     set: [],
                     connect: application.viewersUser.map((id) => ({ id: id })),
@@ -181,6 +189,14 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
                 viewersClassroom: {
                     set: [],
                     connect: application.viewersClassroom.map((id) => ({ id: id })),
+                },
+                answersViewersUser: {
+                    set: [],
+                    connect: application.answersViewersUser.map((id) => ({ id: id })),
+                },
+                answersViewersClassroom: {
+                    set: [],
+                    connect: application.answersViewersClassroom.map((id) => ({ id: id })),
                 },
             },
             select: fieldsWithViewers,
@@ -200,7 +216,7 @@ export const getMyApplications = async (req: Request, res: Response): Promise<vo
         // Get all applications created by the user
         const applications = await prismaClient.application.findMany({
             where: {
-                applicatorId: user.id,
+                applierId: user.id,
             },
             select: fieldsWithViewers,
         });
@@ -224,9 +240,10 @@ export const getVisibleApplications = async (req: Request, res: Response): Promi
                 : await prismaClient.application.findMany({
                       where: {
                           OR: [
+                              { visibility: 'PUBLIC' },
                               { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
                               { viewersUser: { some: { id: user.id } } },
-                              { applicatorId: user.id },
+                              { applierId: user.id },
                           ],
                       },
                       select: fieldsWithNesting,
@@ -249,6 +266,12 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
         const application = await prismaClient.application.findUniqueOrThrow({
             where: {
                 id: id,
+                OR: [
+                    { visibility: 'PUBLIC' },
+                    { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                    { viewersUser: { some: { id: user.id } } },
+                    { applierId: user.id },
+                ],
             },
             select: fieldsWithViewers,
         });
@@ -282,9 +305,10 @@ export const getApplicationWithProtocol = async (req: Request, res: Response): P
                       where: {
                           id: id,
                           OR: [
+                              { visibility: 'PUBLIC' },
                               { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
                               { viewersUser: { some: { id: user.id } } },
-                              { applicatorId: user.id },
+                              { applierId: user.id },
                           ],
                       },
                       select: fieldsWithFullProtocol,
@@ -315,7 +339,7 @@ export const deleteApplication = async (req: Request, res: Response): Promise<vo
                 : await prismaClient.application.delete({
                       where: {
                           id: id,
-                          applicatorId: user.id,
+                          applierId: user.id,
                       },
                   });
 

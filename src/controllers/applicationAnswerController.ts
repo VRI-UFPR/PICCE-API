@@ -10,9 +10,10 @@ const checkAuthorizationToAnswer = async (user: User, applicationId: number) => 
             where: {
                 id: applicationId,
                 OR: [
+                    { visibility: 'PUBLIC' },
                     { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
                     { viewersUser: { some: { id: user.id } } },
-                    { applicatorId: user.id },
+                    { applierId: user.id },
                 ],
             },
         });
