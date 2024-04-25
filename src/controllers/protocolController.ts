@@ -1,5 +1,5 @@
 import { Response, Request } from 'express';
-import { Protocol, ItemType, ItemGroupType, PageType, ItemValidationType } from '@prisma/client';
+import { Protocol, ItemType, ItemGroupType, PageType, ItemValidationType, VisibilityMode } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 
@@ -63,7 +63,16 @@ export const createProtocol = async (req: Request, res: Response) => {
                 description: yup.string().max(3000).notRequired(),
                 enabled: yup.boolean().required(),
                 pages: yup.array().of(pagesSchema).min(1).required(),
-                owners: yup.array().of(yup.number()).min(1).required(),
+                owners: yup.array().of(yup.number()).default([]),
+                visibility: yup.string().oneOf(Object.values(VisibilityMode)).required(),
+                applicability: yup.string().oneOf(Object.values(VisibilityMode)).required(),
+                answersVisibility: yup.string().oneOf(Object.values(VisibilityMode)).required(),
+                viewersUser: yup.array().of(yup.number()).default([]),
+                viewersClassroom: yup.array().of(yup.number()).default([]),
+                answersViewersUser: yup.array().of(yup.number()).default([]),
+                answersViewersClassroom: yup.array().of(yup.number()).default([]),
+                appliers: yup.array().of(yup.number()).default([]),
+                replicable: yup.boolean().required(),
             })
             .noUnknown();
 
@@ -80,11 +89,41 @@ export const createProtocol = async (req: Request, res: Response) => {
                     title: protocol.title,
                     description: protocol.description,
                     enabled: protocol.enabled,
+                    creatorId: 1,
                     owners: {
                         connect: protocol.owners.map((owner) => {
                             return { id: owner };
                         }),
                     },
+                    visibility: protocol.visibility as VisibilityMode,
+                    applicability: protocol.applicability as VisibilityMode,
+                    answersVisibility: protocol.answersVisibility as VisibilityMode,
+                    viewersUser: {
+                        connect: protocol.viewersUser.map((viewer) => {
+                            return { id: viewer };
+                        }),
+                    },
+                    viewersClassroom: {
+                        connect: protocol.viewersClassroom.map((viewer) => {
+                            return { id: viewer };
+                        }),
+                    },
+                    answersViewersUser: {
+                        connect: protocol.answersViewersUser.map((viewer) => {
+                            return { id: viewer };
+                        }),
+                    },
+                    answersViewersClassroom: {
+                        connect: protocol.answersViewersClassroom.map((viewer) => {
+                            return { id: viewer };
+                        }),
+                    },
+                    appliers: {
+                        connect: protocol.appliers.map((applier) => {
+                            return { id: applier };
+                        }),
+                    },
+                    replicable: protocol.replicable,
                 },
             });
             // Create nested pages as well as nested itemGroups, items, itemOptions and itemValidations
@@ -267,7 +306,16 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 description: yup.string().max(3000).notRequired(),
                 enabled: yup.boolean(),
                 pages: yup.array().of(updatePagesSchema).min(1).required(),
-                owners: yup.array().of(yup.number()).min(1).required(),
+                owners: yup.array().of(yup.number()).default([]),
+                visibility: yup.string().oneOf(Object.values(VisibilityMode)),
+                applicability: yup.string().oneOf(Object.values(VisibilityMode)),
+                answersVisibility: yup.string().oneOf(Object.values(VisibilityMode)),
+                viewersUser: yup.array().of(yup.number()).default([]),
+                viewersClassroom: yup.array().of(yup.number()).default([]),
+                answersViewersUser: yup.array().of(yup.number()).default([]),
+                answersViewersClassroom: yup.array().of(yup.number()).default([]),
+                appliers: yup.array().of(yup.number()).default([]),
+                replicable: yup.boolean().required(),
             })
             .noUnknown();
 
@@ -294,6 +342,40 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                             return { id: owner };
                         }),
                     },
+                    visibility: protocol.visibility as VisibilityMode,
+                    applicability: protocol.applicability as VisibilityMode,
+                    answersVisibility: protocol.answersVisibility as VisibilityMode,
+                    viewersUser: {
+                        set: [],
+                        connect: protocol.viewersUser.map((viewer) => {
+                            return { id: viewer };
+                        }),
+                    },
+                    viewersClassroom: {
+                        set: [],
+                        connect: protocol.viewersClassroom.map((viewer) => {
+                            return { id: viewer };
+                        }),
+                    },
+                    answersViewersUser: {
+                        set: [],
+                        connect: protocol.answersViewersUser.map((viewer) => {
+                            return { id: viewer };
+                        }),
+                    },
+                    answersViewersClassroom: {
+                        set: [],
+                        connect: protocol.answersViewersClassroom.map((viewer) => {
+                            return { id: viewer };
+                        }),
+                    },
+                    appliers: {
+                        set: [],
+                        connect: protocol.appliers.map((applier) => {
+                            return { id: applier };
+                        }),
+                    },
+                    replicable: protocol.replicable,
                 },
             });
             // Remove pages that are not in the updated protocol

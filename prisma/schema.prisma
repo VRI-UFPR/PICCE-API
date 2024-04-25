@@ -178,7 +178,8 @@ model User {
   role     UserRole
   acceptedTerms Boolean @default(false)
 
-  protocols            Protocol[]
+  createdProtocols     Protocol[]          @relation(name: "Creator") // protocols that the user has created
+  ownedProtocols            Protocol[]          @relation(name: "OwnersProtocols") // protocols that the user can edit
   answeredApplications ApplicationAnswer[]
   applications         Application[]       @relation(name: "Applier") // applications that the user has created
   visibleApplications  Application[]       @relation(name: "ViewersUser") // applications that the user can see
@@ -236,9 +237,11 @@ model Protocol {
   description String?
   enabled     Boolean
   replicable  Boolean
+  creatorId   Int
+  creator     User @relation(name: "Creator", fields: [creatorId], references: [id], onDelete: Cascade)
   applicability VisibilityMode
   visibility  VisibilityMode
-  answerVisibility VisibilityMode
+  answersVisibility VisibilityMode
   appliers User[] @relation(name: "Appliers") // users that can apply the protocol
   viewersUser User[] @relation(name: "ViewersUsers") // users that can see the protocol
   viewersClassroom Classroom[] @relation(name: "ViewersClassroom") // classrooms that can see the protocol
@@ -246,7 +249,7 @@ model Protocol {
   answersViewersClassroom Classroom[] @relation(name: "AnswersViewersClassroom") // classrooms that can see the answers
 
   pages        Page[]
-  owners        User[]
+  owners        User[] @relation(name: "OwnersProtocols") // users that can edit the protocol
   applications Application[]
 }
 

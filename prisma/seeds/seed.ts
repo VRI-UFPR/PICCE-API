@@ -235,7 +235,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 3,
         },
         {
             id: 2,
@@ -246,7 +247,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 4,
         },
         {
             id: 3,
@@ -257,7 +259,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 5,
         },
         {
             id: 4,
@@ -268,7 +271,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 6,
         },
         {
             id: 5,
@@ -279,7 +283,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 7,
         },
         {
             id: 6,
@@ -290,7 +295,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 8,
         },
         {
             id: 7,
@@ -301,7 +307,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 9,
         },
         {
             id: 8,
@@ -312,7 +319,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 10,
         },
         {
             id: 9,
@@ -323,7 +331,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 11,
         },
         {
             id: 10,
@@ -334,7 +343,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 12,
         },
         {
             id: 11,
@@ -345,7 +355,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 13,
         },
         {
             id: 12,
@@ -356,7 +367,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 14,
         },
         {
             id: 13,
@@ -367,7 +379,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 15,
         },
         {
             id: 14,
@@ -378,7 +391,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 16,
         },
         {
             id: 15,
@@ -389,7 +403,8 @@ async function main() {
             replicable: false,
             applicability: 'PUBLIC' as VisibilityMode,
             visibility: 'PUBLIC' as VisibilityMode,
-            answerVisibility: 'PUBLIC' as VisibilityMode,
+            answersVisibility: 'PUBLIC' as VisibilityMode,
+            creatorId: 17,
         },
     ];
 
