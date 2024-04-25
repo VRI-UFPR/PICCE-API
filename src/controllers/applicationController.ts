@@ -33,7 +33,8 @@ const validateVisibleFields = async (user: User, application: any) => {
 const fieldsWithNesting = {
     id: true,
     protocol: { select: { id: true, title: true, description: true } },
-    visibilityMode: true,
+    visibility: true,
+    answersVisibility: true,
     applier: { select: { id: true, username: true } },
     createdAt: true,
     updatedAt: true,
@@ -43,6 +44,8 @@ const fieldsWithViewers = {
     ...fieldsWithNesting,
     viewersUser: { select: { id: true, username: true } },
     viewersClassroom: { select: { id: true, institution: { select: { name: true } } } },
+    answersViewersUser: { select: { id: true, username: true } },
+    answersViewersClassroom: { select: { id: true, institution: { select: { name: true } } } },
 };
 
 const fieldsWithFullProtocol = {
