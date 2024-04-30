@@ -16,8 +16,8 @@ const checkHierarchy = (user: User, role: UserRole) => {
     const coordinatorRestrictions = user.role === UserRole.COORDINATOR && (role === UserRole.ADMIN || role === UserRole.COORDINATOR);
     const publisherRestrictions =
         user.role === UserRole.PUBLISHER &&
-        (role === UserRole.ADMIN || role === UserRole.COORDINATOR || role === UserRole.PUBLISHER || role === UserRole.APLICATOR);
-    const otherRestrictions = user.role === UserRole.APLICATOR || user.role === UserRole.USER;
+        (role === UserRole.ADMIN || role === UserRole.COORDINATOR || role === UserRole.PUBLISHER || role === UserRole.APPLIER);
+    const otherRestrictions = user.role === UserRole.APPLIER || user.role === UserRole.USER;
 
     if (coordinatorRestrictions || publisherRestrictions || otherRestrictions) {
         throw new Error('This user is not authorized to perform this action');
@@ -26,6 +26,7 @@ const checkHierarchy = (user: User, role: UserRole) => {
 
 // Fields to be selected from the database to the response
 const fieldsWithNesting = {
+    id: true,
     name: true,
     username: true,
     role: true,
