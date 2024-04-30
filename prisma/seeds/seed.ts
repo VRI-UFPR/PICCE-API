@@ -613,7 +613,7 @@ async function main() {
         {
             id: 1,
             groupId: 1,
-            text: '### Seção 1: Características da escola\ncar',
+            text: '### Seção 1: Características da escola',
             description: '',
             placement: 1,
             enabled: true,
