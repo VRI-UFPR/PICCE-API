@@ -43,7 +43,7 @@ export const signUp = async (req: Request, res: Response) => {
 
         res.status(201).json({
             message: 'User signed up.',
-            data: { id: createdUser.id, token: token, expiresIn: process.env.JWT_EXPIRATION },
+            data: { id: createdUser.id, role: createdUser.role, token: token, expiresIn: process.env.JWT_EXPIRATION },
         });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
@@ -78,7 +78,13 @@ export const signIn = async (req: Request, res: Response) => {
 
         res.status(200).json({
             message: 'User signed in.',
-            data: { id: user.id, acceptedTerms: user.acceptedTerms, token: token, expiresIn: ms(process.env.JWT_EXPIRATION as string) },
+            data: {
+                id: user.id,
+                role: user.role,
+                acceptedTerms: user.acceptedTerms,
+                token: token,
+                expiresIn: ms(process.env.JWT_EXPIRATION as string),
+            },
         });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
@@ -99,7 +105,7 @@ export const passwordlessSignIn = async (req: Request, res: Response) => {
 
         res.status(200).json({
             message: 'User signed in.',
-            data: { id: user.id, token: token, expiresIn: ms(process.env.JWT_EXPIRATION as string) },
+            data: { id: user.id, role: user.role, token: token, expiresIn: ms(process.env.JWT_EXPIRATION as string) },
         });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
@@ -116,7 +122,7 @@ export const renewSignIn = async (req: Request, res: Response) => {
 
         res.status(200).json({
             message: 'User signed in.',
-            data: { id: user.id, token: token, expiresIn: ms(process.env.JWT_EXPIRATION as string) },
+            data: { id: user.id, role: user.role, token: token, expiresIn: ms(process.env.JWT_EXPIRATION as string) },
         });
     } catch (error) {
         res.status(400).json(errorFormatter(error));
