@@ -20,6 +20,18 @@ const fieldsWithNesting = {
     classrooms: {
         select: {
             id: true,
+            users: {
+                select: {
+                    id: true,
+                    username: true,
+                },
+            },
+        },
+    },
+    users: {
+        select: {
+            id: true,
+            username: true,
         },
     },
     createdAt: true,
