@@ -7,6 +7,7 @@ import {
     getAllApplicationAnswers,
     getApplicationAnswer,
     deleteApplicationAnswer,
+    getApplicationWithAnswers,
 } from '../controllers/applicationAnswerController';
 
 /**
@@ -273,6 +274,13 @@ router.put(
  *               description: Error message
  */
 router.get('/getAllApplicationAnswers', passport.authenticate('jwt', { session: false }), uploader.none(), getAllApplicationAnswers);
+
+router.get(
+    '/getApplicationWithAnswers/:applicationId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    getApplicationWithAnswers
+);
 
 /**
  * @swagger

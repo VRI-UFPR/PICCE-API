@@ -361,7 +361,6 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
         });
         res.status(200).json({ message: 'Application answer updated.', data: upsertedApplicationAnswer });
     } catch (error: any) {
-        console.log(error);
         res.status(400).json(errorFormatter(error));
     }
 };
@@ -377,6 +376,153 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
                 : await prismaClient.applicationAnswer.findMany({ where: { userId: user.id }, select: fieldsWithNesting });
 
         res.status(200).json({ message: 'All application answers found.', data: applicationAnswers });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const getApplicationWithAnswers = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = req.user as User;
+
+        const applicationId: number = parseInt(req.params.applicationId);
+
+        const applicationWithAnswers: any = await prismaClient.application.findUniqueOrThrow({
+            where: {
+                id: applicationId,
+            },
+            select: {
+                answers: {
+                    select: {
+                        id: true,
+                        date: true,
+                        user: {
+                            select: {
+                                id: true,
+                                username: true,
+                            },
+                        },
+                    },
+                },
+                protocol: {
+                    select: {
+                        title: true,
+                        description: true,
+                        pages: {
+                            select: {
+                                type: true,
+                                placement: true,
+                                itemGroups: {
+                                    select: {
+                                        type: true,
+                                        placement: true,
+                                        isRepeatable: true,
+                                        items: {
+                                            select: {
+                                                id: true,
+                                                text: true,
+                                                description: true,
+                                                type: true,
+                                                placement: true,
+                                                itemOptions: {
+                                                    select: {
+                                                        id: true,
+                                                        text: true,
+                                                        placement: true,
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        for (const page of applicationWithAnswers.protocol.pages) {
+            for (const itemGroup of page.itemGroups) {
+                for (const item of itemGroup.items) {
+                    item.itemAnswers = {};
+                    const itemAnswers = await prismaClient.itemAnswer.findMany({
+                        where: {
+                            group: {
+                                applicationAnswerId: {
+                                    in: applicationWithAnswers.answers.map((answer: any) => answer.id),
+                                },
+                            },
+                            itemId: item.id,
+                        },
+                        select: {
+                            text: true,
+                            group: {
+                                select: {
+                                    id: true,
+                                    applicationAnswerId: true,
+                                },
+                            },
+                        },
+                    });
+
+                    for (const answer of itemAnswers) {
+                        if (!item.itemAnswers[answer.group.applicationAnswerId]) {
+                            item.itemAnswers[answer.group.applicationAnswerId] = {};
+                        }
+
+                        if (!item.itemAnswers[answer.group.applicationAnswerId][answer.group.id]) {
+                            item.itemAnswers[answer.group.applicationAnswerId][answer.group.id] = [];
+                        }
+
+                        item.itemAnswers[answer.group.applicationAnswerId][answer.group.id].push({ text: answer.text });
+                    }
+
+                    for (const option of item.itemOptions) {
+                        option.optionAnswers = {};
+                        const optionAnswers = await prismaClient.optionAnswer.findMany({
+                            where: {
+                                group: {
+                                    applicationAnswerId: {
+                                        in: applicationWithAnswers.answers.map((answer: any) => answer.id),
+                                    },
+                                },
+                                optionId: option.id,
+                            },
+                            select: {
+                                text: true,
+                                group: {
+                                    select: {
+                                        id: true,
+                                        applicationAnswerId: true,
+                                    },
+                                },
+                            },
+                        });
+
+                        for (const answer of optionAnswers) {
+                            if (!option.optionAnswers[answer.group.applicationAnswerId]) {
+                                option.optionAnswers[answer.group.applicationAnswerId] = {};
+                            }
+
+                            if (!option.optionAnswers[answer.group.applicationAnswerId][answer.group.id]) {
+                                option.optionAnswers[answer.group.applicationAnswerId][answer.group.id] = [];
+                            }
+
+                            option.optionAnswers[answer.group.applicationAnswerId][answer.group.id].push({
+                                text: answer.text,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        applicationWithAnswers.answers = Object.fromEntries(
+            applicationWithAnswers.answers.map((answer: any) => [answer.id, { date: answer.date, user: answer.user }])
+        );
+
+        res.status(200).json({ message: 'All answers for application ' + applicationId + ' found.', data: applicationWithAnswers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
