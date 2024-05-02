@@ -56,12 +56,24 @@ const fieldsWithFullProtocol = {
     protocol: {
         include: {
             pages: {
+                orderBy: {
+                    placement: 'asc' as any,
+                },
                 include: {
                     itemGroups: {
+                        orderBy: {
+                            placement: 'asc' as any,
+                        },
                         include: {
                             items: {
+                                orderBy: {
+                                    placement: 'asc' as any,
+                                },
                                 include: {
                                     itemOptions: {
+                                        orderBy: {
+                                            placement: 'asc' as any,
+                                        },
                                         include: {
                                             files: true,
                                         },
