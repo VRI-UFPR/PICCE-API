@@ -1,7 +1,7 @@
 import express from 'express';
 import uploader from '../services/multerUploader';
 import passport from '../services/passportAuth';
-import { signIn, signUp, renewSignIn, checkSignIn, passwordlessSignIn } from '../controllers/authController';
+import { signIn, signUp, renewSignIn, checkSignIn, passwordlessSignIn, acceptTerms } from '../controllers/authController';
 
 /**
  * @swagger
@@ -154,5 +154,7 @@ router.get('/passwordlessSignIn', uploader.none(), passwordlessSignIn);
 router.post('/renewSignIn', passport.authenticate('jwt', { session: false }), uploader.none(), renewSignIn);
 
 router.get('/checkSignIn', passport.authenticate('jwt', { session: false }), uploader.none(), checkSignIn);
+
+router.get('/acceptTerms', passport.authenticate('jwt', { session: false }), uploader.none(), acceptTerms);
 
 export default router;
