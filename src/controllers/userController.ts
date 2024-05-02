@@ -51,7 +51,7 @@ export const createUser = async (req: Request, res: Response) => {
             .shape({
                 id: yup.number().min(1),
                 name: yup.string().min(1).max(255).required(),
-                username: yup.string().min(3).max(16).required(),
+                username: yup.string().min(3).max(20).required(),
                 hash: yup.string().required(),
                 role: yup.string().oneOf(Object.values(UserRole)).required(),
                 institutionId: yup.number().required(),
@@ -97,7 +97,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
             .object()
             .shape({
                 name: yup.string().min(1).max(255),
-                username: yup.string().min(3).max(16),
+                username: yup.string().min(3).max(20),
                 hash: yup.string(),
                 role: yup.string().oneOf(Object.values(UserRole)),
                 institutionId: yup.number(),
