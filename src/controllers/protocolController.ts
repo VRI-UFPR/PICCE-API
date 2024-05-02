@@ -21,7 +21,7 @@ export const checkAuthorizationToCreate = async (creator: User) => {
             id: creator.id,
             role: {
                 not: {
-                    in: [UserRole.USER, UserRole.APLICATOR],
+                    in: [UserRole.USER, UserRole.APPLIER],
                 },
             },
         },
