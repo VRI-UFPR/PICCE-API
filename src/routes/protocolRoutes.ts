@@ -1,5 +1,6 @@
 import express from 'express';
 import uploader from '../services/multerUploader';
+import passport from '../services/passportAuth';
 import { createProtocol, updateProtocol, getAllProtocols, getProtocol, deleteProtocol } from '../controllers/protocolController';
 /**
  * @swagger
@@ -270,7 +271,7 @@ const router = express.Router();
  *               type: string
  *               description: Error message
  */
-router.post('/createProtocol', uploader.any(), createProtocol);
+router.post('/createProtocol', passport.authenticate('jwt', { session: false }), uploader.any(), createProtocol);
 
 /**
  * @swagger
@@ -314,7 +315,7 @@ router.post('/createProtocol', uploader.any(), createProtocol);
  *               type: string
  *               description: Error message
  */
-router.put('/updateProtocol/:protocolId', uploader.any(), updateProtocol);
+router.put('/updateProtocol/:protocolId', passport.authenticate('jwt', { session: false }), uploader.any(), updateProtocol);
 
 /**
  * @swagger
@@ -340,7 +341,7 @@ router.put('/updateProtocol/:protocolId', uploader.any(), updateProtocol);
  *               type: string
  *               description: Error message
  */
-router.get('/getAllProtocols', uploader.none(), getAllProtocols);
+router.get('/getAllProtocols', passport.authenticate('jwt', { session: false }), uploader.none(), getAllProtocols);
 
 /**
  * @swagger
@@ -378,7 +379,7 @@ router.get('/getAllProtocols', uploader.none(), getAllProtocols);
  *               type: string
  *               description: Error message
  */
-router.get('/getProtocol/:protocolId', uploader.none(), getProtocol);
+router.get('/getProtocol/:protocolId', passport.authenticate('jwt', { session: false }), uploader.none(), getProtocol);
 
 /**
  * @swagger
@@ -416,6 +417,6 @@ router.get('/getProtocol/:protocolId', uploader.none(), getProtocol);
  *               type: string
  *               description: Error message
  */
-router.delete('/deleteProtocol/:protocolId', uploader.none(), deleteProtocol);
+router.delete('/deleteProtocol/:protocolId', passport.authenticate('jwt', { session: false }), uploader.none(), deleteProtocol);
 
 export default router;

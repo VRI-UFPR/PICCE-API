@@ -1,6 +1,6 @@
 import express from 'express';
 import uploader from '../services/multerUploader';
-import { createUser, updateUser, getAllUsers, getUser, deleteUser } from '../controllers/userController';
+import { createUser, updateUser, getAllUsers, getUser, deleteUser, getInstitutionUsers } from '../controllers/userController';
 import passport from '../services/passportAuth';
 
 /**
@@ -151,6 +151,8 @@ router.put('/updateUser/:userId', passport.authenticate('jwt', { session: false 
  *               message: error message
  */
 router.get('/getAllUsers', passport.authenticate('jwt', { session: false }), uploader.none(), getAllUsers);
+
+router.get('/getInstitutionUsers', passport.authenticate('jwt', { session: false }), uploader.none(), getInstitutionUsers);
 
 /**
  * @swagger
