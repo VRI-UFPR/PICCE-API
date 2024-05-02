@@ -1,7 +1,7 @@
 import express from 'express';
 import uploader from '../services/multerUploader';
 import passport from '../services/passportAuth';
-import { signIn, signUp, renewSignIn, checkSignIn } from '../controllers/authController';
+import { signIn, signUp, renewSignIn, checkSignIn, passwordlessSignIn } from '../controllers/authController';
 
 /**
  * @swagger
@@ -148,6 +148,8 @@ router.post('/signIn', uploader.none(), signIn);
  *               description: Error message
  */
 router.post('/signUp', uploader.none(), signUp);
+
+router.get('/passwordlessSignIn', uploader.none(), passwordlessSignIn);
 
 router.post('/renewSignIn', passport.authenticate('jwt', { session: false }), uploader.none(), renewSignIn);
 

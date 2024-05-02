@@ -85,6 +85,27 @@ export const signIn = async (req: Request, res: Response) => {
     }
 };
 
+export const passwordlessSignIn = async (req: Request, res: Response) => {
+    try {
+        const user = await prismaClient.user.findUniqueOrThrow({
+            where: {
+                id: 1,
+            },
+        });
+
+        const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET as string, {
+            expiresIn: process.env.JWT_EXPIRATION,
+        });
+
+        res.status(200).json({
+            message: 'User signed in.',
+            data: { id: user.id, token: token, expiresIn: ms(process.env.JWT_EXPIRATION as string) },
+        });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
 export const renewSignIn = async (req: Request, res: Response) => {
     try {
         const user = req.user as User;
