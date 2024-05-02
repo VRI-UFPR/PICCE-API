@@ -4,6 +4,7 @@ import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import jwt from 'jsonwebtoken';
 import errorFormatter from '../services/errorFormatter';
+import ms from 'ms';
 
 export const signUp = async (req: Request, res: Response) => {
     try {
@@ -37,10 +38,13 @@ export const signUp = async (req: Request, res: Response) => {
         });
 
         const token = jwt.sign({ id: createdUser.id, username: createdUser.username }, process.env.JWT_SECRET as string, {
-            expiresIn: 1800,
+            expiresIn: process.env.JWT_EXPIRATION,
         });
 
-        res.status(201).json({ message: 'User signed up.', data: { id: createdUser.id, token: token } });
+        res.status(201).json({
+            message: 'User signed up.',
+            data: { id: createdUser.id, token: token, expiresIn: process.env.JWT_EXPIRATION },
+        });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -69,11 +73,40 @@ export const signIn = async (req: Request, res: Response) => {
         }
 
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET as string, {
-            expiresIn: 1800,
+            expiresIn: process.env.JWT_EXPIRATION,
         });
 
-        res.status(200).json({ message: 'User signed in.', data: { id: user.id, token: token } });
+        res.status(200).json({
+            message: 'User signed in.',
+            data: { id: user.id, token: token, expiresIn: ms(process.env.JWT_EXPIRATION as string) },
+        });
     } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const renewSignIn = async (req: Request, res: Response) => {
+    try {
+        const user = req.user as User;
+
+        const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET as string, {
+            expiresIn: process.env.JWT_EXPIRATION,
+        });
+
+        res.status(200).json({
+            message: 'User signed in.',
+            data: { id: user.id, token: token, expiresIn: ms(process.env.JWT_EXPIRATION as string) },
+        });
+    } catch (error) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const checkSignIn = async (req: Request, res: Response) => {
+    try {
+        const user = req.user as User;
+        res.status(200).json({ message: 'User currently signed in.', data: { id: user.id } });
+    } catch (error) {
         res.status(400).json(errorFormatter(error));
     }
 };
