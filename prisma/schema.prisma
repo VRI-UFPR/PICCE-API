@@ -27,6 +27,12 @@ enum ItemType {
   RADIO
   SELECT
   SCALE
+  TEXT
+  UPLOAD
+  DATEBOX
+  NUMBERBOX
+  TIMEBOX
+  LOCATIONBOX
 }
 
 enum InstitutionType {
