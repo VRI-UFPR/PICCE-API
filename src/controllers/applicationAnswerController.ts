@@ -147,8 +147,8 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 });
                 for (const [itemAnswerIndex, itemAnswer] of itemAnswerGroup.itemAnswers.entries()) {
                     const itemAnswerFiles = files
-                        .filter(
-                            (file) => file.fieldname === `itemAnswerGroups[${itemAnswerGroupIndex}][itemAnswers][${itemAnswerIndex}][files]`
+                        .filter((file) =>
+                            file.fieldname.startsWith(`itemAnswerGroups[${itemAnswerGroupIndex}][itemAnswers][${itemAnswerIndex}][files]`)
                         )
                         .map((file) => {
                             return { path: file.path };
