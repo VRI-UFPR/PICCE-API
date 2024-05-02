@@ -17,7 +17,9 @@ app.use(
     '/api-docs',
     swaggerUi.serve,
     swaggerUi.setup(swaggerDocs, {
-        explorer: true,
+        swaggerOptions: {
+            supportedSubmitMethods: ['get'],
+        },
     })
 );
 
