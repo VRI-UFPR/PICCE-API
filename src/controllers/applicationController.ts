@@ -14,7 +14,7 @@ const checkAuthorizationToApply = async (user: User, protocolId: number) => {
             },
         });
 
-        if (!protocol) {
+        if (!protocol || user.role === UserRole.USER) {
             throw new Error('This user is not authorized to apply this protocol.');
         }
     }

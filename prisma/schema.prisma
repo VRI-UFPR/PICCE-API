@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 enum PageType {
@@ -87,7 +87,7 @@ model ApplicationAnswer {
   itemAnswerGroups ItemAnswerGroup[]
 
   userId        Int?
-  user          User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   applicationId Int
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   addressId     Int?
@@ -172,11 +172,11 @@ model User {
   createdAt DateTime @default(now())
   updateAt  DateTime @updatedAt
 
-  name     String
-  username String @unique
-  hash     String
-  role     UserRole
-  acceptedTerms Boolean @default(false)
+  name          String
+  username      String   @unique
+  hash          String
+  role          UserRole
+  acceptedTerms Boolean  @default(false)
 
   createdProtocols     Protocol[]          @relation(name: "Creator") // protocols that the user has created
   ownedProtocols            Protocol[]          @relation(name: "OwnersProtocols") // protocols that the user can edit
@@ -294,12 +294,12 @@ model Item {
   placement   Int
   enabled     Boolean
 
-  itemOptions   ItemOption[]
-  itemAnswers   ItemAnswer[]
-  optionAnswers OptionAnswer[]
-  tableAnswers  TableAnswer[]
-  files         File[]
-  itemValidations   ItemValidation[]
+  itemOptions     ItemOption[]
+  itemAnswers     ItemAnswer[]
+  optionAnswers   OptionAnswer[]
+  tableAnswers    TableAnswer[]
+  files           File[]
+  itemValidations ItemValidation[]
 
   groupId   Int
   itemGroup ItemGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
@@ -310,12 +310,14 @@ model ItemValidation {
   createdAt DateTime @default(now())
   updateAt  DateTime @updatedAt
 
-  type   ItemValidationType
-  argument String
+  type          ItemValidationType
+  argument      String
   customMessage String
 
-  itemId       Int
-  item         Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId Int
+  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, type])
 }
 
 model ItemOption {

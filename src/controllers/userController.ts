@@ -14,9 +14,7 @@ const checkAuthorization = (user: User, userId: number) => {
 // Check if the user is above the role to be handled
 const checkHierarchy = (user: User, role: UserRole) => {
     const coordinatorRestrictions = user.role === UserRole.COORDINATOR && (role === UserRole.ADMIN || role === UserRole.COORDINATOR);
-    const publisherRestrictions =
-        user.role === UserRole.PUBLISHER &&
-        (role === UserRole.ADMIN || role === UserRole.COORDINATOR || role === UserRole.PUBLISHER || role === UserRole.APPLIER);
+    const publisherRestrictions = user.role === UserRole.PUBLISHER && role !== UserRole.USER;
     const otherRestrictions = user.role === UserRole.APPLIER || user.role === UserRole.USER;
 
     if (coordinatorRestrictions || publisherRestrictions || otherRestrictions) {
@@ -41,6 +39,7 @@ const fieldsWithNesting = {
             id: true,
         },
     },
+    acceptedTerms: true,
     createdAt: true,
     updateAt: true,
 };
@@ -117,6 +116,9 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         checkAuthorization(curUser, id);
 
         // Check if user is authorized to update a user with the given role
+        checkHierarchy(curUser, user.role as UserRole);
+
+        // Prisma operation
         const updatedUser = await prismaClient.user.update({
             where: { id },
             data: {
@@ -136,6 +138,32 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     }
 };
 
+export const acceptTermsUser = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // ID from params
+        const id: number = parseInt(req.params.userId);
+
+        // User from Passport-JWT
+        const curUser = req.user as User;
+
+        // Check if user is authorized to update the user
+        checkAuthorization(curUser, id);
+
+        // Check if user is authorized to update a user with the given role
+        const updatedUser = await prismaClient.user.update({
+            where: { id },
+            data: {
+                acceptedTerms: true,
+            },
+            select: fieldsWithNesting,
+        });
+
+        res.status(200).json({ message: 'User accepted terms.', data: updatedUser });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
@@ -148,6 +176,23 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
         const users = await prismaClient.user.findMany({ select: fieldsWithNesting });
 
         res.status(200).json({ message: 'All users found.', data: users });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const getInstitutionUsers = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // User from Passport-JWT
+        const curUser = req.user as User;
+
+        // Check if user is authorized to get all users from the institution
+        if (curUser.role === UserRole.USER) throw new Error('This user is not authorized to perform this action');
+
+        // Prisma operation
+        const users = await prismaClient.user.findMany({ where: { institutionId: curUser.institutionId }, select: fieldsWithNesting });
+
+        res.status(200).json({ message: 'Institution users found.', data: users });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
