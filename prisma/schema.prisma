@@ -27,6 +27,12 @@ enum ItemType {
   RADIO
   SELECT
   SCALE
+  TEXT
+  UPLOAD
+  DATEBOX
+  NUMBERBOX
+  TIMEBOX
+  LOCATIONBOX
 }
 
 enum InstitutionType {
@@ -121,7 +127,7 @@ model OptionAnswer {
   createdAt DateTime @default(now())
   updateAt  DateTime @updatedAt
 
-  text String
+  text String?
 
   itemId   Int
   item     Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
@@ -136,7 +142,7 @@ model TableAnswer {
   createdAt DateTime @default(now())
   updateAt  DateTime @updatedAt
 
-  text String
+  text String?
 
   itemId   Int
   item     Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
@@ -289,6 +295,7 @@ model ItemValidation {
 
   itemId       Int
   item         Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  @@unique([itemId, type])
 }
 
 model ItemOption {
