@@ -3,10 +3,10 @@ import uploader from '../services/multerUploader';
 import {
     createApplication,
     updateApplication,
-    getAllApplications,
+    getMyApplications,
+    getVisibleApplications,
     getApplication,
     deleteApplication,
-    getAllApplicationsWithProtocol,
     getApplicationWithProtocol,
 } from '../controllers/applicationController';
 import passport from '../services/passportAuth';
@@ -148,9 +148,9 @@ router.put('/updateApplication/:applicationId', passport.authenticate('jwt', { s
 
 /**
  * @swagger
- * /api/application/getAllApplications:
+ * /api/application/getMyApplications:
  *   get:
- *     summary: Get all applications
+ *     summary: Get all applications created by the user
  *     tags: [Application]
  *     security:
  *       - bearerAuth: []
@@ -172,13 +172,13 @@ router.put('/updateApplication/:applicationId', passport.authenticate('jwt', { s
  *               type: string
  *               description: Error message
  */
-router.get('/getAllApplications', passport.authenticate('jwt', { session: false }), uploader.none(), getAllApplications);
+router.get('/getMyApplications', passport.authenticate('jwt', { session: false }), uploader.none(), getMyApplications);
 
 /**
  * @swagger
- * /api/application/getAllApplicationsWithProtocol:
+ * /api/application/getVisibleApplications:
  *   get:
- *     summary: Get all applications with nested protocols
+ *     summary: Get all applications that are visible to the user
  *     tags: [Application]
  *     security:
  *       - bearerAuth: []
@@ -200,12 +200,7 @@ router.get('/getAllApplications', passport.authenticate('jwt', { session: false 
  *               type: string
  *               description: Error message
  */
-router.get(
-    '/getAllApplicationsWithProtocol',
-    passport.authenticate('jwt', { session: false }),
-    uploader.none(),
-    getAllApplicationsWithProtocol
-);
+router.get('/getVisibleApplications', passport.authenticate('jwt', { session: false }), uploader.none(), getVisibleApplications);
 
 /**
  * @swagger

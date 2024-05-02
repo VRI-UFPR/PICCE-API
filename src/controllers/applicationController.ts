@@ -1,8 +1,82 @@
 import { Response, Request } from 'express';
-import { Application, User, VisibilityMode } from '@prisma/client';
+import { Application, User, VisibilityMode, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
+
+const checkAuthorizationToApply = async (user: User, protocolId: number) => {
+    if (user.role !== UserRole.ADMIN) {
+        const protocol = await prismaClient.protocol.findUnique({
+            where: {
+                id: protocolId,
+                applicable: true,
+                enabled: true,
+            },
+        });
+
+        if (!protocol || user.role === UserRole.USER) {
+            throw new Error('This user is not authorized to apply this protocol.');
+        }
+    }
+};
+
+const validateVisibleFields = async (user: User, application: any) => {
+    if (user.role !== UserRole.ADMIN && application.applicatorId !== user.id) {
+        if (
+            !application.viewersUser.some((viewer: any) => viewer.id === user.id) &&
+            !application.viewersClassroom.some((viewer: any) => viewer.users.some((u: any) => u.id === user.id))
+        ) {
+            throw new Error('This user is not authorized to view this application.');
+        }
+        delete application.viewersUser;
+        delete application.viewersClassroom;
+
+        return application;
+    }
+    return application;
+};
+
+const selectedFields = {
+    id: true,
+    protocol: { select: { id: true, title: true, description: true } },
+    visibilityMode: true,
+    applicator: { select: { id: true, username: true } },
+    createdAt: true,
+    updatedAt: true,
+};
+
+const fieldsWithViewers = {
+    ...selectedFields,
+    viewersUser: { select: { id: true, username: true } },
+    viewersClassroom: { select: { id: true, institution: { select: { name: true } } } },
+};
+
+const fieldsWithFullProtocol = {
+    ...selectedFields,
+    protocol: {
+        include: {
+            pages: {
+                include: {
+                    itemGroups: {
+                        include: {
+                            items: {
+                                include: {
+                                    itemOptions: {
+                                        include: {
+                                            files: true,
+                                        },
+                                    },
+                                    itemValidations: true,
+                                    files: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+};
 
 export const createApplication = async (req: Request, res: Response) => {
     try {
@@ -23,8 +97,11 @@ export const createApplication = async (req: Request, res: Response) => {
         // User from Passport-JWT
         const user = req.user as User;
 
+        // Check if the user is allowed to apply the protocol
+        await checkAuthorizationToApply(user, application.protocolId);
+
         // Create the application
-        const createdApplication: Application = await prismaClient.application.create({
+        const createdApplication = await prismaClient.application.create({
             data: {
                 protocolId: application.protocolId,
                 applicatorId: user.id,
@@ -36,10 +113,7 @@ export const createApplication = async (req: Request, res: Response) => {
                     connect: application.viewersClassroom.map((id) => ({ id: id })),
                 },
             },
-            include: {
-                viewersUser: true,
-                viewersClassroom: true,
-            },
+            select: fieldsWithViewers,
         });
 
         res.status(201).json({ message: 'Application created.', data: createdApplication });
@@ -71,7 +145,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
         const user = req.user as User;
 
         // Check if the user is allowed to update the application
-        if (user.role !== 'ADMIN') {
+        if (user.role !== UserRole.ADMIN) {
             await prismaClient.application.findUniqueOrThrow({
                 where: {
                     id: id,
@@ -81,7 +155,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
         }
 
         // Update the application
-        const updatedApplication: Application = await prismaClient.application.update({
+        const updatedApplication = await prismaClient.application.update({
             where: {
                 id,
             },
@@ -97,10 +171,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
                     connect: application.viewersClassroom.map((id) => ({ id: id })),
                 },
             },
-            include: {
-                viewersUser: true,
-                viewersClassroom: true,
-            },
+            select: fieldsWithViewers,
         });
 
         res.status(200).json({ message: 'Application updated.', data: updatedApplication });
@@ -109,61 +180,46 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
     }
 };
 
-export const getAllApplications = async (req: Request, res: Response): Promise<void> => {
+export const getMyApplications = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
 
-        // Get all applications that the user is allowed to see
-        const applications: Application[] =
-            user.role === 'ADMIN'
-                ? await prismaClient.application.findMany({
-                      include: {
-                          viewersUser: true,
-                          viewersClassroom: true,
-                      },
-                  })
-                : await prismaClient.application.findMany({
-                      where: {
-                          applicatorId: user.id,
-                      },
-                      include: {
-                          viewersUser: true,
-                          viewersClassroom: true,
-                      },
-                  });
-        res.status(200).json({ message: 'All applications found.', data: applications });
+        // Get all applications created by the user
+        const applications = await prismaClient.application.findMany({
+            where: {
+                applicatorId: user.id,
+            },
+            select: fieldsWithViewers,
+        });
+        res.status(200).json({ message: 'All your applications found.', data: applications });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
 };
 
-export const getAllApplicationsWithProtocol = async (req: Request, res: Response): Promise<void> => {
+export const getVisibleApplications = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
 
         // Get all applications that the user is allowed to see
-        const applications: Application[] =
-            user.role === 'ADMIN'
+        const applications =
+            user.role === UserRole.ADMIN
                 ? await prismaClient.application.findMany({
-                      include: {
-                          viewersUser: true,
-                          viewersClassroom: true,
-                          protocol: true,
-                      },
+                      select: fieldsWithViewers,
                   })
                 : await prismaClient.application.findMany({
                       where: {
-                          applicatorId: user.id,
+                          OR: [
+                              { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                              { viewersUser: { some: { id: user.id } } },
+                              { applicatorId: user.id },
+                          ],
                       },
-                      include: {
-                          viewersUser: true,
-                          viewersClassroom: true,
-                          protocol: true,
-                      },
+                      select: selectedFields,
                   });
-        res.status(200).json({ message: 'All applications found.', data: applications });
+        res.status(200).json({ message: 'All visible applications found.', data: applications });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -178,29 +234,16 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
         const user = req.user as User;
 
         // Get the application if the user is allowed to see it
-        const application: Application =
-            user.role === 'ADMIN'
-                ? await prismaClient.application.findUniqueOrThrow({
-                      where: {
-                          id: id,
-                      },
-                      include: {
-                          viewersUser: true,
-                          viewersClassroom: true,
-                      },
-                  })
-                : await prismaClient.application.findUniqueOrThrow({
-                      where: {
-                          id: id,
-                          applicatorId: user.id,
-                      },
-                      include: {
-                          viewersUser: true,
-                          viewersClassroom: true,
-                      },
-                  });
+        const application = await prismaClient.application.findUniqueOrThrow({
+            where: {
+                id: id,
+            },
+            select: fieldsWithViewers,
+        });
 
-        res.status(200).json({ message: 'Application found.', data: application });
+        const visibleApplication = await validateVisibleFields(user, application);
+
+        res.status(200).json({ message: 'Application found.', data: visibleApplication });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -215,72 +258,24 @@ export const getApplicationWithProtocol = async (req: Request, res: Response): P
         const user = req.user as User;
 
         // Get the application if the user is allowed to see it
-        const application: Application =
-            user.role === 'ADMIN'
+        const application =
+            user.role === UserRole.ADMIN
                 ? await prismaClient.application.findUniqueOrThrow({
                       where: {
                           id: id,
                       },
-                      include: {
-                          viewersUser: true,
-                          viewersClassroom: true,
-                          protocol: {
-                              include: {
-                                  pages: {
-                                      include: {
-                                          itemGroups: {
-                                              include: {
-                                                  items: {
-                                                      include: {
-                                                          itemOptions: {
-                                                              include: {
-                                                                  files: true,
-                                                              },
-                                                          },
-                                                          itemValidations: true,
-                                                          files: true,
-                                                      },
-                                                  },
-                                              },
-                                          },
-                                      },
-                                  },
-                              },
-                          },
-                      },
+                      select: fieldsWithFullProtocol,
                   })
                 : await prismaClient.application.findUniqueOrThrow({
                       where: {
                           id: id,
-                          applicatorId: user.id,
+                          OR: [
+                              { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                              { viewersUser: { some: { id: user.id } } },
+                              { applicatorId: user.id },
+                          ],
                       },
-                      include: {
-                          viewersUser: true,
-                          viewersClassroom: true,
-                          protocol: {
-                              include: {
-                                  pages: {
-                                      include: {
-                                          itemGroups: {
-                                              include: {
-                                                  items: {
-                                                      include: {
-                                                          itemOptions: {
-                                                              include: {
-                                                                  files: true,
-                                                              },
-                                                          },
-                                                          itemValidations: true,
-                                                          files: true,
-                                                      },
-                                                  },
-                                              },
-                                          },
-                                      },
-                                  },
-                              },
-                          },
-                      },
+                      select: fieldsWithFullProtocol,
                   });
 
         res.status(200).json({ message: 'Application found.', data: application });
@@ -299,7 +294,7 @@ export const deleteApplication = async (req: Request, res: Response): Promise<vo
 
         // Delete the application if the user is allowed to delete it
         const deletedApplication: Application =
-            user.role === 'ADMIN'
+            user.role === UserRole.ADMIN
                 ? await prismaClient.application.delete({
                       where: {
                           id: id,
