@@ -613,7 +613,7 @@ async function main() {
         {
             id: 1,
             groupId: 1,
-            text: '### Seção 1: Características da escola\ncar',
+            text: '### Seção 1: Características da escola',
             description: '',
             placement: 1,
             enabled: true,
@@ -20285,6 +20285,7 @@ async function main() {
     await prismaClient.$executeRawUnsafe(`ALTER SEQUENCE "public"."Classroom_id_seq" RESTART WITH ${classrooms.length + 1}`);
     await prismaClient.$executeRawUnsafe(`ALTER SEQUENCE "public"."Institution_id_seq" RESTART WITH ${institutions.length + 1}`);
     await prismaClient.$executeRawUnsafe(`ALTER SEQUENCE "public"."Address_id_seq" RESTART WITH ${addresses.length + 1}`);
+    await prismaClient.$executeRawUnsafe(`ALTER SEQUENCE "public"."File_id_seq" RESTART WITH ${picceFiles.length + 1}`);
     await prismaClient.$executeRawUnsafe(`ALTER SEQUENCE "public"."OptionAnswer_id_seq" RESTART WITH 1`);
     await prismaClient.$executeRawUnsafe(`ALTER SEQUENCE "public"."ItemAnswer_id_seq" RESTART WITH 1`);
     await prismaClient.$executeRawUnsafe(`ALTER SEQUENCE "public"."ItemAnswerGroup_id_seq" RESTART WITH 1`);
