@@ -36,7 +36,7 @@ const validateVisibleFields = async (user: User, application: any) => {
     return application;
 };
 
-const selectedFields = {
+const fieldsWithNesting = {
     id: true,
     protocol: { select: { id: true, title: true, description: true } },
     visibilityMode: true,
@@ -46,13 +46,13 @@ const selectedFields = {
 };
 
 const fieldsWithViewers = {
-    ...selectedFields,
+    ...fieldsWithNesting,
     viewersUser: { select: { id: true, username: true } },
     viewersClassroom: { select: { id: true, institution: { select: { name: true } } } },
 };
 
 const fieldsWithFullProtocol = {
-    ...selectedFields,
+    ...fieldsWithNesting,
     protocol: {
         include: {
             pages: {
@@ -217,7 +217,7 @@ export const getVisibleApplications = async (req: Request, res: Response): Promi
                               { applicatorId: user.id },
                           ],
                       },
-                      select: selectedFields,
+                      select: fieldsWithNesting,
                   });
         res.status(200).json({ message: 'All visible applications found.', data: applications });
     } catch (error: any) {
