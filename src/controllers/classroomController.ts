@@ -131,6 +131,31 @@ export const getAllClassrooms = async (req: Request, res: Response): Promise<voi
     }
 };
 
+export const getInstitutionClassrooms = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // ID from params
+        const institutionId: number = parseInt(req.params.institutionId);
+
+        // User from Passport-JWT
+        const user = req.user as User;
+
+        // Check if user is authorized to get all classrooms from the institution
+        if (user.role === UserRole.USER || user.institutionId !== institutionId) {
+            throw new Error('This user is not authorized to perform this action');
+        }
+
+        // Prisma operation
+        const classrooms = await prismaClient.classroom.findMany({
+            where: { institutionId: user.institutionId as number },
+            select: fieldsWithNesting,
+        });
+
+        res.status(200).json({ message: 'Institution classrooms found.', data: classrooms });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
 export const getClassroom = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params

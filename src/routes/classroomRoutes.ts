@@ -1,6 +1,13 @@
 import express from 'express';
 import uploader from '../services/multerUploader';
-import { createClassroom, updateClassroom, getAllClassrooms, getClassroom, deleteClassroom } from '../controllers/classroomController';
+import {
+    createClassroom,
+    updateClassroom,
+    getAllClassrooms,
+    getClassroom,
+    deleteClassroom,
+    getInstitutionClassrooms,
+} from '../controllers/classroomController';
 import passport from '../services/passportAuth';
 
 /**
@@ -136,6 +143,13 @@ router.put('/updateClassroom/:classroomId', passport.authenticate('jwt', { sessi
  *              $ref: '#/components/schemas/Classroom'
  */
 router.get('/getAllClassrooms', passport.authenticate('jwt', { session: false }), uploader.none(), getAllClassrooms);
+
+router.get(
+    '/getInstitutionClassrooms/:institutionId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    getInstitutionClassrooms
+);
 
 /**
  * @swagger
