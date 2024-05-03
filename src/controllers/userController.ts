@@ -78,6 +78,7 @@ export const createUser = async (req: Request, res: Response) => {
                 hash: user.hash,
                 role: user.role,
                 institutionId: user.institutionId,
+                classrooms: { connect: user.classrooms.map((id) => ({ id: id })) },
             },
             select: fieldsWithNesting,
         });
@@ -127,7 +128,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
                 hash: user.hash,
                 role: user.role,
                 institutionId: user.institutionId,
-                classrooms: { disconnect: user.classrooms?.map((id) => ({ id: id })) },
+                classrooms: { set: [], connect: user.classrooms?.map((id) => ({ id: id })) },
             },
             select: fieldsWithNesting,
         });
@@ -183,11 +184,15 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
 
 export const getInstitutionUsers = async (req: Request, res: Response): Promise<void> => {
     try {
+        // ID from params
+        const institutionId: number = parseInt(req.params.institutionId);
+
         // User from Passport-JWT
         const curUser = req.user as User;
 
         // Check if user is authorized to get all users from the institution
-        if (curUser.role === UserRole.USER) throw new Error('This user is not authorized to perform this action');
+        if (curUser.role === UserRole.USER || curUser.institutionId !== institutionId)
+            throw new Error('This user is not authorized to perform this action');
 
         // Prisma operation
         const users = await prismaClient.user.findMany({ where: { institutionId: curUser.institutionId }, select: fieldsWithNesting });

@@ -152,7 +152,7 @@ router.put('/updateUser/:userId', passport.authenticate('jwt', { session: false 
  */
 router.get('/getAllUsers', passport.authenticate('jwt', { session: false }), uploader.none(), getAllUsers);
 
-router.get('/getInstitutionUsers', passport.authenticate('jwt', { session: false }), uploader.none(), getInstitutionUsers);
+router.get('/getInstitutionUsers/:institutionId', passport.authenticate('jwt', { session: false }), uploader.none(), getInstitutionUsers);
 
 /**
  * @swagger
