@@ -47,7 +47,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         // Yup schemas
         const createItemAnswerSchema = yup
             .object()
-            .shape({ id: yup.number(), text: yup.string().max(255).required(), itemId: yup.number().required() })
+            .shape({ id: yup.number(), text: yup.string().max(255), itemId: yup.number().required() })
             .noUnknown();
 
         const createOptionAnswerSchema = yup
