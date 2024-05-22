@@ -463,6 +463,11 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
                                     applicationAnswerId: true,
                                 },
                             },
+                            files: {
+                                select: {
+                                    path: true,
+                                },
+                            },
                         },
                     });
 
@@ -475,7 +480,10 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
                             item.itemAnswers[answer.group.applicationAnswerId][answer.group.id] = [];
                         }
 
-                        item.itemAnswers[answer.group.applicationAnswerId][answer.group.id].push({ text: answer.text });
+                        item.itemAnswers[answer.group.applicationAnswerId][answer.group.id].push({
+                            text: answer.text,
+                            files: answer.files,
+                        });
                     }
 
                     for (const option of item.itemOptions) {
