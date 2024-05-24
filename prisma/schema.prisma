@@ -99,7 +99,7 @@ model ItemAnswer {
   createdAt DateTime @default(now())
   updateAt  DateTime @updatedAt
 
-  text String
+  text String?
 
   files File[]
 
