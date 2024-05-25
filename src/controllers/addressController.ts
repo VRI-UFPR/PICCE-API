@@ -4,10 +4,18 @@ import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 
-// Only admin can perform C-UD operations on addresses
-const checkAuthorization = (user: User) => {
-    if (user.role !== UserRole.ADMIN) {
-        throw new Error('This user is not authorized to perform this action');
+const checkAuthorization = async (user: User, addressId: number | undefined, action: string) => {
+    switch (action) {
+        case 'create':
+        case 'update':
+        case 'getAll':
+        case 'get':
+        case 'delete':
+            // Only ADMINs can perform create/update/getAll/get/delete operations on addresses
+            if (user.role !== UserRole.ADMIN) {
+                throw new Error('This user is not authorized to perform this action');
+            }
+            break;
     }
 };
 
@@ -23,15 +31,12 @@ export const createAddress = async (req: Request, res: Response) => {
                 country: yup.string().min(1).required(),
             })
             .noUnknown();
-
         // Yup parsing/validation
         const address = await createAddressSchema.validate(req.body, { stripUnknown: false });
-
         // User from Passport-JWT
         const user = req.user as User;
-
         // Check if user is authorized to create an address
-        checkAuthorization(user);
+        await checkAuthorization(user, undefined, 'create');
         // Prisma operation
         const createdAddress: Address = await prismaClient.address.create({
             data: { id: address.id, city: address.city, state: address.state, country: address.country },
@@ -46,26 +51,21 @@ export const createAddress = async (req: Request, res: Response) => {
 export const updateAddress = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
-        const id: number = parseInt(req.params.addressId);
-
+        const addressId: number = parseInt(req.params.addressId);
         // Yup schemas
         const updateAddressSchema = yup
             .object()
             .shape({ city: yup.string().min(1), state: yup.string().min(1), country: yup.string().min(1) })
             .noUnknown();
-
         // Yup parsing/validation
         const address = await updateAddressSchema.validate(req.body, { stripUnknown: false });
-
         // User from Passport-JWT
         const user = req.user as User;
-
         // Check if user is authorized to update an address
-        checkAuthorization(user);
-
+        await checkAuthorization(user, addressId, 'update');
         // Prisma operation
         const updatedAddress: Address = await prismaClient.address.update({
-            where: { id },
+            where: { id: addressId },
             data: { city: address.city, state: address.state, country: address.country },
         });
 
@@ -77,6 +77,10 @@ export const updateAddress = async (req: Request, res: Response): Promise<void> 
 
 export const getAllAddresses = async (req: Request, res: Response): Promise<void> => {
     try {
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is authorized to get all addresses
+        await checkAuthorization(user, undefined, 'getAll');
         // Prisma operation
         const addresses: Address[] = await prismaClient.address.findMany();
 
@@ -89,10 +93,13 @@ export const getAllAddresses = async (req: Request, res: Response): Promise<void
 export const getAddress = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
-        const id: number = parseInt(req.params.addressId);
-
+        const addressId: number = parseInt(req.params.addressId);
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is authorized to get an address
+        await checkAuthorization(user, addressId, 'get');
         // Prisma operation
-        const address: Address = await prismaClient.address.findUniqueOrThrow({ where: { id } });
+        const address: Address = await prismaClient.address.findUniqueOrThrow({ where: { id: addressId } });
 
         res.status(200).json({ message: 'Address found.', data: address });
     } catch (error: any) {
@@ -103,17 +110,13 @@ export const getAddress = async (req: Request, res: Response): Promise<void> => 
 export const deleteAddress = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
-        const id: number = parseInt(req.params.addressId);
-
+        const addressId: number = parseInt(req.params.addressId);
         // User from Passport-JWT
         const user = req.user as User;
-
         // Check if user is authorized to delete an address
-        checkAuthorization(user);
-
+        await checkAuthorization(user, addressId, 'delete');
         // Prisma operation
-        const deletedAddress = await prismaClient.address.delete({ where: { id }, select: { id: true } });
-
+        const deletedAddress = await prismaClient.address.delete({ where: { id: addressId }, select: { id: true } });
         res.status(200).json({ message: 'Address deleted.', data: deletedAddress });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));

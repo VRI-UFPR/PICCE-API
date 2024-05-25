@@ -8,6 +8,7 @@ import ms from 'ms';
 
 export const signUp = async (req: Request, res: Response) => {
     try {
+        // Yup schemas
         const signUpSchema = yup
             .object()
             .shape({
@@ -20,9 +21,9 @@ export const signUp = async (req: Request, res: Response) => {
                 classrooms: yup.array().of(yup.number()).default([]),
             })
             .noUnknown();
-
+        // Yup parsing/validation
         const signingUser = await signUpSchema.validate(req.body, { stripUnknown: false });
-
+        // Prisma operation
         const createdUser = await prismaClient.user.create({
             data: {
                 id: signingUser.id,
@@ -31,12 +32,10 @@ export const signUp = async (req: Request, res: Response) => {
                 hash: signingUser.hash,
                 role: signingUser.role,
                 institutionId: signingUser.institutionId,
-                classrooms: {
-                    connect: signingUser.classrooms.map((classroomId) => ({ id: classroomId })),
-                },
+                classrooms: { connect: signingUser.classrooms.map((classroomId) => ({ id: classroomId })) },
             },
         });
-
+        // JWT token creation
         const token = jwt.sign({ id: createdUser.id, username: createdUser.username }, process.env.JWT_SECRET as string, {
             expiresIn: process.env.JWT_EXPIRATION,
         });
@@ -58,26 +57,24 @@ export const signUp = async (req: Request, res: Response) => {
 
 export const signIn = async (req: Request, res: Response) => {
     try {
+        // Yup schemas
         const signInSchema = yup
             .object()
-            .shape({
-                username: yup.string().min(3).max(20).required(),
-                hash: yup.string().required(),
-            })
+            .shape({ username: yup.string().min(3).max(20).required(), hash: yup.string().required() })
             .noUnknown();
-
+        // Yup parsing/validation
         const signingUser = await signInSchema.validate(req.body, { stripUnknown: false });
-
+        // Prisma operation
         const user: User = await prismaClient.user.findUniqueOrThrow({
             where: {
                 username: signingUser.username,
             },
         });
-
+        // Password check
         if (user.hash !== signingUser.hash) {
             throw new Error('Invalid credentials.');
         }
-
+        // JWT token creation
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET as string, {
             expiresIn: process.env.JWT_EXPIRATION,
         });
@@ -100,12 +97,9 @@ export const signIn = async (req: Request, res: Response) => {
 
 export const passwordlessSignIn = async (req: Request, res: Response) => {
     try {
-        const user = await prismaClient.user.findUniqueOrThrow({
-            where: {
-                id: 1,
-            },
-        });
-
+        // Prisma operation
+        const user = await prismaClient.user.findUniqueOrThrow({ where: { id: 1 } });
+        // JWT token creation
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET as string, {
             expiresIn: process.env.JWT_EXPIRATION,
         });
@@ -127,8 +121,9 @@ export const passwordlessSignIn = async (req: Request, res: Response) => {
 
 export const renewSignIn = async (req: Request, res: Response) => {
     try {
+        // User from Passport-JWT
         const user = req.user as User;
-
+        // JWT token creation
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET as string, {
             expiresIn: process.env.JWT_EXPIRATION,
         });
@@ -150,7 +145,9 @@ export const renewSignIn = async (req: Request, res: Response) => {
 
 export const checkSignIn = async (req: Request, res: Response) => {
     try {
+        // User from Passport-JWT
         const user = req.user as User;
+
         res.status(200).json({ message: 'User currently signed in.', data: { id: user.id } });
     } catch (error) {
         res.status(400).json(errorFormatter(error));
@@ -159,20 +156,14 @@ export const checkSignIn = async (req: Request, res: Response) => {
 
 export const acceptTerms = async (req: Request, res: Response) => {
     try {
+        // User from Passport-JWT
         const user = req.user as User;
-
+        // Check if user is authorized to accept terms
         if (user.id === 1) {
             throw new Error('Cannot accept terms as anonymous user.');
         }
-
-        const updatedUser = await prismaClient.user.update({
-            where: {
-                id: user.id,
-            },
-            data: {
-                acceptedTerms: true,
-            },
-        });
+        // Prisma operation
+        const updatedUser = await prismaClient.user.update({ where: { id: user.id }, data: { acceptedTerms: true } });
 
         res.status(200).json({ message: 'Terms accepted.', data: { id: updatedUser.id, acceptedTerms: updatedUser.acceptedTerms } });
     } catch (error) {
