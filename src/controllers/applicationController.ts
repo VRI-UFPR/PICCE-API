@@ -107,6 +107,8 @@ const fieldsWProtocol = {
             id: true,
             title: true,
             description: true,
+            createdAt: true,
+            updateAt: true,
             pages: {
                 orderBy: { placement: 'asc' as any },
                 select: {
@@ -128,9 +130,9 @@ const fieldsWProtocol = {
                                     placement: true,
                                     itemOptions: {
                                         orderBy: { placement: 'asc' as any },
-                                        select: { id: true, text: true, placement: true },
+                                        select: { id: true, text: true, placement: true, files: { select: { id: true, path: true } } },
                                     },
-                                    files: { select: { path: true } },
+                                    files: { select: { id: true, path: true } },
                                 },
                             },
                         },
