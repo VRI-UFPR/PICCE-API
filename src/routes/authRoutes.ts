@@ -52,13 +52,6 @@ import { signIn, signUp, renewSignIn, checkSignIn, passwordlessSignIn, acceptTer
  *            type: integer
  *          description: The ids of the classrooms the user is part of
  *          example: [1, 2]
- *      example:
- *        name: "John Doe"
- *        username: "johndoe"
- *        hash: "f70adf6b3777a760085e89144c3e817f"
- *        role: "USER"
- *        institutionId: 1
- *        classrooms: [1, 2]
  *     SignIn:
  *      type: object
  *      required:
@@ -73,9 +66,6 @@ import { signIn, signUp, renewSignIn, checkSignIn, passwordlessSignIn, acceptTer
  *          type: string
  *          description: The hash of the user's password (encrypted)
  *          example: "f70adf6b3777a760085e89144c3e817f"
- *      example:
- *        username: "johndoe"
- *        hash: "f70adf6b3777a760085e89144c3e817f"
  *     GetAuth:
  *      type: object
  *      properties:
@@ -95,7 +85,7 @@ import { signIn, signUp, renewSignIn, checkSignIn, passwordlessSignIn, acceptTer
  *        token:
  *          type: string
  *          description: The JWT token of the user who signed in
- *          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJqb2huZG9lIiwiaWF0IjoxNjM0NzQwNzI2LCJleHAiOjE2MzQ3NDA3MzZ9.7
+ *          example: "eyJhbGcdla8sds89ds89d98u5cCI6IkpXVCJ9"
  *        expiresIn:
  *          type: integer
  *          description: The expiration time of the JWT token in seconds
@@ -104,13 +94,6 @@ import { signIn, signUp, renewSignIn, checkSignIn, passwordlessSignIn, acceptTer
  *          type: integer
  *          description: The id of the institution of the user
  *          example: 1
- *      example:
- *        id: 1
- *        role: "USER"
- *        acceptedTerms: true
- *        token
- *        expiresIn: 3600
- *        institutionId: 1
  */
 const router = express.Router();
 

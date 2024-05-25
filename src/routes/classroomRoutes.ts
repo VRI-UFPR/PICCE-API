@@ -241,9 +241,9 @@ router.get('/getMyClassrooms', passport.authenticate('jwt', { session: false }),
 /**
  * @swagger
  * /api/classroom/getClassroom/{classroomId}:
- *    summary: Get the classroom by id
- *    tags: [Classroom]
  *   get:
+ *     summary: Get the classroom by id
+ *     tags: [Classroom]
  *     security:
  *       - bearerAuth: []
  *     parameters:
