@@ -283,9 +283,7 @@ export const getVisibleApplications = async (req: Request, res: Response): Promi
         // Prisma operation
         const applications =
             user.role === UserRole.ADMIN
-                ? await prismaClient.application.findMany({
-                      select: fieldsWViewers,
-                  })
+                ? await prismaClient.application.findMany({ select: fieldsWViewers })
                 : await prismaClient.application.findMany({
                       where: {
                           OR: [

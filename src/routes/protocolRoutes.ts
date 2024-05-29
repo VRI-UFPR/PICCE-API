@@ -1,7 +1,15 @@
 import express from 'express';
 import uploader from '../services/multerUploader';
 import passport from '../services/passportAuth';
-import { createProtocol, updateProtocol, getAllProtocols, getProtocol, deleteProtocol } from '../controllers/protocolController';
+import {
+    createProtocol,
+    updateProtocol,
+    getAllProtocols,
+    getProtocol,
+    deleteProtocol,
+    getMyProtocols,
+    getVisibleProtocols,
+} from '../controllers/protocolController';
 /**
  * @swagger
  * components:
@@ -342,6 +350,58 @@ router.put('/updateProtocol/:protocolId', passport.authenticate('jwt', { session
  *               description: Error message
  */
 router.get('/getAllProtocols', passport.authenticate('jwt', { session: false }), uploader.none(), getAllProtocols);
+
+/**
+ * @swagger
+ * /api/protocol/getMyProtocols:
+ *   get:
+ *     summary: Get all protocols of the user
+ *     tags: [Protocol]
+ *     responses:
+ *       200:
+ *         description: The list of protocols was successfully retrieved
+ *         content:
+ *           application/json:
+ *             message: My protocols found.
+ *             data:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Protocol'
+ *       500:
+ *         description: An error occurred while retrieving the list of protocols
+ *         content:
+ *           application/json:
+ *             error:
+ *               type: string
+ *               description: Error message
+ */
+router.get('/getMyProtocols', passport.authenticate('jwt', { session: false }), uploader.none(), getMyProtocols);
+
+/**
+ * @swagger
+ * /api/protocol/getVisibleProtocols:
+ *   get:
+ *     summary: Get all visible protocols
+ *     tags: [Protocol]
+ *     responses:
+ *       200:
+ *         description: The list of protocols was successfully retrieved
+ *         content:
+ *           application/json:
+ *             message: Visible protocols found.
+ *             data:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Protocol'
+ *       500:
+ *         description: An error occurred while retrieving the list of protocols
+ *         content:
+ *           application/json:
+ *             error:
+ *               type: string
+ *               description: Error message
+ */
+router.get('/getVisibleProtocols', passport.authenticate('jwt', { session: false }), uploader.none(), getVisibleProtocols);
 
 /**
  * @swagger
