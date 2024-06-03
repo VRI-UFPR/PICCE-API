@@ -82,37 +82,35 @@ const validateOwners = async (owners: (number | undefined)[], institutionId: num
 
 const validateProtocolPlacements = async (protocol: any) => {
     const pagesPlacements = [];
-    const itemGroupsPlacements = [];
-    const itemsPlacements = [];
-    const itemOptionsPlacements = [];
-    const tableColumnsPlacements = [];
     for (const page of protocol.pages) {
         pagesPlacements.push(page.placement);
+        const itemGroupsPlacements = [];
         for (const itemGroup of page.itemGroups) {
             itemGroupsPlacements.push(itemGroup.placement);
+            const itemsPlacements = [];
             for (const item of itemGroup.items) {
                 itemsPlacements.push(item.placement);
-                for (const itemOption of item.itemOptions) {
-                    itemOptionsPlacements.push(itemOption.placement);
-                }
+                const itemOptionsPlacements = [];
+                for (const itemOption of item.itemOptions) itemOptionsPlacements.push(itemOption.placement);
+                await validatePlacements(itemOptionsPlacements);
             }
-            for (const tableColumn of itemGroup.tableColumns) {
-                tableColumnsPlacements.push(tableColumn.placement);
-            }
+            await validatePlacements(itemsPlacements);
+            const tableColumnsPlacements = [];
+            for (const tableColumn of itemGroup.tableColumns) tableColumnsPlacements.push(tableColumn.placement);
+            await validatePlacements(tableColumnsPlacements);
         }
+        await validatePlacements(itemGroupsPlacements);
     }
     await validatePlacements(pagesPlacements);
-    await validatePlacements(itemGroupsPlacements);
-    await validatePlacements(itemsPlacements);
-    await validatePlacements(itemOptionsPlacements);
-    await validatePlacements(tableColumnsPlacements);
 };
 
 const validatePlacements = async (placements: number[]) => {
-    const placementSet = new Set<number>(placements);
-    placements.sort((a, b) => a - b);
-    if (placementSet.size !== placements.length || placements[0] !== 1 || placements[placements.length - 1] !== placements.length)
-        throw new Error('Invalid placement values: must be unique, consecutive and start from 1.');
+    if (placements.length > 0) {
+        const placementSet = new Set<number>(placements);
+        placements.sort((a, b) => a - b);
+        if (placementSet.size !== placements.length || placements[0] !== 1 || placements[placements.length - 1] !== placements.length)
+            throw new Error('Invalid placement values: must be unique, consecutive and start from 1.');
+    }
 };
 
 const fields = {
@@ -120,7 +118,7 @@ const fields = {
     title: true,
     description: true,
     createdAt: true,
-    updatedAt: true,
+    updateAt: true,
     enabled: true,
     replicable: true,
     creator: { select: { id: true, username: true } },
@@ -148,7 +146,10 @@ const fields = {
                             type: true,
                             placement: true,
                             enabled: true,
-                            itemOptions: { orderBy: { placement: 'asc' as any }, select: { id: true, text: true, placement: true } },
+                            itemOptions: {
+                                orderBy: { placement: 'asc' as any },
+                                select: { id: true, text: true, placement: true, files: { select: { id: true, path: true } } },
+                            },
                             files: { select: { id: true, path: true } },
                         },
                     },
@@ -163,9 +164,9 @@ const fieldsWViewers = {
     ...fields,
     owners: { select: { id: true, username: true } },
     viewersUser: { select: { id: true, username: true } },
-    viewersClassroom: { select: { id: true, name: true } },
+    viewersClassroom: { select: { id: true } },
     answersViewersUser: { select: { id: true, username: true } },
-    answersViewersClassroom: { select: { id: true, name: true } },
+    answersViewersClassroom: { select: { id: true } },
     appliers: { select: { id: true, username: true } },
 };
 
