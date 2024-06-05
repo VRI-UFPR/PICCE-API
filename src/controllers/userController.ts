@@ -38,11 +38,11 @@ const checkAuthorization = async (curUser: User, userId: number | undefined, rol
             break;
         case 'get':
             // Only admins, members (except USERs) of its institution or the user itself can perform get operations on it
-            if (curUser.role !== UserRole.ADMIN && (curUser.role === UserRole.USER || curUser.id !== userId)) {
+            if (curUser.role !== UserRole.ADMIN) {
                 const user: User | null = await prismaClient.user.findUnique({
                     where: { id: userId, institutionId: curUser.institutionId },
                 });
-                if (!user || !user.institutionId) {
+                if (!user || !user.institutionId || (curUser.role === UserRole.USER && curUser.id !== userId)) {
                     throw new Error('This user is not authorized to perform this action');
                 }
             }

@@ -767,7 +767,10 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
         });
 
         const visibleProtocol =
-            user.role === UserRole.ADMIN || protocol.creator.id === user.id || protocol.owners.some((owner) => owner.id === user.id)
+            user.role === UserRole.ADMIN ||
+            protocol.creator.id === user.id ||
+            protocol.owners.some((owner) => owner.id === user.id) ||
+            protocol.appliers.some((applier) => applier.id === user.id)
                 ? protocol
                 : {
                       ...protocol,

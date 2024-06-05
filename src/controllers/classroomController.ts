@@ -17,19 +17,19 @@ const fields = {
 const checkAuthorization = async (user: User, classroomId: number | undefined, institutionId: number | undefined, action: string) => {
     switch (action) {
         case 'create':
-            // Only ADMINs or COORDINATORs of an institution can perform create operations on its classrooms
-            if (user.role !== UserRole.ADMIN && (user.role !== UserRole.COORDINATOR || user.institutionId !== institutionId)) {
+            // Only ADMINs or members of an institution can perform create operations on its classrooms
+            if (user.role !== UserRole.ADMIN && (user.role === UserRole.USER || user.institutionId !== institutionId)) {
                 throw new Error('This user is not authorized to perform this action');
             }
             break;
         case 'update':
         case 'delete':
-            // Only ADMINs or COORDINATORs of an institution can perform update/delete operations on its classrooms
+            // Only ADMINs, COORDINATORs and PUBLISHERs of an institution can perform update/delete operations on its classrooms
             if (user.role !== UserRole.ADMIN) {
                 const classroom = await prismaClient.classroom.findUnique({
                     where: user.institutionId ? { id: classroomId, institutionId: user.institutionId } : { id: classroomId },
                 });
-                if (user.role !== UserRole.COORDINATOR || !user.institutionId || !classroom) {
+                if (user.role === UserRole.USER || user.role === UserRole.APPLIER || !user.institutionId || !classroom) {
                     throw new Error('This user is not authorized to perform this action');
                 }
             }

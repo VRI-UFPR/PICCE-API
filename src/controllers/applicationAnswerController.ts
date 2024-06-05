@@ -29,6 +29,7 @@ const checkAuthorization = async (
                     throw new Error('This user is not authorized to perform this action.');
                 }
             }
+            break;
         case 'update':
         case 'get':
         case 'delete':

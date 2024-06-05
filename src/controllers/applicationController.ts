@@ -82,6 +82,32 @@ const checkAuthorization = async (user: User, applicationId: number | undefined,
     }
 };
 
+const validateVisibility = async (
+    visibility: VisibilityMode | undefined,
+    answersVisibility: VisibilityMode | undefined,
+    viewersUsers: number[],
+    viewersClassrooms: number[],
+    answersViewersUsers: number[],
+    answersViewersClassrooms: number[],
+    protocolId: number
+) => {
+    const protocolViewers = await prismaClient.protocol.findUnique({
+        where: {
+            id: protocolId,
+            visibility: visibility,
+            answersVisibility: answersVisibility,
+            answersViewersUser: { every: { id: { in: answersViewersUsers } } },
+            answersViewersClassroom: { every: { id: { in: answersViewersClassrooms } } },
+            viewersUser: { every: { id: { in: viewersUsers } } },
+            viewersClassroom: { every: { id: { in: viewersClassrooms } } },
+        },
+    });
+
+    if (!protocolViewers || !visibility || !answersVisibility) {
+        throw new Error('Invalid visibility/viewers. Please make sure the viewers are valid and the protocol allows them.');
+    }
+};
+
 const fields = {
     id: true,
     protocol: { select: { id: true, title: true, description: true } },
@@ -155,12 +181,12 @@ export const createApplication = async (req: Request, res: Response) => {
             .object()
             .shape({
                 protocolId: yup.number().required(),
-                visibility: yup.string().oneOf(Object.values(VisibilityMode)).required(),
-                answersVisibility: yup.string().oneOf(Object.values(VisibilityMode)).required(),
-                viewersUser: yup.array().of(yup.number()).required(),
-                viewersClassroom: yup.array().of(yup.number()).required(),
-                answersViewersUser: yup.array().of(yup.number()).required(),
-                answersViewersClassroom: yup.array().of(yup.number()).required(),
+                visibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)).required(),
+                answersVisibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)).required(),
+                viewersUser: yup.array().of(yup.number()).default([]),
+                viewersClassroom: yup.array().of(yup.number()).default([]),
+                answersViewersUser: yup.array().of(yup.number()).default([]),
+                answersViewersClassroom: yup.array().of(yup.number()).default([]),
             })
             .noUnknown();
         // Yup parsing/validation
@@ -169,6 +195,16 @@ export const createApplication = async (req: Request, res: Response) => {
         const user = req.user as User;
         // Check if the user is allowed to apply the protocol
         await checkAuthorization(user, undefined, application.protocolId, 'create');
+        // Check if the viewers are valid
+        await validateVisibility(
+            application.visibility,
+            application.answersVisibility,
+            application.viewersUser as number[],
+            application.viewersClassroom as number[],
+            application.answersViewersUser as number[],
+            application.answersViewersClassroom as number[],
+            application.protocolId
+        );
         // Prisma operation
         const createdApplication = await prismaClient.application.create({
             data: {
@@ -176,18 +212,10 @@ export const createApplication = async (req: Request, res: Response) => {
                 applierId: user.id,
                 visibility: application.visibility,
                 answersVisibility: application.answersVisibility,
-                viewersUser: {
-                    connect: application.viewersUser.map((id) => ({ id: id })),
-                },
-                viewersClassroom: {
-                    connect: application.viewersClassroom.map((id) => ({ id: id })),
-                },
-                answersViewersUser: {
-                    connect: application.answersViewersUser.map((id) => ({ id: id })),
-                },
-                answersViewersClassroom: {
-                    connect: application.answersViewersClassroom.map((id) => ({ id: id })),
-                },
+                viewersUser: { connect: application.viewersUser.map((id) => ({ id: id })) },
+                viewersClassroom: { connect: application.viewersClassroom.map((id) => ({ id: id })) },
+                answersViewersUser: { connect: application.answersViewersUser.map((id) => ({ id: id })) },
+                answersViewersClassroom: { connect: application.answersViewersClassroom.map((id) => ({ id: id })) },
             },
             select: fieldsWViewers,
         });
@@ -206,9 +234,8 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
         const updateApplicationSchema = yup
             .object()
             .shape({
-                protocolId: yup.number(),
-                visibility: yup.string().oneOf(Object.values(VisibilityMode)),
-                answersVisibility: yup.string().oneOf(Object.values(VisibilityMode)),
+                visibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)),
+                answersVisibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)),
                 viewersUser: yup.array().of(yup.number()).required(),
                 viewersClassroom: yup.array().of(yup.number()).required(),
                 answersViewersUser: yup.array().of(yup.number()).required(),
@@ -221,31 +248,26 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
         const user = req.user as User;
         // Check if the user is allowed to update the application
         await checkAuthorization(user, applicationId, undefined, 'update');
+        // Check if the viewers are valid
+        await validateVisibility(
+            application.visibility,
+            application.answersVisibility,
+            application.viewersUser as number[],
+            application.viewersClassroom as number[],
+            application.answersViewersUser as number[],
+            application.answersViewersClassroom as number[],
+            (await prismaClient.application.findUniqueOrThrow({ where: { id: applicationId } })).protocolId
+        );
         // Prisma operation
         const updatedApplication = await prismaClient.application.update({
-            where: {
-                id: applicationId,
-            },
+            where: { id: applicationId },
             data: {
-                protocolId: application.protocolId,
                 visibility: application.visibility,
                 answersVisibility: application.answersVisibility,
-                viewersUser: {
-                    set: [],
-                    connect: application.viewersUser.map((id) => ({ id: id })),
-                },
-                viewersClassroom: {
-                    set: [],
-                    connect: application.viewersClassroom.map((id) => ({ id: id })),
-                },
-                answersViewersUser: {
-                    set: [],
-                    connect: application.answersViewersUser.map((id) => ({ id: id })),
-                },
-                answersViewersClassroom: {
-                    set: [],
-                    connect: application.answersViewersClassroom.map((id) => ({ id: id })),
-                },
+                viewersUser: { set: [], connect: application.viewersUser.map((id) => ({ id: id })) },
+                viewersClassroom: { set: [], connect: application.viewersClassroom.map((id) => ({ id: id })) },
+                answersViewersUser: { set: [], connect: application.answersViewersUser.map((id) => ({ id: id })) },
+                answersViewersClassroom: { set: [], connect: application.answersViewersClassroom.map((id) => ({ id: id })) },
             },
             select: fieldsWViewers,
         });
