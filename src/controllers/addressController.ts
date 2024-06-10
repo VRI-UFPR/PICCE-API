@@ -1,96 +1,124 @@
 import { Response, Request } from 'express';
-import { Address } from '@prisma/client';
+import { Address, User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
+import errorFormatter from '../services/errorFormatter';
+
+const checkAuthorization = async (user: User, addressId: number | undefined, action: string) => {
+    switch (action) {
+        case 'create':
+        case 'update':
+        case 'getAll':
+        case 'get':
+        case 'delete':
+            // Only ADMINs can perform create/update/getAll/get/delete operations on addresses
+            if (user.role !== UserRole.ADMIN) {
+                throw new Error('This user is not authorized to perform this action');
+            }
+            break;
+    }
+};
 
 export const createAddress = async (req: Request, res: Response) => {
     try {
+        // Yup schemas
         const createAddressSchema = yup
             .object()
             .shape({
-                city: yup.string().min(3).max(255).required(),
-                state: yup.string().min(3).max(255).required(),
-                country: yup.string().min(3).max(255).required(),
+                id: yup.number().min(1),
+                city: yup.string().min(1).required(),
+                state: yup.string().min(1).required(),
+                country: yup.string().min(1).required(),
             })
             .noUnknown();
-
-        const address = await createAddressSchema.validate(req.body);
-
+        // Yup parsing/validation
+        const address = await createAddressSchema.validate(req.body, { stripUnknown: false });
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is authorized to create an address
+        await checkAuthorization(user, undefined, 'create');
+        // Prisma operation
         const createdAddress: Address = await prismaClient.address.create({
-            data: address,
+            data: { id: address.id, city: address.city, state: address.state, country: address.country },
         });
 
         res.status(201).json({ message: 'Address created.', data: createdAddress });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
 export const updateAddress = async (req: Request, res: Response): Promise<void> => {
     try {
-        const id: number = parseInt(req.params.addressId);
-
-        const createAddressSchema = yup
+        // ID from params
+        const addressId: number = parseInt(req.params.addressId);
+        // Yup schemas
+        const updateAddressSchema = yup
             .object()
-            .shape({
-                city: yup.string().min(3).max(255),
-                state: yup.string().min(3).max(255),
-                country: yup.string().min(3).max(255),
-            })
+            .shape({ city: yup.string().min(1), state: yup.string().min(1), country: yup.string().min(1) })
             .noUnknown();
-
-        const address = await createAddressSchema.validate(req.body);
-
+        // Yup parsing/validation
+        const address = await updateAddressSchema.validate(req.body, { stripUnknown: false });
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is authorized to update an address
+        await checkAuthorization(user, addressId, 'update');
+        // Prisma operation
         const updatedAddress: Address = await prismaClient.address.update({
-            where: {
-                id,
-            },
-            data: address,
+            where: { id: addressId },
+            data: { city: address.city, state: address.state, country: address.country },
         });
 
         res.status(200).json({ message: 'Address updated.', data: updatedAddress });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
 export const getAllAddresses = async (req: Request, res: Response): Promise<void> => {
     try {
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is authorized to get all addresses
+        await checkAuthorization(user, undefined, 'getAll');
+        // Prisma operation
         const addresses: Address[] = await prismaClient.address.findMany();
+
         res.status(200).json({ message: 'All addresses found.', data: addresses });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
 export const getAddress = async (req: Request, res: Response): Promise<void> => {
     try {
-        const id: number = parseInt(req.params.addressId);
-
-        const address: Address = await prismaClient.address.findUniqueOrThrow({
-            where: {
-                id,
-            },
-        });
+        // ID from params
+        const addressId: number = parseInt(req.params.addressId);
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is authorized to get an address
+        await checkAuthorization(user, addressId, 'get');
+        // Prisma operation
+        const address: Address = await prismaClient.address.findUniqueOrThrow({ where: { id: addressId } });
 
         res.status(200).json({ message: 'Address found.', data: address });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
 
 export const deleteAddress = async (req: Request, res: Response): Promise<void> => {
     try {
-        const id: number = parseInt(req.params.addressId);
-
-        const deletedAddress: Address = await prismaClient.address.delete({
-            where: {
-                id,
-            },
-        });
-
+        // ID from params
+        const addressId: number = parseInt(req.params.addressId);
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is authorized to delete an address
+        await checkAuthorization(user, addressId, 'delete');
+        // Prisma operation
+        const deletedAddress = await prismaClient.address.delete({ where: { id: addressId }, select: { id: true } });
         res.status(200).json({ message: 'Address deleted.', data: deletedAddress });
     } catch (error: any) {
-        res.status(400).json({ error: error });
+        res.status(400).json(errorFormatter(error));
     }
 };
