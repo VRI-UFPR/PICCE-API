@@ -157,8 +157,8 @@ const fields = {
                     tableColumns: { select: { id: true, text: true, placement: true } },
                     dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
                 },
-                dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
             },
+            dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
         },
     },
 };
