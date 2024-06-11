@@ -151,6 +151,7 @@ const fields = {
                                 select: { id: true, text: true, placement: true, files: { select: { id: true, path: true } } },
                             },
                             files: { select: { id: true, path: true } },
+                            itemValidations: { select: { type: true, argument: true, customMessage: true } },
                         },
                     },
                     tableColumns: { select: { id: true, text: true, placement: true } },
