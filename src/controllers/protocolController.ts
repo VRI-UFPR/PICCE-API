@@ -1,5 +1,5 @@
 import { Response, Request } from 'express';
-import { ItemType, ItemGroupType, PageType, ItemValidationType, User, UserRole, VisibilityMode } from '@prisma/client';
+import { ItemType, ItemGroupType, PageType, ItemValidationType, User, UserRole, VisibilityMode, DependencyType } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
@@ -155,7 +155,9 @@ const fields = {
                         },
                     },
                     tableColumns: { select: { id: true, text: true, placement: true } },
+                    dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
                 },
+                dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
             },
         },
     },
@@ -189,13 +191,24 @@ export const createProtocol = async (req: Request, res: Response) => {
             .shape({
                 type: yup.mixed<ItemValidationType>().oneOf(Object.values(ItemValidationType)).required(),
                 argument: yup.string().required(),
-                customMessage: yup.string().required(),
+                customMessage: yup.string(),
+            })
+            .noUnknown();
+
+        const dependenciesSchema = yup
+            .object()
+            .shape({
+                type: yup.mixed<DependencyType>().oneOf(Object.values(DependencyType)).required(),
+                argument: yup.string().required(),
+                customMessage: yup.string(),
+                itemTempId: yup.number().min(1).required(),
             })
             .noUnknown();
 
         const itemsSchema = yup
             .object()
             .shape({
+                tempId: yup.number().min(1).required(),
                 text: yup.string().min(3).max(3000).required(),
                 description: yup.string().max(3000),
                 enabled: yup.boolean().required(),
@@ -213,6 +226,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                 isRepeatable: yup.boolean().required(),
                 type: yup.mixed<ItemGroupType>().oneOf(Object.values(ItemGroupType)).required(),
                 items: yup.array().of(itemsSchema).min(1).required(),
+                dependencies: yup.array().of(dependenciesSchema).default([]),
                 tableColumns: yup.array().of(tableColumnSchema).default([]),
             })
             .noUnknown();
@@ -223,6 +237,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                 placement: yup.number().min(1).required(),
                 type: yup.mixed<PageType>().oneOf(Object.values(PageType)).required(),
                 itemGroups: yup.array().of(itemGroupsSchema).default([]),
+                dependencies: yup.array().of(dependenciesSchema).default([]),
             })
             .noUnknown();
 
@@ -259,6 +274,8 @@ export const createProtocol = async (req: Request, res: Response) => {
         await validateProtocolPlacements(protocol);
         // Multer files
         const files = req.files as Express.Multer.File[];
+        // Create map table for tempIds
+        const tempIdMap = new Map<number, number>();
         // Prisma transaction
         const createdProtocol = await prismaClient.$transaction(async (prisma) => {
             const createdProtocol = await prisma.protocol.create({
@@ -317,6 +334,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                                 files: { create: itemFiles },
                             },
                         });
+                        tempIdMap.set(item.tempId, createdItem.id);
                         for (const [itemOptionId, itemOption] of item.itemOptions.entries()) {
                             const itemOptionFiles = files
                                 .filter((file) =>
@@ -346,6 +364,28 @@ export const createProtocol = async (req: Request, res: Response) => {
                             });
                         }
                     }
+                    for (const [dependencyId, dependency] of itemGroup.dependencies.entries()) {
+                        const createdDependency = await prisma.itemGroupDependencyRule.create({
+                            data: {
+                                type: dependency.type,
+                                argument: dependency.argument,
+                                customMessage: dependency.customMessage,
+                                itemGroupId: createdItemGroup.id,
+                                itemId: tempIdMap.get(dependency.itemTempId) as number,
+                            },
+                        });
+                    }
+                }
+                for (const [dependencyId, dependency] of page.dependencies.entries()) {
+                    const createdDependency = await prisma.pageDependencyRule.create({
+                        data: {
+                            type: dependency.type,
+                            argument: dependency.argument,
+                            customMessage: dependency.customMessage,
+                            pageId: createdPage.id,
+                            itemId: tempIdMap.get(dependency.itemTempId) as number,
+                        },
+                    });
                 }
             }
             // Return the created application answer with nested content included
@@ -387,10 +427,22 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             })
             .noUnknown();
 
+        const updateDependenciesSchema = yup
+            .object()
+            .shape({
+                id: yup.number().min(1),
+                type: yup.mixed<DependencyType>().oneOf(Object.values(DependencyType)).required(),
+                argument: yup.string().required(),
+                customMessage: yup.string(),
+                itemTempId: yup.number().min(1).required(),
+            })
+            .noUnknown();
+
         const updateItemsSchema = yup
             .object()
             .shape({
                 id: yup.number().min(1),
+                tempId: yup.number().min(1).required(),
                 text: yup.string().min(3).max(3000),
                 description: yup.string().max(3000),
                 enabled: yup.boolean(),
@@ -411,6 +463,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 type: yup.mixed<ItemGroupType>().oneOf(Object.values(ItemGroupType)).required(),
                 items: yup.array().of(updateItemsSchema).min(1).required(),
                 tableColumns: yup.array().of(UpdatedTableColumnSchema).default([]),
+                dependencies: yup.array().of(updateDependenciesSchema).default([]),
             })
             .noUnknown();
 
@@ -421,6 +474,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 placement: yup.number().min(1).required(),
                 type: yup.mixed<PageType>().oneOf(Object.values(PageType)).required(),
                 itemGroups: yup.array().of(updateItemGroupsSchema).min(1).required(),
+                dependencies: yup.array().of(updateDependenciesSchema).default([]),
             })
             .noUnknown();
 
@@ -456,6 +510,8 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
         await validateProtocolPlacements(protocol);
         //Multer files
         const files = req.files as Express.Multer.File[];
+        // Create map table for tempIds
+        const tempIdMap = new Map<number, number>();
         // Prisma transaction
         const upsertedProtocol = await prismaClient.$transaction(async (prisma) => {
             // Update protocol
@@ -590,6 +646,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                       placement: item.placement as number,
                                   },
                               });
+                        tempIdMap.set(item.tempId, upsertedItem.id);
                         // Remove files that are not in the updated item
                         await prisma.file.deleteMany({
                             where: { id: { notIn: item.filesIds as number[] }, itemId: upsertedItem.id },
@@ -671,6 +728,63 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                   });
                         }
                     }
+                    // Remove dependencies that are not in the updated itemGroup
+                    await prisma.itemGroupDependencyRule.deleteMany({
+                        where: {
+                            id: {
+                                notIn: itemGroup.dependencies
+                                    .filter((dependency) => dependency.id)
+                                    .map((dependency) => dependency.id as number),
+                            },
+                            itemGroupId: upsertedItemGroup.id,
+                        },
+                    });
+                    // Update existing dependencies or create new ones
+                    for (const [dependencyId, dependency] of itemGroup.dependencies.entries()) {
+                        const upsertedDependency = dependency.id
+                            ? await prisma.itemGroupDependencyRule.update({
+                                  where: { id: dependency.id, itemGroupId: upsertedItemGroup.id },
+                                  data: {
+                                      argument: dependency.argument,
+                                      customMessage: dependency.customMessage,
+                                  },
+                              })
+                            : await prisma.itemGroupDependencyRule.create({
+                                  data: {
+                                      type: dependency.type as DependencyType,
+                                      argument: dependency.argument as string,
+                                      customMessage: dependency.customMessage as string,
+                                      itemGroupId: upsertedItemGroup.id as number,
+                                      itemId: tempIdMap.get(dependency.itemTempId) as number,
+                                  },
+                              });
+                    }
+                }
+                // Remove dependencies that are not in the updated page
+                await prisma.pageDependencyRule.deleteMany({
+                    where: {
+                        id: {
+                            notIn: page.dependencies.filter((dependency) => dependency.id).map((dependency) => dependency.id as number),
+                        },
+                        pageId: upsertedPage.id,
+                    },
+                });
+                // Update existing dependencies or create new ones
+                for (const [dependencyId, dependency] of page.dependencies.entries()) {
+                    const upsertedDependency = dependency.id
+                        ? await prisma.pageDependencyRule.update({
+                              where: { id: dependency.id, pageId: upsertedPage.id },
+                              data: { argument: dependency.argument, customMessage: dependency.customMessage },
+                          })
+                        : await prisma.pageDependencyRule.create({
+                              data: {
+                                  type: dependency.type as DependencyType,
+                                  argument: dependency.argument as string,
+                                  customMessage: dependency.customMessage as string,
+                                  pageId: upsertedPage.id as number,
+                                  itemId: tempIdMap.get(dependency.itemTempId) as number,
+                              },
+                          });
                 }
             }
             // Return the updated application answer with nested content included

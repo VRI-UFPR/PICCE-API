@@ -323,7 +323,7 @@ model ItemValidation {
 
   type          ItemValidationType
   argument      String
-  customMessage String
+  customMessage String?
 
   itemId Int
   item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
