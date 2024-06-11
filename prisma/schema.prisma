@@ -65,6 +65,7 @@ enum ItemValidationType {
   MANDATORY
   MIN
   MAX
+  STEP
   MAX_ANSWERS
 }
 
