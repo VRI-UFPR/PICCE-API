@@ -79,7 +79,16 @@ const validateDependencies = async (protocol: any) => {
                 case DependencyType.MIN_SELECTED:
                     if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
                         throw new Error('Min argument must be a valid integer.');
+                    if (page.dependencies.find((d: any) => d.type === DependencyType.MAX_SELECTED && d.argument <= dependency.argument))
+                        throw new Error('Min argument must be less than max argument.');
                     if (itemType !== ItemType.CHECKBOX) throw new Error('Min selected dependency only allowed for checkbox items.');
+                    break;
+                case DependencyType.MAX_SELECTED:
+                    if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
+                        throw new Error('Max argument must be a valid integer.');
+                    if (page.dependencies.find((d: any) => d.type === DependencyType.MIN_SELECTED && d.argument >= dependency.argument))
+                        throw new Error('Max argument must be greater than min argument.');
+                    if (itemType !== ItemType.CHECKBOX) throw new Error('Max selected dependency only allowed for checkbox items.');
                     break;
                 case DependencyType.OPTION_SELECTED:
                     if (itemType !== ItemType.RADIO && itemType !== ItemType.SELECT)
@@ -99,7 +108,16 @@ const validateDependencies = async (protocol: any) => {
                     case DependencyType.MIN_SELECTED:
                         if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
                             throw new Error('Min argument must be a valid integer.');
+                        if (page.dependencies.find((d: any) => d.type === DependencyType.MAX_SELECTED && d.argument <= dependency.argument))
+                            throw new Error('Min argument must be less than max argument.');
                         if (itemType !== ItemType.CHECKBOX) throw new Error('Min selected dependency only allowed for checkbox items.');
+                        break;
+                    case DependencyType.MAX_SELECTED:
+                        if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
+                            throw new Error('Max argument must be a valid integer.');
+                        if (page.dependencies.find((d: any) => d.type === DependencyType.MIN_SELECTED && d.argument >= dependency.argument))
+                            throw new Error('Max argument must be greater than min argument.');
+                        if (itemType !== ItemType.CHECKBOX) throw new Error('Max selected dependency only allowed for checkbox items.');
                         break;
                     case DependencyType.OPTION_SELECTED:
                         if (itemType !== ItemType.RADIO && itemType !== ItemType.SELECT && itemType !== ItemType.CHECKBOX)
@@ -119,7 +137,8 @@ const validateItemValidations = async (itemType: ItemType, validations: any[]) =
     const maxValidation = validations.find((v) => v.type === ItemValidationType.MAX);
     const stepValidation = validations.find((v) => v.type === ItemValidationType.STEP);
     const mandatoryValidation = validations.find((v) => v.type === ItemValidationType.MANDATORY);
-    const maxAnswersValidation = validations.find((v) => v.type === ItemValidationType.MAX_ANSWERS);
+    const minSelectedValidation = validations.find((v) => v.type === ItemValidationType.MIN_SELECTED);
+    const maxSelectedValidation = validations.find((v) => v.type === ItemValidationType.MAX_SELECTED);
 
     if (minValidation && (minValidation.argument.includes('.') || isNaN(parseFloat(minValidation.argument))))
         throw new Error('Min argument must be a valid integer.');
@@ -127,8 +146,10 @@ const validateItemValidations = async (itemType: ItemType, validations: any[]) =
         throw new Error('Max argument must be a valid integer.');
     if (stepValidation && (stepValidation.argument.includes('.') || isNaN(parseFloat(stepValidation.argument))))
         throw new Error('Step argument must be a valid integer.');
-    if (maxAnswersValidation && (maxAnswersValidation.argument.includes('.') || isNaN(parseFloat(maxAnswersValidation.argument))))
-        throw new Error('Max answers argument must be a valid integer.');
+    if (minSelectedValidation && (minSelectedValidation.argument.includes('.') || isNaN(parseFloat(minSelectedValidation.argument))))
+        throw new Error('Min selected argument must be a valid integer.');
+    if (maxSelectedValidation && (maxSelectedValidation.argument.includes('.') || isNaN(parseFloat(maxSelectedValidation.argument))))
+        throw new Error('Max selected argument must be a valid integer.');
     if (mandatoryValidation && mandatoryValidation.argument !== 'true' && mandatoryValidation.argument !== 'false')
         throw new Error('Mandatory argument must be a valid boolean.');
     if (minValidation && maxValidation && minValidation.argument >= maxValidation.argument)
@@ -137,7 +158,8 @@ const validateItemValidations = async (itemType: ItemType, validations: any[]) =
         throw new Error('Step argument must be less than the difference between min and max arguments.');
     if (itemType === ItemType.SCALE && (!minValidation || !maxValidation || !stepValidation))
         throw new Error('Scale items must have min, max and step.');
-    if (maxAnswersValidation && itemType !== ItemType.CHECKBOX) throw new Error('Max answers validation only allowed for checkbox items.');
+    if ((maxSelectedValidation || minSelectedValidation) && itemType !== ItemType.CHECKBOX)
+        throw new Error('Min/max selected validation only allowed for checkbox items.');
     if (stepValidation && itemType !== ItemType.SCALE) throw new Error('Step validation only allowed for scale items.');
     if ((maxValidation || minValidation) && itemType !== ItemType.NUMBERBOX && itemType !== ItemType.SCALE)
         throw new Error('Min and max validations only allowed for numberbox and scale items.');
