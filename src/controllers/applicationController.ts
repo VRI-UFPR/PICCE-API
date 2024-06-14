@@ -143,6 +143,7 @@ const fieldsWProtocol = {
                     itemGroups: {
                         orderBy: { placement: 'asc' as any },
                         select: {
+                            id: true,
                             type: true,
                             placement: true,
                             isRepeatable: true,
