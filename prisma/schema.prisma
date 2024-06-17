@@ -11,10 +11,11 @@ datasource db {
 }
 
 enum DependencyType {
+  IS_ANSWERED
   EXACT_ANSWER
   OPTION_SELECTED
-  MIN_SELECTED
-  MAX_SELECTED
+  LESS_THAN
+  MORE_THAN
 }
 
 enum PageType {
@@ -23,9 +24,10 @@ enum PageType {
 }
 
 enum ItemGroupType {
-  SINGLE_ITEM
-  MULTIPLE_ITEMS
-  TABLE
+  ONE_DIMENSIONAL
+  TEXTBOX_TABLE
+  RADIO_TABLE
+  CHECKBOX_TABLE
 }
 
 enum ItemType {
@@ -33,7 +35,7 @@ enum ItemType {
   CHECKBOX
   RADIO
   SELECT
-  SCALE
+  RANGE
   TEXT
   UPLOAD
   DATEBOX
@@ -47,6 +49,7 @@ enum InstitutionType {
   LOWER_SECONDARY
   UPPER_SECONDARY
   TERTIARY
+  OTHER
 }
 
 enum UserRole {
@@ -67,8 +70,6 @@ enum ItemValidationType {
   MIN
   MAX
   STEP
-  MIN_SELECTED
-  MAX_SELECTED
 }
 
 model Address {
@@ -186,9 +187,11 @@ model User {
   hash          String
   role          UserRole
   acceptedTerms Boolean  @default(false)
+  profileImageId Int?
+  profileImage  File?   @relation(name: "UserProfileImage", fields: [profileImageId], references: [id], onDelete: SetNull) 
 
   createdProtocols     Protocol[]          @relation(name: "Creator") // protocols that the user has created
-  ownedProtocols            Protocol[]          @relation(name: "OwnersProtocols") // protocols that the user can edit
+  ownedProtocols            Protocol[]          @relation(name: "ManagersProtocols") // protocols that the user can edit
   answeredApplications ApplicationAnswer[]
   applications         Application[]       @relation(name: "Applier") // applications that the user has created
   visibleApplications  Application[]       @relation(name: "ApplicationViewersUser") // applications that the user can see
@@ -207,6 +210,8 @@ model Classroom {
   createdAt DateTime @default(now())
   updateAt  DateTime @updatedAt
 
+  name String
+
   users               User[]
   visibleApplications Application[] @relation(name: "ApplicationViewersClassroom") // applications that the classroom can see
   visibleProtocols    Protocol[] @relation(name: "ProtocolViewersClassroom") // protocols that the classroom can see
@@ -215,6 +220,8 @@ model Classroom {
 
   institutionId Int
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@unique([name, institutionId])
 }
 
 model Application {
@@ -258,7 +265,7 @@ model Protocol {
   answersViewersClassroom Classroom[] @relation(name: "ProtocolAnswersViewersClassroom") // classrooms that can see the answers
 
   pages        Page[]
-  owners        User[] @relation(name: "OwnersProtocols") // users that can edit the protocol
+  managers        User[] @relation(name: "ManagersProtocols") // users that can edit the protocol
   applications Application[]
 }
 
@@ -368,6 +375,7 @@ model File {
   updateAt  DateTime @updatedAt
 
   path String
+  description String?
 
   itemId       Int?
   item         Item?       @relation(fields: [itemId], references: [id], onDelete: Cascade)
@@ -375,6 +383,7 @@ model File {
   itemOption   ItemOption? @relation(fields: [itemOptionId], references: [id], onDelete: Cascade)
   itemAnswerId Int?
   itemAnswer   ItemAnswer? @relation(fields: [itemAnswerId], references: [id], onDelete: Cascade)
+  users        User[]     @relation(name: "UserProfileImage")
 }
 
 model ItemGroupDependencyRule {

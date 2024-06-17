@@ -94,8 +94,6 @@ const validateAnswers = async (itemAnswerGroups: any, applicationId: number) => 
                     min: item.itemValidations?.find((validation) => validation.type === 'MIN'),
                     max: item.itemValidations?.find((validation) => validation.type === 'MAX'),
                     step: item.itemValidations?.find((validation) => validation.type === 'STEP'),
-                    minSelected: item.itemValidations?.find((validation) => validation.type === 'MIN_SELECTED'),
-                    maxSelected: item.itemValidations?.find((validation) => validation.type === 'MAX_SELECTED'),
                 }))
             )
         ) || [];
@@ -134,31 +132,51 @@ const validateAnswers = async (itemAnswerGroups: any, applicationId: number) => 
             }
         }
         if (itemValidation.min && answers[itemValidation.id]) {
-            for (const answer of answers[itemValidation.id]) {
-                if (answer.text !== '' && Number(answer.text) < Number(itemValidation.min.argument)) {
-                    throw new Error('Item value is too low: ' + itemValidation.text + ' expecteds at least ' + itemValidation.min.argument);
+            if (itemValidation.type === 'NUMBERBOX') {
+                for (const answer of answers[itemValidation.id]) {
+                    if (answer.text !== '' && Number(answer.text) < Number(itemValidation.min.argument)) {
+                        throw new Error(
+                            'Item value is too low: ' + itemValidation.text + ' expected at least ' + itemValidation.min.argument
+                        );
+                    }
+                }
+            } else if (itemValidation.type === 'TEXTBOX') {
+                for (const answer of answers[itemValidation.id]) {
+                    if (answer.text !== '' && answer.text.length < Number(itemValidation.min.argument)) {
+                        throw new Error(
+                            'Item value is too low: ' + itemValidation.text + ' expected at least ' + itemValidation.min.argument
+                        );
+                    }
+                }
+            } else if (itemValidation.type === 'CHECKBOX') {
+                if (answers[itemValidation.id].length < Number(itemValidation.min.argument)) {
+                    throw new Error(
+                        'Not enough items selected: ' + itemValidation.text + ' expected at least ' + itemValidation.min.argument
+                    );
                 }
             }
         }
         if (itemValidation.max && answers[itemValidation.id]) {
-            for (const answer of answers[itemValidation.id]) {
-                if (answer.text !== '' && Number(answer.text) > Number(itemValidation.max.argument)) {
-                    throw new Error('Item value is too high: ' + itemValidation.text + ' expecteds at most ' + itemValidation.max.argument);
+            if (itemValidation.type === 'NUMBERBOX') {
+                for (const answer of answers[itemValidation.id]) {
+                    if (answer.text !== '' && Number(answer.text) < Number(itemValidation.max.argument)) {
+                        throw new Error(
+                            'Item value is too high: ' + itemValidation.text + ' expected at most ' + itemValidation.max.argument
+                        );
+                    }
                 }
-            }
-        }
-        if (itemValidation.minSelected && answers[itemValidation.id]) {
-            if (answers[itemValidation.id].length < Number(itemValidation.minSelected.argument)) {
-                throw new Error(
-                    'Not enough items selected: ' + itemValidation.text + ' expecteds at least ' + itemValidation.minSelected.argument
-                );
-            }
-        }
-        if (itemValidation.maxSelected && answers[itemValidation.id]) {
-            if (answers[itemValidation.id].length > Number(itemValidation.maxSelected.argument)) {
-                throw new Error(
-                    'Too many items selected: ' + itemValidation.text + ' expecteds at most ' + itemValidation.maxSelected.argument
-                );
+            } else if (itemValidation.type === 'TEXTBOX') {
+                for (const answer of answers[itemValidation.id]) {
+                    if (answer.text !== '' && answer.text.length < Number(itemValidation.max.argument)) {
+                        throw new Error(
+                            'Item value is too high: ' + itemValidation.text + ' expected at most ' + itemValidation.max.argument
+                        );
+                    }
+                }
+            } else if (itemValidation.type === 'CHECKBOX') {
+                if (answers[itemValidation.id].length < Number(itemValidation.max.argument)) {
+                    throw new Error('Too many items selected: ' + itemValidation.text + ' expected at most ' + itemValidation.max.argument);
+                }
             }
         }
     }
