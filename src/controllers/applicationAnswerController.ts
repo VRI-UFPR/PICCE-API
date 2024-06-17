@@ -159,7 +159,7 @@ const validateAnswers = async (itemAnswerGroups: any, applicationId: number) => 
         if (itemValidation.max && answers[itemValidation.id]) {
             if (itemValidation.type === 'NUMBERBOX') {
                 for (const answer of answers[itemValidation.id]) {
-                    if (answer.text !== '' && Number(answer.text) < Number(itemValidation.max.argument)) {
+                    if (answer.text !== '' && Number(answer.text) > Number(itemValidation.max.argument)) {
                         throw new Error(
                             'Item value is too high: ' + itemValidation.text + ' expected at most ' + itemValidation.max.argument
                         );
@@ -167,14 +167,14 @@ const validateAnswers = async (itemAnswerGroups: any, applicationId: number) => 
                 }
             } else if (itemValidation.type === 'TEXTBOX') {
                 for (const answer of answers[itemValidation.id]) {
-                    if (answer.text !== '' && answer.text.length < Number(itemValidation.max.argument)) {
+                    if (answer.text !== '' && answer.text.length > Number(itemValidation.max.argument)) {
                         throw new Error(
                             'Item value is too high: ' + itemValidation.text + ' expected at most ' + itemValidation.max.argument
                         );
                     }
                 }
             } else if (itemValidation.type === 'CHECKBOX') {
-                if (answers[itemValidation.id].length < Number(itemValidation.max.argument)) {
+                if (answers[itemValidation.id].length > Number(itemValidation.max.argument)) {
                     throw new Error('Too many items selected: ' + itemValidation.text + ' expected at most ' + itemValidation.max.argument);
                 }
             }

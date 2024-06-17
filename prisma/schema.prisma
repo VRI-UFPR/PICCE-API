@@ -14,8 +14,8 @@ enum DependencyType {
   IS_ANSWERED
   EXACT_ANSWER
   OPTION_SELECTED
-  LESS_THAN
-  MORE_THAN
+  MIN
+  MAX
 }
 
 enum PageType {
@@ -399,6 +399,8 @@ model ItemGroupDependencyRule {
   itemGroup   ItemGroup @relation(fields: [itemGroupId], references: [id], onDelete: Cascade)
   itemId      Int
   item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemGroupId, itemId, type])
 }
 
 model PageDependencyRule {
@@ -414,4 +416,6 @@ model PageDependencyRule {
   page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
   itemId Int
   item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, itemId, type])
 }

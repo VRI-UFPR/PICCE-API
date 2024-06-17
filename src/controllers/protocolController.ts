@@ -74,26 +74,48 @@ const validateDependencies = async (protocol: any) => {
             if (!itemType) throw new Error('Invalid dependency item: must reference a previous item.');
             switch (dependency.type) {
                 case DependencyType.EXACT_ANSWER:
-                    if (itemType === ItemType.UPLOAD || itemType === ItemType.CHECKBOX)
+                    if (itemType !== ItemType.TEXTBOX && itemType !== ItemType.NUMBERBOX && itemType !== ItemType.RANGE)
                         throw new Error('Exact answer dependency not allowed for this item type.');
                     break;
-                case DependencyType.MORE_THAN:
+                case DependencyType.MIN:
                     if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
                         throw new Error('Min argument must be a valid integer.');
-                    if (page.dependencies.find((d: any) => d.type === DependencyType.MORE_THAN && d.argument <= dependency.argument))
+                    if (
+                        page.dependencies.find(
+                            (d: any) =>
+                                d.type === DependencyType.MAX && d.argument <= dependency.argument && d.itemTempId === dependency.itemTempId
+                        )
+                    )
                         throw new Error('Min argument must be less than max argument.');
-                    if (itemType !== ItemType.CHECKBOX) throw new Error('Min selected dependency only allowed for checkbox items.');
+                    if (
+                        itemType !== ItemType.CHECKBOX &&
+                        itemType !== ItemType.NUMBERBOX &&
+                        itemType !== ItemType.RANGE &&
+                        itemType !== ItemType.TEXTBOX
+                    )
+                        throw new Error('Min dependency only allowed for checkbox, numberbox, range and textbox items.');
                     break;
-                case DependencyType.LESS_THAN:
+                case DependencyType.MAX:
                     if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
                         throw new Error('Max argument must be a valid integer.');
-                    if (page.dependencies.find((d: any) => d.type === DependencyType.LESS_THAN && d.argument >= dependency.argument))
+                    if (
+                        page.dependencies.find(
+                            (d: any) =>
+                                d.type === DependencyType.MIN && d.argument >= dependency.argument && d.itemTempId === dependency.itemTempId
+                        )
+                    )
                         throw new Error('Max argument must be greater than min argument.');
-                    if (itemType !== ItemType.CHECKBOX) throw new Error('Max selected dependency only allowed for checkbox items.');
+                    if (
+                        itemType !== ItemType.CHECKBOX &&
+                        itemType !== ItemType.NUMBERBOX &&
+                        itemType !== ItemType.RANGE &&
+                        itemType !== ItemType.TEXTBOX
+                    )
+                        throw new Error('Max dependency only allowed for checkbox, numberbox, range and textbox items.');
                     break;
                 case DependencyType.OPTION_SELECTED:
-                    if (itemType !== ItemType.RADIO && itemType !== ItemType.SELECT)
-                        throw new Error('Option selected dependency only allowed for radio and select items.');
+                    if (itemType !== ItemType.RADIO && itemType !== ItemType.SELECT && itemType !== ItemType.CHECKBOX)
+                        throw new Error('Option selected dependency only allowed for radio, select and checkbox items.');
                     break;
             }
         }
@@ -103,22 +125,48 @@ const validateDependencies = async (protocol: any) => {
                 if (!itemType) throw new Error('Invalid dependency item: must reference a previous item.');
                 switch (dependency.type) {
                     case DependencyType.EXACT_ANSWER:
-                        if (itemType === ItemType.UPLOAD || itemType === ItemType.CHECKBOX)
+                        if (itemType !== ItemType.TEXTBOX && itemType !== ItemType.NUMBERBOX && itemType !== ItemType.RANGE)
                             throw new Error('Exact answer dependency not allowed for this item type.');
                         break;
-                    case DependencyType.MORE_THAN:
+                    case DependencyType.MIN:
                         if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
                             throw new Error('Min argument must be a valid integer.');
-                        if (page.dependencies.find((d: any) => d.type === DependencyType.MORE_THAN && d.argument <= dependency.argument))
+                        if (
+                            page.dependencies.find(
+                                (d: any) =>
+                                    d.type === DependencyType.MAX &&
+                                    d.argument <= dependency.argument &&
+                                    d.itemTempId === dependency.itemTempId
+                            )
+                        )
                             throw new Error('Min argument must be less than max argument.');
-                        if (itemType !== ItemType.CHECKBOX) throw new Error('Min selected dependency only allowed for checkbox items.');
+                        if (
+                            itemType !== ItemType.CHECKBOX &&
+                            itemType !== ItemType.NUMBERBOX &&
+                            itemType !== ItemType.RANGE &&
+                            itemType !== ItemType.TEXTBOX
+                        )
+                            throw new Error('Min dependency only allowed for checkbox, numberbox, range and textbox items.');
                         break;
-                    case DependencyType.LESS_THAN:
+                    case DependencyType.MAX:
                         if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
                             throw new Error('Max argument must be a valid integer.');
-                        if (page.dependencies.find((d: any) => d.type === DependencyType.LESS_THAN && d.argument >= dependency.argument))
+                        if (
+                            page.dependencies.find(
+                                (d: any) =>
+                                    d.type === DependencyType.MIN &&
+                                    d.argument >= dependency.argument &&
+                                    d.itemTempId === dependency.itemTempId
+                            )
+                        )
                             throw new Error('Max argument must be greater than min argument.');
-                        if (itemType !== ItemType.CHECKBOX) throw new Error('Max selected dependency only allowed for checkbox items.');
+                        if (
+                            itemType !== ItemType.CHECKBOX &&
+                            itemType !== ItemType.NUMBERBOX &&
+                            itemType !== ItemType.RANGE &&
+                            itemType !== ItemType.TEXTBOX
+                        )
+                            throw new Error('Max dependency only allowed for checkbox, numberbox, range and textbox items.');
                         break;
                     case DependencyType.OPTION_SELECTED:
                         if (itemType !== ItemType.RADIO && itemType !== ItemType.SELECT && itemType !== ItemType.CHECKBOX)
@@ -158,9 +206,10 @@ const validateItemValidations = async (itemType: ItemType, validations: any[]) =
         (maxValidation || minValidation) &&
         itemType !== ItemType.NUMBERBOX &&
         itemType !== ItemType.RANGE &&
-        itemType !== ItemType.CHECKBOX
+        itemType !== ItemType.CHECKBOX &&
+        itemType !== ItemType.TEXTBOX
     )
-        throw new Error('Min and max validations only allowed for numberbox, range and checkbox items.');
+        throw new Error('Min and max validations only allowed for numberbox, textbox, range and checkbox items.');
 };
 
 const validateManagers = async (managers: (number | undefined)[], institutionId: number | null) => {
