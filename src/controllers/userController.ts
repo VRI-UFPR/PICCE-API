@@ -63,7 +63,7 @@ const fields = {
     username: true,
     role: true,
     institution: { select: { id: true, name: true } },
-    classrooms: { select: { id: true } },
+    classrooms: { select: { id: true, name: true } },
     acceptedTerms: true,
     createdAt: true,
     updateAt: true,

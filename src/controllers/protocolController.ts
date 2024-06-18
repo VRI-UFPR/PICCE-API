@@ -275,6 +275,7 @@ const fields = {
     pages: {
         orderBy: { placement: 'asc' as any },
         select: {
+            id: true,
             type: true,
             placement: true,
             itemGroups: {

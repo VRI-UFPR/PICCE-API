@@ -7,6 +7,7 @@ import errorFormatter from '../services/errorFormatter';
 // Fields to be selected from the database to the response
 const fields = {
     id: true,
+    name: true,
     institution: { select: { id: true, name: true } },
     users: { select: { id: true, name: true, username: true, role: true } },
     createdAt: true,
