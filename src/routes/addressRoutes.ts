@@ -9,12 +9,31 @@ const router = express.Router();
  * @swagger
  * components:
  *   schemas:
- *     Address:
+ *     CreateAddress:
  *      type: object
  *      required:
  *        - city
  *        - state
  *        - country
+ *      properties:
+ *        id:
+ *          type: integer
+ *          description: The auto-generated id of the address
+ *          example: 1
+ *        city:
+ *          type: string
+ *          description: The city of the address
+ *          example: "New York"
+ *        state:
+ *          type: string
+ *          description: The state of the address
+ *          example: "New York"
+ *        country:
+ *          type: string
+ *          description: The country of the address
+ *          example: "USA"
+ *     UpdateGetAddress:
+ *      type: object
  *      properties:
  *        id:
  *          type: integer
@@ -45,7 +64,7 @@ const router = express.Router();
  *       content:
  *         multipart/form-data:
  *           schema:
- *             $ref: '#/components/schemas/Address'
+ *             $ref: '#/components/schemas/CreateAddress'
  *     responses:
  *       201:
  *         description: The address was successfully created
@@ -53,21 +72,19 @@ const router = express.Router();
  *           application/json:
  *             message: Address created.
  *             data:
- *               $ref: '#/components/schemas/Address'
+ *               $ref: '#/components/schemas/UpdateGetAddress'
  *       400:
- *         description: Some required fields are missing or the address already exists
+ *         description: Request data validation failed
  *         content:
  *           application/json:
  *             error:
- *               type: string
- *               description: Error message
+ *               message: Bad request.
  *       500:
  *         description: Some server error happened
  *         content:
  *           application/json:
  *             error:
- *               type: string
- *               description: Error message
+ *               message: Internal server error.
  */
 router.post('/createAddress', passport.authenticate('jwt', { session: false }), uploader.none(), createAddress);
 
@@ -89,7 +106,7 @@ router.post('/createAddress', passport.authenticate('jwt', { session: false }), 
  *       content:
  *         multipart/form-data:
  *           schema:
- *             $ref: '#/components/schemas/Address'
+ *             $ref: '#/components/schemas/UpdateGetAddress'
  *     responses:
  *       200:
  *         description: The address was successfully updated
@@ -97,21 +114,19 @@ router.post('/createAddress', passport.authenticate('jwt', { session: false }), 
  *           application/json:
  *             message: Address updated.
  *             data:
- *               $ref: '#/components/schemas/Address'
+ *               $ref: '#/components/schemas/UpdateGetAddress'
  *       400:
- *         description: Some required fields are missing or the address does not exist
+ *         description: Request data validation failed
  *         content:
  *           application/json:
  *             error:
- *               type: string
- *               description: Error message
+ *               message: Bad request.
  *       500:
  *         description: Some server error happened
  *         content:
  *           application/json:
  *             error:
- *               type: string
- *               description: Error message
+ *               message: Internal server error.
  */
 router.put('/updateAddress/:addressId', passport.authenticate('jwt', { session: false }), uploader.none(), updateAddress);
 
@@ -130,14 +145,13 @@ router.put('/updateAddress/:addressId', passport.authenticate('jwt', { session: 
  *             data:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/Address'
+ *                 $ref: '#/components/schemas/UpdateGetAddress'
  *       500:
  *         description: Some server error happened
  *         content:
  *           application/json:
  *             error:
- *               type: string
- *               description: Error message
+ *               message: Internal server error.
  */
 router.get('/getAllAddresses', passport.authenticate('jwt', { session: false }), uploader.none(), getAllAddresses);
 
@@ -161,21 +175,19 @@ router.get('/getAllAddresses', passport.authenticate('jwt', { session: false }),
  *           application/json:
  *             message: Address found.
  *             data:
- *               $ref: '#/components/schemas/Address'
+ *               $ref: '#/components/schemas/UpdateGetAddress'
  *       404:
  *         description: The address was not found
  *         content:
  *           application/json:
  *             error:
- *               type: string
- *               description: Error message
+ *               message: Address not found.
  *       500:
  *         description: Some server error happened
  *         content:
  *           application/json:
  *             error:
- *               type: string
- *               description: Error message
+ *               message: Internal server error.
  */
 router.get('/getAddress/:addressId', passport.authenticate('jwt', { session: false }), uploader.none(), getAddress);
 
@@ -205,15 +217,13 @@ router.get('/getAddress/:addressId', passport.authenticate('jwt', { session: fal
  *         content:
  *           application/json:
  *             error:
- *               type: string
- *               description: Error message
+ *               message: Address not found.
  *       500:
  *         description: Some server error happened
  *         content:
  *           application/json:
  *             error:
- *               type: string
- *               description: Error message
+ *               message: Internal server error.
  */
 router.delete('/deleteAddress/:addressId', passport.authenticate('jwt', { session: false }), uploader.none(), deleteAddress);
 

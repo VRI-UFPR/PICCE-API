@@ -1,30 +1,61 @@
 import { Response, Request } from 'express';
-import { ApplicationAnswer, User } from '@prisma/client';
+import { ApplicationAnswer, User, UserRole, VisibilityMode } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 
-const checkAuthorizationToAnswer = async (user: User, applicationId: number) => {
-    if (user.role !== 'ADMIN') {
-        const application = await prismaClient.application.findUnique({
-            where: {
-                id: applicationId,
-                OR: [
-                    { visibility: 'PUBLIC' },
-                    { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
-                    { viewersUser: { some: { id: user.id } } },
-                    { applierId: user.id },
-                ],
-            },
-        });
-
-        if (!application) {
-            throw new Error('This user is not authorized to answer this application.');
-        }
+const checkAuthorization = async (
+    user: User,
+    applicationAnswerId: number | undefined,
+    applicationId: number | undefined,
+    action: string
+) => {
+    switch (action) {
+        case 'create':
+            // Only ADMINs, the applier or viewers of the application can perform create operations on application answers
+            if (user.role !== UserRole.ADMIN) {
+                const application = await prismaClient.application.findUnique({
+                    where: {
+                        id: applicationId,
+                        OR: [
+                            { visibility: VisibilityMode.PUBLIC },
+                            { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                            { viewersUser: { some: { id: user.id } } },
+                            { applierId: user.id },
+                        ],
+                    },
+                });
+                if (!application) {
+                    throw new Error('This user is not authorized to perform this action.');
+                }
+            }
+            break;
+        case 'update':
+        case 'get':
+        case 'delete':
+            // Only ADMINs or the creator of the application answer can perform update/get/delete operations on application answers
+            if (user.role !== UserRole.ADMIN) {
+                const applicationAnswer = await prismaClient.applicationAnswer.findUnique({
+                    where: { id: applicationAnswerId, userId: user.id },
+                });
+                if (!applicationAnswer) {
+                    throw new Error('This user is not authorized to perform this action.');
+                }
+            }
+            break;
+        case 'getAll':
+            // Only ADMINs can perform get all application answers operation
+            if (user.role !== UserRole.ADMIN) {
+                throw new Error('This user is not authorized to perform this action.');
+            }
+            break;
+        case 'getMy':
+            // All users can perform getMy operations on application answers (the results will be filtered based on the user)
+            break;
     }
 };
 
-const fieldsWithNesting = {
+const fields = {
     id: true,
     date: true,
     userId: true,
@@ -49,7 +80,6 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
             .object()
             .shape({ id: yup.number(), text: yup.string().max(255), itemId: yup.number().required() })
             .noUnknown();
-
         const createOptionAnswerSchema = yup
             .object()
             .shape({
@@ -59,7 +89,6 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 optionId: yup.number().required(),
             })
             .noUnknown();
-
         const createTableAnswerSchema = yup
             .object()
             .shape({
@@ -69,7 +98,6 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 columnId: yup.number().required(),
             })
             .noUnknown();
-
         const createItemAnswerGroupSchema = yup
             .object()
             .shape({
@@ -79,7 +107,6 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 optionAnswers: yup.array().of(createOptionAnswerSchema).default([]),
             })
             .noUnknown();
-
         const createApplicationAnswerSchema = yup
             .object()
             .shape({
@@ -90,19 +117,14 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 itemAnswerGroups: yup.array().of(createItemAnswerGroupSchema).min(1).required(),
             })
             .noUnknown();
-
         // Yup parsing/validation
         const applicationAnswer = await createApplicationAnswerSchema.validate(req.body, { stripUnknown: false });
-
         // Multer files
         const files = req.files as Express.Multer.File[];
-
         // User from Passport-JWT
         const user = req.user as User;
-
         // Check if user is allowed to answer this application
-        await checkAuthorizationToAnswer(user, applicationAnswer.applicationId);
-
+        await checkAuthorization(user, undefined, applicationAnswer.applicationId, 'create');
         // Prisma transaction
         const createdApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
             const createdApplicationAnswer: ApplicationAnswer = await prisma.applicationAnswer.create({
@@ -114,7 +136,6 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                     addressId: applicationAnswer.addressId,
                 },
             });
-            // Create nested item answer groups as well as nested item, option and table answers
             for (const [itemAnswerGroupIndex, itemAnswerGroup] of applicationAnswer.itemAnswerGroups.entries()) {
                 const createdItemAnswerGroup = await prisma.itemAnswerGroup.create({
                     data: {
@@ -168,7 +189,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
             // Return the created application answer with nested content included
             return await prisma.applicationAnswer.findUnique({
                 where: { id: createdApplicationAnswer.id },
-                select: fieldsWithNesting,
+                select: fields,
             });
         });
 
@@ -181,8 +202,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
 export const updateApplicationAnswer = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
-        const id: number = parseInt(req.params.applicationAnswerId);
-
+        const applicationAnswerId: number = parseInt(req.params.applicationAnswerId);
         // Yup schemas
         const updateItemAnswerSchema = yup
             .object()
@@ -193,17 +213,14 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 filesIds: yup.array().of(yup.number()).default([]),
             })
             .noUnknown();
-
         const updateOptionAnswerSchema = yup
             .object()
             .shape({ id: yup.number(), text: yup.string().max(255), itemId: yup.number().min(1), optionId: yup.number().min(1) })
             .noUnknown();
-
         const updateTableAnswerSchema = yup
             .object()
             .shape({ id: yup.number(), text: yup.string().max(255), itemId: yup.number().min(1), columnId: yup.number().min(1) })
             .noUnknown();
-
         const updateItemAnswerGroupSchema = yup
             .object()
             .shape({
@@ -213,7 +230,6 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 optionAnswers: yup.array().of(updateOptionAnswerSchema).default([]),
             })
             .noUnknown();
-
         const updateApplicationAnswerSchema = yup
             .object()
             .shape({
@@ -222,21 +238,19 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 itemAnswerGroups: yup.array().of(updateItemAnswerGroupSchema).min(1).required(),
             })
             .noUnknown();
-
         // Yup parsing/validation
         const applicationAnswer = await updateApplicationAnswerSchema.validate(req.body, { stripUnknown: false });
-
         // Multer files
         const files = req.files as Express.Multer.File[];
-
         // User from Passport-JWT
         const user = req.user as User;
-
+        // Check if user is allowed to update this application answer
+        await checkAuthorization(user, applicationAnswerId, undefined, 'update');
         // Prisma transaction
         const upsertedApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
             // Update application answer
             await prisma.applicationAnswer.update({
-                where: { id, userId: user.id },
+                where: { id: applicationAnswerId },
                 data: { date: applicationAnswer.date, addressId: applicationAnswer.addressId },
             });
             // Remove item answer groups that are not in the updated application answer
@@ -247,7 +261,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                             .filter((itemAnswerGroup) => itemAnswerGroup.id)
                             .map((itemAnswerGroup) => itemAnswerGroup.id as number),
                     },
-                    applicationAnswerId: id,
+                    applicationAnswerId: applicationAnswerId,
                 },
             });
             for (const [itemAnswerGroupIndex, itemAnswerGroup] of applicationAnswer.itemAnswerGroups.entries()) {
@@ -256,7 +270,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                     itemAnswerGroup.id ||
                     (
                         await prisma.itemAnswerGroup.create({
-                            data: { applicationAnswerId: id },
+                            data: { applicationAnswerId: applicationAnswerId },
                         })
                     ).id;
                 // Remove item answers that are not in the updated item answer group
@@ -267,7 +281,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                                 .filter((itemAnswer) => itemAnswer.id)
                                 .map((itemAnswer) => itemAnswer.id as number),
                         },
-                        group: { applicationAnswerId: id },
+                        group: { applicationAnswerId: applicationAnswerId },
                     },
                 });
                 for (const [itemAnswerIndex, itemAnswer] of itemAnswerGroup.itemAnswers.entries()) {
@@ -357,8 +371,9 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 }
             }
             // Return the updated application answer with nested content included
-            return await prisma.applicationAnswer.findUnique({ where: { id }, select: fieldsWithNesting });
+            return await prisma.applicationAnswer.findUnique({ where: { id: applicationAnswerId }, select: fields });
         });
+
         res.status(200).json({ message: 'Application answer updated.', data: upsertedApplicationAnswer });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
@@ -367,13 +382,12 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
 
 export const getAllApplicationAnswers = async (req: Request, res: Response): Promise<void> => {
     try {
+        // User from Passport-JWT
         const user = req.user as User;
-
-        // Get all application answers with nested content included (only those that the user is allowed to view)
-        const applicationAnswers: ApplicationAnswer[] =
-            user.role === 'ADMIN'
-                ? await prismaClient.applicationAnswer.findMany({ select: fieldsWithNesting })
-                : await prismaClient.applicationAnswer.findMany({ where: { userId: user.id }, select: fieldsWithNesting });
+        // Check if user is allowed to get all application answers
+        await checkAuthorization(user, undefined, undefined, 'getAll');
+        // Prisma operation
+        const applicationAnswers: ApplicationAnswer[] = await prismaClient.applicationAnswer.findMany({ select: fields });
 
         res.status(200).json({ message: 'All application answers found.', data: applicationAnswers });
     } catch (error: any) {
@@ -381,156 +395,19 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
     }
 };
 
-export const getApplicationWithAnswers = async (req: Request, res: Response): Promise<void> => {
+export const getMyApplicationAnswers = async (req: Request, res: Response): Promise<void> => {
     try {
+        // User from Passport-JWT
         const user = req.user as User;
-
-        const applicationId: number = parseInt(req.params.applicationId);
-
-        const applicationWithAnswers: any = await prismaClient.application.findUniqueOrThrow({
-            where: {
-                id: applicationId,
-            },
-            select: {
-                answers: {
-                    select: {
-                        id: true,
-                        date: true,
-                        user: {
-                            select: {
-                                id: true,
-                                username: true,
-                            },
-                        },
-                    },
-                },
-                protocol: {
-                    select: {
-                        title: true,
-                        description: true,
-                        pages: {
-                            select: {
-                                type: true,
-                                placement: true,
-                                itemGroups: {
-                                    select: {
-                                        type: true,
-                                        placement: true,
-                                        isRepeatable: true,
-                                        items: {
-                                            select: {
-                                                id: true,
-                                                text: true,
-                                                description: true,
-                                                type: true,
-                                                placement: true,
-                                                itemOptions: {
-                                                    select: {
-                                                        id: true,
-                                                        text: true,
-                                                        placement: true,
-                                                    },
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
+        // Check if user is allowed to get their application answers
+        await checkAuthorization(user, undefined, undefined, 'getMy');
+        // Prisma operation
+        const applicationAnswers: ApplicationAnswer[] = await prismaClient.applicationAnswer.findMany({
+            where: { userId: user.id },
+            select: fields,
         });
 
-        for (const page of applicationWithAnswers.protocol.pages) {
-            for (const itemGroup of page.itemGroups) {
-                for (const item of itemGroup.items) {
-                    item.itemAnswers = {};
-                    const itemAnswers = await prismaClient.itemAnswer.findMany({
-                        where: {
-                            group: {
-                                applicationAnswerId: {
-                                    in: applicationWithAnswers.answers.map((answer: any) => answer.id),
-                                },
-                            },
-                            itemId: item.id,
-                        },
-                        select: {
-                            text: true,
-                            group: {
-                                select: {
-                                    id: true,
-                                    applicationAnswerId: true,
-                                },
-                            },
-                            files: {
-                                select: {
-                                    path: true,
-                                },
-                            },
-                        },
-                    });
-
-                    for (const answer of itemAnswers) {
-                        if (!item.itemAnswers[answer.group.applicationAnswerId]) {
-                            item.itemAnswers[answer.group.applicationAnswerId] = {};
-                        }
-
-                        if (!item.itemAnswers[answer.group.applicationAnswerId][answer.group.id]) {
-                            item.itemAnswers[answer.group.applicationAnswerId][answer.group.id] = [];
-                        }
-
-                        item.itemAnswers[answer.group.applicationAnswerId][answer.group.id].push({
-                            text: answer.text,
-                            files: answer.files,
-                        });
-                    }
-
-                    for (const option of item.itemOptions) {
-                        option.optionAnswers = {};
-                        const optionAnswers = await prismaClient.optionAnswer.findMany({
-                            where: {
-                                group: {
-                                    applicationAnswerId: {
-                                        in: applicationWithAnswers.answers.map((answer: any) => answer.id),
-                                    },
-                                },
-                                optionId: option.id,
-                            },
-                            select: {
-                                text: true,
-                                group: {
-                                    select: {
-                                        id: true,
-                                        applicationAnswerId: true,
-                                    },
-                                },
-                            },
-                        });
-
-                        for (const answer of optionAnswers) {
-                            if (!option.optionAnswers[answer.group.applicationAnswerId]) {
-                                option.optionAnswers[answer.group.applicationAnswerId] = {};
-                            }
-
-                            if (!option.optionAnswers[answer.group.applicationAnswerId][answer.group.id]) {
-                                option.optionAnswers[answer.group.applicationAnswerId][answer.group.id] = [];
-                            }
-
-                            option.optionAnswers[answer.group.applicationAnswerId][answer.group.id].push({
-                                text: answer.text,
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        applicationWithAnswers.answers = Object.fromEntries(
-            applicationWithAnswers.answers.map((answer: any) => [answer.id, { date: answer.date, user: answer.user }])
-        );
-
-        res.status(200).json({ message: 'All answers for application ' + applicationId + ' found.', data: applicationWithAnswers });
+        res.status(200).json({ message: 'My application answers found.', data: applicationAnswers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -538,20 +415,17 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
 
 export const getApplicationAnswer = async (req: Request, res: Response): Promise<void> => {
     try {
+        // ID from params
+        const applicationAnswerId: number = parseInt(req.params.applicationAnswerId);
         // User from Passport-JWT
         const user = req.user as User;
-
-        // ID from params
-        const id: number = parseInt(req.params.applicationAnswerId);
-
-        // Get application answer with nested content included (only if user is allowed to view it or is admin)
-        const applicationAnswer: ApplicationAnswer =
-            user.role === 'ADMIN'
-                ? await prismaClient.applicationAnswer.findUniqueOrThrow({ where: { id }, select: fieldsWithNesting })
-                : await prismaClient.applicationAnswer.findUniqueOrThrow({
-                      where: { id, userId: user.id },
-                      select: fieldsWithNesting,
-                  });
+        // Check if user is allowed to view this application answer
+        await checkAuthorization(user, applicationAnswerId, undefined, 'get');
+        // Prisma operation
+        const applicationAnswer: ApplicationAnswer = await prismaClient.applicationAnswer.findUniqueOrThrow({
+            where: { id: applicationAnswerId },
+            select: fields,
+        });
 
         res.status(200).json({ message: 'Application answer found.', data: applicationAnswer });
     } catch (error: any) {
@@ -561,17 +435,17 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
 
 export const deleteApplicationAnswer = async (req: Request, res: Response): Promise<void> => {
     try {
+        // ID from params
+        const applicationAnswerId: number = parseInt(req.params.applicationAnswerId);
         // User from Passport-JWT
         const user = req.user as User;
-
-        // ID from params
-        const id: number = parseInt(req.params.applicationAnswerId);
-
-        // Delete application answer (only if user is allowed to delete it or is admin)
-        const deletedApplicationAnswer: ApplicationAnswer =
-            user.role === 'ADMIN'
-                ? await prismaClient.applicationAnswer.delete({ where: { id } })
-                : await prismaClient.applicationAnswer.delete({ where: { id, userId: user.id } });
+        // Check if user is allowed to delete this application answer
+        await checkAuthorization(user, applicationAnswerId, undefined, 'delete');
+        // Prisma operation
+        const deletedApplicationAnswer = await prismaClient.applicationAnswer.delete({
+            where: { id: applicationAnswerId },
+            select: { id: true },
+        });
 
         res.status(200).json({ message: 'Application answer deleted.', data: deletedApplicationAnswer });
     } catch (error: any) {

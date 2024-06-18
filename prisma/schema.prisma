@@ -44,7 +44,7 @@ enum InstitutionType {
 
 enum UserRole {
   USER
-  APLICATOR
+  APPLIER
   PUBLISHER
   COORDINATOR
   ADMIN
@@ -182,11 +182,11 @@ model User {
   ownedProtocols            Protocol[]          @relation(name: "OwnersProtocols") // protocols that the user can edit
   answeredApplications ApplicationAnswer[]
   applications         Application[]       @relation(name: "Applier") // applications that the user has created
-  visibleApplications  Application[]       @relation(name: "ViewersUser") // applications that the user can see
-  visibleProtocols     Protocol[]          @relation(name: "ViewersUsers") // protocols that the user can see
+  visibleApplications  Application[]       @relation(name: "ApplicationViewersUser") // applications that the user can see
+  visibleProtocols     Protocol[]          @relation(name: "ProtocolViewersUsers") // protocols that the user can see
   appliableProtocols   Protocol[]          @relation(name: "Appliers") // protocols that the user can apply
-  visibleProtocolAnswers Protocol[]       @relation(name: "AnswersViewersUsers") // protocols that the user can see the answers
-  visibleApplicationAnswers Application[] @relation(name: "AnswersViewersUsers") // applications that the user can see the answers
+  visibleProtocolAnswers Protocol[]       @relation(name: "ProtocolAnswersViewersUsers") // protocols that the user can see the answers
+  visibleApplicationAnswers Application[] @relation(name: "ApplicationAnswersViewersUsers") // applications that the user can see the answers
   classrooms           Classroom[]
 
   institutionId Int?
@@ -199,10 +199,10 @@ model Classroom {
   updateAt  DateTime @updatedAt
 
   users               User[]
-  visibleApplications Application[] @relation(name: "ViewersClassroom") // applications that the classroom can see
-  visibleProtocols    Protocol[] @relation(name: "ViewersClassroom") // protocols that the classroom can see
-  visibleProtocolAnswers Protocol[] @relation(name: "AnswersViewersClassroom") // protocols that the classroom can see the answers
-  visibleApplicationAnswers Application[] @relation(name: "AnswersViewersClassroom") // applications that the classroom can see the answers
+  visibleApplications Application[] @relation(name: "ApplicationViewersClassroom") // applications that the classroom can see
+  visibleProtocols    Protocol[] @relation(name: "ProtocolViewersClassroom") // protocols that the classroom can see
+  visibleProtocolAnswers Protocol[] @relation(name: "ProtocolAnswersViewersClassroom") // protocols that the classroom can see the answers
+  visibleApplicationAnswers Application[] @relation(name: "ApplicationAnswersViewersClassroom") // applications that the classroom can see the answers
 
   institutionId Int
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
@@ -217,10 +217,10 @@ model Application {
   answersVisibility VisibilityMode
 
   answers          ApplicationAnswer[]
-  viewersClassroom Classroom[] @relation(name: "ViewersClassroom") // classrooms that can see the application
-  viewersUser      User[]              @relation(name: "ViewersUser") // users that can see the application
-  answersViewersUser User[] @relation(name: "AnswersViewersUsers") // users that can see the answers
-  answersViewersClassroom Classroom[] @relation(name: "AnswersViewersClassroom") // classrooms that can see the answers
+  viewersClassroom Classroom[] @relation(name: "ApplicationViewersClassroom") // classrooms that can see the application
+  viewersUser      User[]              @relation(name: "ApplicationViewersUser") // users that can see the application
+  answersViewersUser User[] @relation(name: "ApplicationAnswersViewersUsers") // users that can see the answers
+  answersViewersClassroom Classroom[] @relation(name: "ApplicationAnswersViewersClassroom") // classrooms that can see the answers
 
   protocolId   Int
   protocol     Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
@@ -243,10 +243,10 @@ model Protocol {
   visibility  VisibilityMode
   answersVisibility VisibilityMode
   appliers User[] @relation(name: "Appliers") // users that can apply the protocol
-  viewersUser User[] @relation(name: "ViewersUsers") // users that can see the protocol
-  viewersClassroom Classroom[] @relation(name: "ViewersClassroom") // classrooms that can see the protocol
-  answersViewersUser User[] @relation(name: "AnswersViewersUsers") // users that can see the answers
-  answersViewersClassroom Classroom[] @relation(name: "AnswersViewersClassroom") // classrooms that can see the answers
+  viewersUser User[] @relation(name: "ProtocolViewersUsers") // users that can see the protocol
+  viewersClassroom Classroom[] @relation(name: "ProtocolViewersClassroom") // classrooms that can see the protocol
+  answersViewersUser User[] @relation(name: "ProtocolAnswersViewersUsers") // users that can see the answers
+  answersViewersClassroom Classroom[] @relation(name: "ProtocolAnswersViewersClassroom") // classrooms that can see the answers
 
   pages        Page[]
   owners        User[] @relation(name: "OwnersProtocols") // users that can edit the protocol
