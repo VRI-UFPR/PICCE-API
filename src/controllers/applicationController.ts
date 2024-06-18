@@ -143,6 +143,7 @@ const fieldsWProtocol = {
                     itemGroups: {
                         orderBy: { placement: 'asc' as any },
                         select: {
+                            id: true,
                             type: true,
                             placement: true,
                             isRepeatable: true,
@@ -161,8 +162,10 @@ const fieldsWProtocol = {
                                     files: { select: { id: true, path: true } },
                                 },
                             },
+                            dependencies: { select: { type: true, argument: true, itemId: true, customMessage: true } },
                         },
                     },
+                    dependencies: { select: { type: true, argument: true, itemId: true, customMessage: true } },
                 },
             },
         },

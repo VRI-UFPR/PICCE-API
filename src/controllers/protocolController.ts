@@ -1,5 +1,5 @@
 import { Response, Request } from 'express';
-import { ItemType, ItemGroupType, PageType, ItemValidationType, User, UserRole, VisibilityMode } from '@prisma/client';
+import { ItemType, ItemGroupType, PageType, ItemValidationType, User, UserRole, VisibilityMode, DependencyType } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
@@ -63,6 +63,106 @@ const validateItemGroup = async (type: ItemGroupType, itemsLength: number, table
         (type !== ItemGroupType.TABLE && tableColumnsLength > 0)
     )
         throw new Error('ItemGroup type does not match the amount of items or tableColumns.');
+};
+
+const validateDependencies = async (protocol: any) => {
+    const previousItemsTempIds = new Map<number, ItemType>();
+    for (const page of protocol.pages) {
+        for (const dependency of page.dependencies) {
+            const itemType = previousItemsTempIds.get(dependency.itemTempId);
+            if (!itemType) throw new Error('Invalid dependency item: must reference a previous item.');
+            switch (dependency.type) {
+                case DependencyType.EXACT_ANSWER:
+                    if (itemType === ItemType.UPLOAD || itemType === ItemType.CHECKBOX)
+                        throw new Error('Exact answer dependency not allowed for this item type.');
+                    break;
+                case DependencyType.MIN_SELECTED:
+                    if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
+                        throw new Error('Min argument must be a valid integer.');
+                    if (page.dependencies.find((d: any) => d.type === DependencyType.MAX_SELECTED && d.argument <= dependency.argument))
+                        throw new Error('Min argument must be less than max argument.');
+                    if (itemType !== ItemType.CHECKBOX) throw new Error('Min selected dependency only allowed for checkbox items.');
+                    break;
+                case DependencyType.MAX_SELECTED:
+                    if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
+                        throw new Error('Max argument must be a valid integer.');
+                    if (page.dependencies.find((d: any) => d.type === DependencyType.MIN_SELECTED && d.argument >= dependency.argument))
+                        throw new Error('Max argument must be greater than min argument.');
+                    if (itemType !== ItemType.CHECKBOX) throw new Error('Max selected dependency only allowed for checkbox items.');
+                    break;
+                case DependencyType.OPTION_SELECTED:
+                    if (itemType !== ItemType.RADIO && itemType !== ItemType.SELECT)
+                        throw new Error('Option selected dependency only allowed for radio and select items.');
+                    break;
+            }
+        }
+        for (const itemGroup of page.itemGroups) {
+            for (const dependency of itemGroup.dependencies) {
+                const itemType = previousItemsTempIds.get(dependency.itemTempId);
+                if (!itemType) throw new Error('Invalid dependency item: must reference a previous item.');
+                switch (dependency.type) {
+                    case DependencyType.EXACT_ANSWER:
+                        if (itemType === ItemType.UPLOAD || itemType === ItemType.CHECKBOX)
+                            throw new Error('Exact answer dependency not allowed for this item type.');
+                        break;
+                    case DependencyType.MIN_SELECTED:
+                        if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
+                            throw new Error('Min argument must be a valid integer.');
+                        if (page.dependencies.find((d: any) => d.type === DependencyType.MAX_SELECTED && d.argument <= dependency.argument))
+                            throw new Error('Min argument must be less than max argument.');
+                        if (itemType !== ItemType.CHECKBOX) throw new Error('Min selected dependency only allowed for checkbox items.');
+                        break;
+                    case DependencyType.MAX_SELECTED:
+                        if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
+                            throw new Error('Max argument must be a valid integer.');
+                        if (page.dependencies.find((d: any) => d.type === DependencyType.MIN_SELECTED && d.argument >= dependency.argument))
+                            throw new Error('Max argument must be greater than min argument.');
+                        if (itemType !== ItemType.CHECKBOX) throw new Error('Max selected dependency only allowed for checkbox items.');
+                        break;
+                    case DependencyType.OPTION_SELECTED:
+                        if (itemType !== ItemType.RADIO && itemType !== ItemType.SELECT && itemType !== ItemType.CHECKBOX)
+                            throw new Error('Option selected dependency only allowed for radio, select and checkbox items.');
+                        break;
+                }
+            }
+            for (const item of itemGroup.items) {
+                previousItemsTempIds.set(item.tempId, item.type);
+            }
+        }
+    }
+};
+
+const validateItemValidations = async (itemType: ItemType, validations: any[]) => {
+    const minValidation = validations.find((v) => v.type === ItemValidationType.MIN);
+    const maxValidation = validations.find((v) => v.type === ItemValidationType.MAX);
+    const stepValidation = validations.find((v) => v.type === ItemValidationType.STEP);
+    const mandatoryValidation = validations.find((v) => v.type === ItemValidationType.MANDATORY);
+    const minSelectedValidation = validations.find((v) => v.type === ItemValidationType.MIN_SELECTED);
+    const maxSelectedValidation = validations.find((v) => v.type === ItemValidationType.MAX_SELECTED);
+
+    if (minValidation && (minValidation.argument.includes('.') || isNaN(parseFloat(minValidation.argument))))
+        throw new Error('Min argument must be a valid integer.');
+    if (maxValidation && (maxValidation.argument.includes('.') || isNaN(parseFloat(maxValidation.argument))))
+        throw new Error('Max argument must be a valid integer.');
+    if (stepValidation && (stepValidation.argument.includes('.') || isNaN(parseFloat(stepValidation.argument))))
+        throw new Error('Step argument must be a valid integer.');
+    if (minSelectedValidation && (minSelectedValidation.argument.includes('.') || isNaN(parseFloat(minSelectedValidation.argument))))
+        throw new Error('Min selected argument must be a valid integer.');
+    if (maxSelectedValidation && (maxSelectedValidation.argument.includes('.') || isNaN(parseFloat(maxSelectedValidation.argument))))
+        throw new Error('Max selected argument must be a valid integer.');
+    if (mandatoryValidation && mandatoryValidation.argument !== 'true' && mandatoryValidation.argument !== 'false')
+        throw new Error('Mandatory argument must be a valid boolean.');
+    if (minValidation && maxValidation && minValidation.argument >= maxValidation.argument)
+        throw new Error('Min argument must be less than max argument.');
+    if (minValidation && maxValidation && stepValidation && maxValidation.argument - minValidation.argument <= stepValidation.argument)
+        throw new Error('Step argument must be less than the difference between min and max arguments.');
+    if (itemType === ItemType.SCALE && (!minValidation || !maxValidation || !stepValidation))
+        throw new Error('Scale items must have min, max and step.');
+    if ((maxSelectedValidation || minSelectedValidation) && itemType !== ItemType.CHECKBOX)
+        throw new Error('Min/max selected validation only allowed for checkbox items.');
+    if (stepValidation && itemType !== ItemType.SCALE) throw new Error('Step validation only allowed for scale items.');
+    if ((maxValidation || minValidation) && itemType !== ItemType.NUMBERBOX && itemType !== ItemType.SCALE)
+        throw new Error('Min and max validations only allowed for numberbox and scale items.');
 };
 
 const validateOwners = async (owners: (number | undefined)[], institutionId: number | null) => {
@@ -151,11 +251,14 @@ const fields = {
                                 select: { id: true, text: true, placement: true, files: { select: { id: true, path: true } } },
                             },
                             files: { select: { id: true, path: true } },
+                            itemValidations: { select: { type: true, argument: true, customMessage: true } },
                         },
                     },
                     tableColumns: { select: { id: true, text: true, placement: true } },
+                    dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
                 },
             },
+            dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
         },
     },
 };
@@ -188,13 +291,24 @@ export const createProtocol = async (req: Request, res: Response) => {
             .shape({
                 type: yup.mixed<ItemValidationType>().oneOf(Object.values(ItemValidationType)).required(),
                 argument: yup.string().required(),
-                customMessage: yup.string().required(),
+                customMessage: yup.string(),
+            })
+            .noUnknown();
+
+        const dependenciesSchema = yup
+            .object()
+            .shape({
+                type: yup.mixed<DependencyType>().oneOf(Object.values(DependencyType)).required(),
+                argument: yup.string().required(),
+                customMessage: yup.string(),
+                itemTempId: yup.number().min(1).required(),
             })
             .noUnknown();
 
         const itemsSchema = yup
             .object()
             .shape({
+                tempId: yup.number().min(1).required(),
                 text: yup.string().min(3).max(3000).required(),
                 description: yup.string().max(3000),
                 enabled: yup.boolean().required(),
@@ -212,6 +326,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                 isRepeatable: yup.boolean().required(),
                 type: yup.mixed<ItemGroupType>().oneOf(Object.values(ItemGroupType)).required(),
                 items: yup.array().of(itemsSchema).min(1).required(),
+                dependencies: yup.array().of(dependenciesSchema).default([]),
                 tableColumns: yup.array().of(tableColumnSchema).default([]),
             })
             .noUnknown();
@@ -222,6 +337,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                 placement: yup.number().min(1).required(),
                 type: yup.mixed<PageType>().oneOf(Object.values(PageType)).required(),
                 itemGroups: yup.array().of(itemGroupsSchema).default([]),
+                dependencies: yup.array().of(dependenciesSchema).default([]),
             })
             .noUnknown();
 
@@ -248,6 +364,18 @@ export const createProtocol = async (req: Request, res: Response) => {
             .noUnknown();
         // Yup parsing/validation
         const protocol = await createProtocolSchema.validate(req.body, { stripUnknown: true });
+        // Sort elements by placement
+        for (const page of protocol.pages) {
+            page.itemGroups.sort((a, b) => a.placement - b.placement);
+            for (const itemGroup of page.itemGroups) {
+                for (const item of itemGroup.items) {
+                    item.itemOptions.sort((a, b) => a.placement - b.placement);
+                }
+                itemGroup.items.sort((a, b) => a.placement - b.placement);
+                itemGroup.tableColumns.sort((a, b) => a.placement - b.placement);
+            }
+        }
+        protocol.pages.sort((a, b) => a.placement - b.placement);
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is allowed to create a application
@@ -256,8 +384,12 @@ export const createProtocol = async (req: Request, res: Response) => {
         await validateOwners(protocol.owners, user.institutionId);
         // Check if protocol placements are valid
         await validateProtocolPlacements(protocol);
+        // Check if dependencies are valid
+        await validateDependencies(protocol);
         // Multer files
         const files = req.files as Express.Multer.File[];
+        // Create map table for tempIds
+        const tempIdMap = new Map<number, number>();
         // Prisma transaction
         const createdProtocol = await prismaClient.$transaction(async (prisma) => {
             const createdProtocol = await prisma.protocol.create({
@@ -299,7 +431,10 @@ export const createProtocol = async (req: Request, res: Response) => {
                         });
                     }
                     for (const [itemId, item] of itemGroup.items.entries()) {
+                        // Check if item has the allowed amount of itemOptions and tableColumns
                         await validateItem(item.type, item.itemOptions.length);
+                        // Check if itemValidations are valid
+                        await validateItemValidations(item.type, item.itemValidations);
                         const itemFiles = files
                             .filter((file) =>
                                 file.fieldname.startsWith(`pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][files]`)
@@ -316,6 +451,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                                 files: { create: itemFiles },
                             },
                         });
+                        tempIdMap.set(item.tempId, createdItem.id);
                         for (const [itemOptionId, itemOption] of item.itemOptions.entries()) {
                             const itemOptionFiles = files
                                 .filter((file) =>
@@ -345,6 +481,28 @@ export const createProtocol = async (req: Request, res: Response) => {
                             });
                         }
                     }
+                    for (const [dependencyId, dependency] of itemGroup.dependencies.entries()) {
+                        const createdDependency = await prisma.itemGroupDependencyRule.create({
+                            data: {
+                                type: dependency.type,
+                                argument: dependency.argument,
+                                customMessage: dependency.customMessage,
+                                itemGroupId: createdItemGroup.id,
+                                itemId: tempIdMap.get(dependency.itemTempId) as number,
+                            },
+                        });
+                    }
+                }
+                for (const [dependencyId, dependency] of page.dependencies.entries()) {
+                    const createdDependency = await prisma.pageDependencyRule.create({
+                        data: {
+                            type: dependency.type,
+                            argument: dependency.argument,
+                            customMessage: dependency.customMessage,
+                            pageId: createdPage.id,
+                            itemId: tempIdMap.get(dependency.itemTempId) as number,
+                        },
+                    });
                 }
             }
             // Return the created application answer with nested content included
@@ -386,10 +544,22 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             })
             .noUnknown();
 
+        const updateDependenciesSchema = yup
+            .object()
+            .shape({
+                id: yup.number().min(1),
+                type: yup.mixed<DependencyType>().oneOf(Object.values(DependencyType)).required(),
+                argument: yup.string().required(),
+                customMessage: yup.string(),
+                itemTempId: yup.number().min(1).required(),
+            })
+            .noUnknown();
+
         const updateItemsSchema = yup
             .object()
             .shape({
                 id: yup.number().min(1),
+                tempId: yup.number().min(1).required(),
                 text: yup.string().min(3).max(3000),
                 description: yup.string().max(3000),
                 enabled: yup.boolean(),
@@ -410,6 +580,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 type: yup.mixed<ItemGroupType>().oneOf(Object.values(ItemGroupType)).required(),
                 items: yup.array().of(updateItemsSchema).min(1).required(),
                 tableColumns: yup.array().of(UpdatedTableColumnSchema).default([]),
+                dependencies: yup.array().of(updateDependenciesSchema).default([]),
             })
             .noUnknown();
 
@@ -420,6 +591,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 placement: yup.number().min(1).required(),
                 type: yup.mixed<PageType>().oneOf(Object.values(PageType)).required(),
                 itemGroups: yup.array().of(updateItemGroupsSchema).min(1).required(),
+                dependencies: yup.array().of(updateDependenciesSchema).default([]),
             })
             .noUnknown();
 
@@ -445,6 +617,18 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             .noUnknown();
         // Yup parsing/validation
         const protocol = await updateProtocolSchema.validate(req.body, { stripUnknown: true });
+        // Sort elements by placement
+        for (const page of protocol.pages) {
+            page.itemGroups.sort((a, b) => a.placement - b.placement);
+            for (const itemGroup of page.itemGroups) {
+                for (const item of itemGroup.items) {
+                    item.itemOptions.sort((a, b) => a.placement - b.placement);
+                }
+                itemGroup.items.sort((a, b) => a.placement - b.placement);
+                itemGroup.tableColumns.sort((a, b) => a.placement - b.placement);
+            }
+        }
+        protocol.pages.sort((a, b) => a.placement - b.placement);
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is included in the owners, or if user is admin
@@ -453,8 +637,12 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
         await validateOwners(protocol.owners, user.institutionId);
         // Check if protocol placements are valid
         await validateProtocolPlacements(protocol);
+        // Check if dependencies are valid
+        await validateDependencies(protocol);
         //Multer files
         const files = req.files as Express.Multer.File[];
+        // Create map table for tempIds
+        const tempIdMap = new Map<number, number>();
         // Prisma transaction
         const upsertedProtocol = await prismaClient.$transaction(async (prisma) => {
             // Update protocol
@@ -565,6 +753,8 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                     for (const [itemId, item] of itemGroup.items.entries()) {
                         // Check if item has the allowed amount of itemOptions and tableColumns
                         await validateItem(item.type, item.itemOptions.length);
+                        // Check if itemValidations are valid
+                        await validateItemValidations(item.type, item.itemValidations);
                         const upsertedItem = item.id
                             ? await prisma.item.update({
                                   where: {
@@ -589,6 +779,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                       placement: item.placement as number,
                                   },
                               });
+                        tempIdMap.set(item.tempId, upsertedItem.id);
                         // Remove files that are not in the updated item
                         await prisma.file.deleteMany({
                             where: { id: { notIn: item.filesIds as number[] }, itemId: upsertedItem.id },
@@ -670,6 +861,63 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                   });
                         }
                     }
+                    // Remove dependencies that are not in the updated itemGroup
+                    await prisma.itemGroupDependencyRule.deleteMany({
+                        where: {
+                            id: {
+                                notIn: itemGroup.dependencies
+                                    .filter((dependency) => dependency.id)
+                                    .map((dependency) => dependency.id as number),
+                            },
+                            itemGroupId: upsertedItemGroup.id,
+                        },
+                    });
+                    // Update existing dependencies or create new ones
+                    for (const [dependencyId, dependency] of itemGroup.dependencies.entries()) {
+                        const upsertedDependency = dependency.id
+                            ? await prisma.itemGroupDependencyRule.update({
+                                  where: { id: dependency.id, itemGroupId: upsertedItemGroup.id },
+                                  data: {
+                                      argument: dependency.argument,
+                                      customMessage: dependency.customMessage,
+                                  },
+                              })
+                            : await prisma.itemGroupDependencyRule.create({
+                                  data: {
+                                      type: dependency.type as DependencyType,
+                                      argument: dependency.argument as string,
+                                      customMessage: dependency.customMessage as string,
+                                      itemGroupId: upsertedItemGroup.id as number,
+                                      itemId: tempIdMap.get(dependency.itemTempId) as number,
+                                  },
+                              });
+                    }
+                }
+                // Remove dependencies that are not in the updated page
+                await prisma.pageDependencyRule.deleteMany({
+                    where: {
+                        id: {
+                            notIn: page.dependencies.filter((dependency) => dependency.id).map((dependency) => dependency.id as number),
+                        },
+                        pageId: upsertedPage.id,
+                    },
+                });
+                // Update existing dependencies or create new ones
+                for (const [dependencyId, dependency] of page.dependencies.entries()) {
+                    const upsertedDependency = dependency.id
+                        ? await prisma.pageDependencyRule.update({
+                              where: { id: dependency.id, pageId: upsertedPage.id },
+                              data: { argument: dependency.argument, customMessage: dependency.customMessage },
+                          })
+                        : await prisma.pageDependencyRule.create({
+                              data: {
+                                  type: dependency.type as DependencyType,
+                                  argument: dependency.argument as string,
+                                  customMessage: dependency.customMessage as string,
+                                  pageId: upsertedPage.id as number,
+                                  itemId: tempIdMap.get(dependency.itemTempId) as number,
+                              },
+                          });
                 }
             }
             // Return the updated application answer with nested content included

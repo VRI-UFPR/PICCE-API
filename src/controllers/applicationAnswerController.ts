@@ -3,6 +3,7 @@ import { ApplicationAnswer, User, UserRole, VisibilityMode } from '@prisma/clien
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
+import { text } from 'body-parser';
 
 const checkAuthorization = async (
     user: User,
@@ -55,6 +56,113 @@ const checkAuthorization = async (
     }
 };
 
+const validateAnswers = async (itemAnswerGroups: any, applicationId: number) => {
+    const application = await prismaClient.application.findUnique({
+        where: { id: applicationId },
+        select: {
+            protocol: {
+                select: {
+                    pages: {
+                        select: {
+                            itemGroups: {
+                                select: {
+                                    items: {
+                                        select: {
+                                            id: true,
+                                            type: true,
+                                            text: true,
+                                            itemValidations: { select: { type: true, argument: true, customMessage: true } },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    const itemValidations =
+        application?.protocol.pages.flatMap((page) =>
+            page.itemGroups.flatMap((itemGroup) =>
+                itemGroup.items.map((item) => ({
+                    id: item.id,
+                    text: item.text,
+                    type: item.type,
+                    mandatory: item.itemValidations?.find((validation) => validation.type === 'MANDATORY'),
+                    min: item.itemValidations?.find((validation) => validation.type === 'MIN'),
+                    max: item.itemValidations?.find((validation) => validation.type === 'MAX'),
+                    step: item.itemValidations?.find((validation) => validation.type === 'STEP'),
+                    minSelected: item.itemValidations?.find((validation) => validation.type === 'MIN_SELECTED'),
+                    maxSelected: item.itemValidations?.find((validation) => validation.type === 'MAX_SELECTED'),
+                }))
+            )
+        ) || [];
+
+    const answers: any = {};
+
+    for (const itemAnswerGroup of itemAnswerGroups) {
+        for (const itemAnswer of itemAnswerGroup.itemAnswers) {
+            if (answers[itemAnswer.itemId]) {
+                answers[itemAnswer.itemId].push(itemAnswer);
+            } else {
+                answers[itemAnswer.itemId] = [itemAnswer];
+            }
+        }
+        for (const optionAnswer of itemAnswerGroup.optionAnswers) {
+            if (answers[optionAnswer.itemId]) {
+                answers[optionAnswer.itemId].push(optionAnswer);
+            } else {
+                answers[optionAnswer.itemId] = [optionAnswer];
+            }
+        }
+        for (const tableAnswer of itemAnswerGroup.tableAnswers) {
+            if (answers[tableAnswer.itemId]) {
+                answers[tableAnswer.itemId].push(tableAnswer);
+            } else {
+                answers[tableAnswer.itemId] = [tableAnswer];
+            }
+        }
+    }
+
+    for (const itemValidation of itemValidations) {
+        if (itemValidation.mandatory) {
+            if (!answers[itemValidation.id]) throw new Error('Mandatory item is missing: ' + itemValidation.text);
+            for (const answer of answers[itemValidation.id]) {
+                if (answer.text === '') throw new Error('Mandatory item is missing: ' + itemValidation.text);
+            }
+        }
+        if (itemValidation.min && answers[itemValidation.id]) {
+            for (const answer of answers[itemValidation.id]) {
+                if (answer.text !== '' && Number(answer.text) < Number(itemValidation.min.argument)) {
+                    throw new Error('Item value is too low: ' + itemValidation.text + ' expecteds at least ' + itemValidation.min.argument);
+                }
+            }
+        }
+        if (itemValidation.max && answers[itemValidation.id]) {
+            for (const answer of answers[itemValidation.id]) {
+                if (answer.text !== '' && Number(answer.text) > Number(itemValidation.max.argument)) {
+                    throw new Error('Item value is too high: ' + itemValidation.text + ' expecteds at most ' + itemValidation.max.argument);
+                }
+            }
+        }
+        if (itemValidation.minSelected && answers[itemValidation.id]) {
+            if (answers[itemValidation.id].length < Number(itemValidation.minSelected.argument)) {
+                throw new Error(
+                    'Not enough items selected: ' + itemValidation.text + ' expecteds at least ' + itemValidation.minSelected.argument
+                );
+            }
+        }
+        if (itemValidation.maxSelected && answers[itemValidation.id]) {
+            if (answers[itemValidation.id].length > Number(itemValidation.maxSelected.argument)) {
+                throw new Error(
+                    'Too many items selected: ' + itemValidation.text + ' expecteds at most ' + itemValidation.maxSelected.argument
+                );
+            }
+        }
+    }
+};
 const fields = {
     id: true,
     date: true,
@@ -125,6 +233,8 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         const user = req.user as User;
         // Check if user is allowed to answer this application
         await checkAuthorization(user, undefined, applicationAnswer.applicationId, 'create');
+        // Validate answers
+        await validateAnswers(applicationAnswer.itemAnswerGroups, applicationAnswer.applicationId);
         // Prisma transaction
         const createdApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
             const createdApplicationAnswer: ApplicationAnswer = await prisma.applicationAnswer.create({
@@ -246,6 +356,8 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
         const user = req.user as User;
         // Check if user is allowed to update this application answer
         await checkAuthorization(user, applicationAnswerId, undefined, 'update');
+        // Validate answers
+        await validateAnswers(applicationAnswer.itemAnswerGroups, applicationAnswerId);
         // Prisma transaction
         const upsertedApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
             // Update application answer

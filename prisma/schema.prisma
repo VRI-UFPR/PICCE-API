@@ -10,6 +10,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum DependencyType {
+  EXACT_ANSWER
+  OPTION_SELECTED
+  MIN_SELECTED
+  MAX_SELECTED
+}
+
 enum PageType {
   ITEMS
   SUBPROTOCOL
@@ -59,7 +66,9 @@ enum ItemValidationType {
   MANDATORY
   MIN
   MAX
-  MAX_ANSWERS
+  STEP
+  MIN_SELECTED
+  MAX_SELECTED
 }
 
 model Address {
@@ -262,6 +271,7 @@ model Page {
   placement Int
 
   itemGroups ItemGroup[]
+  dependencies PageDependencyRule[]
 
   protocolId Int
   protocol   Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
@@ -278,6 +288,7 @@ model ItemGroup {
 
   tableColumns TableColumn[]
   items        Item[]
+  dependencies ItemGroupDependencyRule[]
 
   pageId Int
   page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
@@ -300,6 +311,8 @@ model Item {
   tableAnswers    TableAnswer[]
   files           File[]
   itemValidations ItemValidation[]
+  pageDependencies      PageDependencyRule[]
+  itemGroupDependencies ItemGroupDependencyRule[]
 
   groupId   Int
   itemGroup ItemGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
@@ -312,7 +325,7 @@ model ItemValidation {
 
   type          ItemValidationType
   argument      String
-  customMessage String
+  customMessage String?
 
   itemId Int
   item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
@@ -362,4 +375,34 @@ model File {
   itemOption   ItemOption? @relation(fields: [itemOptionId], references: [id], onDelete: Cascade)
   itemAnswerId Int?
   itemAnswer   ItemAnswer? @relation(fields: [itemAnswerId], references: [id], onDelete: Cascade)
+}
+
+model ItemGroupDependencyRule {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+
+  type          DependencyType
+  argument      String
+  customMessage String?
+
+  itemGroupId Int
+  itemGroup   ItemGroup @relation(fields: [itemGroupId], references: [id], onDelete: Cascade)
+  itemId      Int
+  item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+}
+
+model PageDependencyRule {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+
+  type          DependencyType
+  argument      String
+  customMessage String?
+
+  pageId Int
+  page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  itemId Int
+  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
