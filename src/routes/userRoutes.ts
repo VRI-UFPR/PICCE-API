@@ -174,7 +174,7 @@ const router = express.Router();
  *             error:
  *               message: Internal Server Error.
  */
-router.post('/createUser', passport.authenticate('jwt', { session: false }), uploader.none(), createUser);
+router.post('/createUser', passport.authenticate('jwt', { session: false }), uploader.single('profileImage'), createUser);
 
 /**
  * @swagger
@@ -219,7 +219,7 @@ router.post('/createUser', passport.authenticate('jwt', { session: false }), upl
  *             error:
  *               message: Internal Server Error.
  */
-router.put('/updateUser/:userId', passport.authenticate('jwt', { session: false }), uploader.none(), updateUser);
+router.put('/updateUser/:userId', passport.authenticate('jwt', { session: false }), uploader.single('profileImage'), updateUser);
 
 /**
  * @swagger
