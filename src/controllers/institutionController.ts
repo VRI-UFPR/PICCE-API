@@ -13,7 +13,7 @@ const fields = {
     classrooms: { select: { id: true, name: true, users: { select: { id: true, name: true, username: true, role: true } } } },
     users: { select: { id: true, name: true, username: true, role: true } },
     createdAt: true,
-    updateAt: true,
+    updatedAt: true,
 };
 
 const checkAuthorization = async (user: User, institutionId: number | undefined, action: string) => {

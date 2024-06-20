@@ -11,7 +11,7 @@ const fields = {
     institution: { select: { id: true, name: true } },
     users: { select: { id: true, name: true, username: true, role: true } },
     createdAt: true,
-    updateAt: true,
+    updatedAt: true,
 };
 
 // Only admins or the coordinator of the institution can perform C-UD operations on classrooms

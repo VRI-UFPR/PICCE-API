@@ -66,7 +66,7 @@ const fields = {
     classrooms: { select: { id: true, name: true } },
     acceptedTerms: true,
     createdAt: true,
-    updateAt: true,
+    updatedAt: true,
 };
 
 export const createUser = async (req: Request, res: Response) => {

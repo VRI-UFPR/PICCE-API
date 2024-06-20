@@ -188,7 +188,7 @@ const fields = {
     applicationId: true,
     addressId: true,
     createdAt: true,
-    updateAt: true,
+    updatedAt: true,
     itemAnswerGroups: {
         select: {
             id: true,

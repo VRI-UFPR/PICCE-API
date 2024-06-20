@@ -17,7 +17,7 @@ import {
 import prismaClient from '../../src/services/prismaClient';
 
 async function main() {
-    const addresses: Omit<Address, 'createdAt' | 'updateAt'>[] = [
+    const addresses: Omit<Address, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             city: 'Curitiba',
@@ -26,7 +26,7 @@ async function main() {
         },
     ];
 
-    const institutions: Omit<Institution, 'createdAt' | 'updateAt'>[] = [
+    const institutions: Omit<Institution, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             name: 'Universidade Federal do Paraná',
@@ -35,7 +35,7 @@ async function main() {
         },
     ];
 
-    const classrooms: Omit<Classroom, 'createdAt' | 'updateAt'>[] = [
+    const classrooms: Omit<Classroom, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             name: 'Sala 1',
@@ -43,7 +43,7 @@ async function main() {
         },
     ];
 
-    const users: (Omit<User, 'createdAt' | 'updateAt' | 'profileImageId'> & { classrooms: number[] })[] = [
+    const users: (Omit<User, 'createdAt' | 'updatedAt' | 'profileImageId'> & { classrooms: number[] })[] = [
         {
             id: 1,
             name: 'Visitante',
@@ -226,7 +226,7 @@ async function main() {
         },
     ];
 
-    const picceProtocols: Omit<Protocol, 'createdAt' | 'updateAt'>[] = [
+    const picceProtocols: Omit<Protocol, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             title: 'PICCE - Exposição ao marketing e sua influência no padrão de consumo de drogas: implicações psicosociais',
@@ -409,7 +409,7 @@ async function main() {
         },
     ];
 
-    const piccePages: Omit<Page, 'createdAt' | 'updateAt'>[] = [
+    const piccePages: Omit<Page, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             protocolId: 1,
@@ -502,7 +502,7 @@ async function main() {
         },
     ];
 
-    const picceItemGroups: Omit<ItemGroup, 'createdAt' | 'updateAt'>[] = [
+    const picceItemGroups: Omit<ItemGroup, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             pageId: 1,
@@ -610,7 +610,7 @@ async function main() {
         },
     ];
 
-    const picceItems: Omit<Item, 'createdAt' | 'updateAt'>[] = [
+    const picceItems: Omit<Item, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             groupId: 1,
@@ -6823,7 +6823,7 @@ async function main() {
         },
     ];
 
-    const picceFiles: Omit<File, 'createdAt' | 'updateAt'>[] = [
+    const picceFiles: Omit<File, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             description: 'Imagem',
@@ -9866,7 +9866,7 @@ async function main() {
         },
     ];
 
-    const picceItemOptions: Omit<ItemOption, 'createdAt' | 'updateAt'>[] = [
+    const picceItemOptions: Omit<ItemOption, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             itemId: 3,

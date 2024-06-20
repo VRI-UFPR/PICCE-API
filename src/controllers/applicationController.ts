@@ -134,7 +134,7 @@ const fieldsWProtocol = {
             title: true,
             description: true,
             createdAt: true,
-            updateAt: true,
+            updatedAt: true,
             pages: {
                 orderBy: { placement: 'asc' as any },
                 select: {

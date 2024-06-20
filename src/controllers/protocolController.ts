@@ -265,7 +265,7 @@ const fields = {
     title: true,
     description: true,
     createdAt: true,
-    updateAt: true,
+    updatedAt: true,
     enabled: true,
     replicable: true,
     creator: { select: { id: true, username: true } },

@@ -152,7 +152,7 @@ import passport from '../services/passportAuth';
  *          format: date-time
  *          description: The date and time the institution was created
  *          example: "2021-06-01T00:00:00Z"
- *        updateAt:
+ *        updatedAt:
  *          type: string
  *          format: date-time
  *          description: The date and time the institution was updated

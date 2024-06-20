@@ -75,7 +75,7 @@ enum ItemValidationType {
 model Address {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   city    String
   state   String
@@ -90,7 +90,7 @@ model Address {
 model ApplicationAnswer {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   date DateTime
 
@@ -107,7 +107,7 @@ model ApplicationAnswer {
 model ItemAnswer {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   text String?
 
@@ -122,7 +122,7 @@ model ItemAnswer {
 model ItemAnswerGroup {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   itemAnswers   ItemAnswer[]
   optionAnswers OptionAnswer[]
@@ -135,7 +135,7 @@ model ItemAnswerGroup {
 model OptionAnswer {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   text String?
 
@@ -150,7 +150,7 @@ model OptionAnswer {
 model TableAnswer {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   text String?
 
@@ -165,7 +165,7 @@ model TableAnswer {
 model Institution {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   name String
   type InstitutionType
@@ -180,7 +180,7 @@ model Institution {
 model User {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   name          String
   username      String   @unique
@@ -208,7 +208,7 @@ model User {
 model Classroom {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   name String
 
@@ -247,7 +247,7 @@ model Application {
 model Protocol {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   title       String
   description String?
@@ -272,7 +272,7 @@ model Protocol {
 model Page {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   type      PageType
   placement Int
@@ -287,7 +287,7 @@ model Page {
 model ItemGroup {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   type         ItemGroupType
   placement    Int
@@ -304,7 +304,7 @@ model ItemGroup {
 model Item {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   text        String
   description String?
@@ -328,7 +328,7 @@ model Item {
 model ItemValidation {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   type          ItemValidationType
   argument      String
@@ -343,7 +343,7 @@ model ItemValidation {
 model ItemOption {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   text      String
   placement Int
@@ -358,7 +358,7 @@ model ItemOption {
 model TableColumn {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   text      String
   placement Int
@@ -372,7 +372,7 @@ model TableColumn {
 model File {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   path String
   description String?
@@ -389,7 +389,7 @@ model File {
 model ItemGroupDependencyRule {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   type          DependencyType
   argument      String
@@ -406,7 +406,7 @@ model ItemGroupDependencyRule {
 model PageDependencyRule {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   type          DependencyType
   argument      String
