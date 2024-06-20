@@ -7,10 +7,11 @@ import errorFormatter from '../services/errorFormatter';
 // Fields to be selected from the database to the response
 const fields = {
     id: true,
+    name: true,
     institution: { select: { id: true, name: true } },
     users: { select: { id: true, name: true, username: true, role: true } },
     createdAt: true,
-    updateAt: true,
+    updatedAt: true,
 };
 
 // Only admins or the coordinator of the institution can perform C-UD operations on classrooms
@@ -63,6 +64,7 @@ export const createClassroom = async (req: Request, res: Response) => {
             .object()
             .shape({
                 id: yup.number().min(1),
+                name: yup.string().min(1).max(255).required(),
                 institutionId: yup.number().required(),
                 users: yup.array().of(yup.number()).min(2).required(),
             })
@@ -77,6 +79,7 @@ export const createClassroom = async (req: Request, res: Response) => {
         const createdClassroom: Classroom = await prismaClient.classroom.create({
             data: {
                 id: classroom.id,
+                name: classroom.name,
                 institutionId: classroom.institutionId,
                 users: { connect: classroom.users.map((id) => ({ id: id })) },
             },
@@ -95,7 +98,7 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
         // Yup schemas
         const updateClassroomSchema = yup
             .object()
-            .shape({ users: yup.array().of(yup.number()).min(2) })
+            .shape({ name: yup.string().min(1).max(255), users: yup.array().of(yup.number()).min(2) })
             .noUnknown();
         // Yup parsing/validation
         const classroom = await updateClassroomSchema.validate(req.body);
@@ -106,7 +109,7 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
         // Prisma operation
         const updatedClassroom = await prismaClient.classroom.update({
             where: { id: classroomId },
-            data: { users: { set: [], connect: classroom.users?.map((id) => ({ id: id })) } },
+            data: { name: classroom.name, users: { set: [], connect: classroom.users?.map((id) => ({ id: id })) } },
             select: fields,
         });
 

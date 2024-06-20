@@ -11,10 +11,11 @@ datasource db {
 }
 
 enum DependencyType {
+  IS_ANSWERED
   EXACT_ANSWER
   OPTION_SELECTED
-  MIN_SELECTED
-  MAX_SELECTED
+  MIN
+  MAX
 }
 
 enum PageType {
@@ -23,9 +24,10 @@ enum PageType {
 }
 
 enum ItemGroupType {
-  SINGLE_ITEM
-  MULTIPLE_ITEMS
-  TABLE
+  ONE_DIMENSIONAL
+  TEXTBOX_TABLE
+  RADIO_TABLE
+  CHECKBOX_TABLE
 }
 
 enum ItemType {
@@ -33,7 +35,7 @@ enum ItemType {
   CHECKBOX
   RADIO
   SELECT
-  SCALE
+  RANGE
   TEXT
   UPLOAD
   DATEBOX
@@ -47,6 +49,7 @@ enum InstitutionType {
   LOWER_SECONDARY
   UPPER_SECONDARY
   TERTIARY
+  OTHER
 }
 
 enum UserRole {
@@ -67,14 +70,12 @@ enum ItemValidationType {
   MIN
   MAX
   STEP
-  MIN_SELECTED
-  MAX_SELECTED
 }
 
 model Address {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   city    String
   state   String
@@ -89,7 +90,7 @@ model Address {
 model ApplicationAnswer {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   date DateTime
 
@@ -106,7 +107,7 @@ model ApplicationAnswer {
 model ItemAnswer {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   text String?
 
@@ -121,7 +122,7 @@ model ItemAnswer {
 model ItemAnswerGroup {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   itemAnswers   ItemAnswer[]
   optionAnswers OptionAnswer[]
@@ -134,7 +135,7 @@ model ItemAnswerGroup {
 model OptionAnswer {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   text String?
 
@@ -149,7 +150,7 @@ model OptionAnswer {
 model TableAnswer {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   text String?
 
@@ -164,7 +165,7 @@ model TableAnswer {
 model Institution {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   name String
   type InstitutionType
@@ -179,16 +180,18 @@ model Institution {
 model User {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   name          String
   username      String   @unique
   hash          String
   role          UserRole
   acceptedTerms Boolean  @default(false)
+  profileImageId Int?
+  profileImage  File?   @relation(name: "UserProfileImage", fields: [profileImageId], references: [id], onDelete: SetNull) 
 
   createdProtocols     Protocol[]          @relation(name: "Creator") // protocols that the user has created
-  ownedProtocols            Protocol[]          @relation(name: "OwnersProtocols") // protocols that the user can edit
+  ownedProtocols            Protocol[]          @relation(name: "ManagersProtocols") // protocols that the user can edit
   answeredApplications ApplicationAnswer[]
   applications         Application[]       @relation(name: "Applier") // applications that the user has created
   visibleApplications  Application[]       @relation(name: "ApplicationViewersUser") // applications that the user can see
@@ -205,7 +208,9 @@ model User {
 model Classroom {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
+
+  name String
 
   users               User[]
   visibleApplications Application[] @relation(name: "ApplicationViewersClassroom") // applications that the classroom can see
@@ -215,6 +220,8 @@ model Classroom {
 
   institutionId Int
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@unique([name, institutionId])
 }
 
 model Application {
@@ -240,7 +247,7 @@ model Application {
 model Protocol {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   title       String
   description String?
@@ -258,14 +265,14 @@ model Protocol {
   answersViewersClassroom Classroom[] @relation(name: "ProtocolAnswersViewersClassroom") // classrooms that can see the answers
 
   pages        Page[]
-  owners        User[] @relation(name: "OwnersProtocols") // users that can edit the protocol
+  managers        User[] @relation(name: "ManagersProtocols") // users that can edit the protocol
   applications Application[]
 }
 
 model Page {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   type      PageType
   placement Int
@@ -280,7 +287,7 @@ model Page {
 model ItemGroup {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   type         ItemGroupType
   placement    Int
@@ -297,7 +304,7 @@ model ItemGroup {
 model Item {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   text        String
   description String?
@@ -321,7 +328,7 @@ model Item {
 model ItemValidation {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   type          ItemValidationType
   argument      String
@@ -336,7 +343,7 @@ model ItemValidation {
 model ItemOption {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   text      String
   placement Int
@@ -351,7 +358,7 @@ model ItemOption {
 model TableColumn {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   text      String
   placement Int
@@ -365,9 +372,10 @@ model TableColumn {
 model File {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   path String
+  description String?
 
   itemId       Int?
   item         Item?       @relation(fields: [itemId], references: [id], onDelete: Cascade)
@@ -375,12 +383,13 @@ model File {
   itemOption   ItemOption? @relation(fields: [itemOptionId], references: [id], onDelete: Cascade)
   itemAnswerId Int?
   itemAnswer   ItemAnswer? @relation(fields: [itemAnswerId], references: [id], onDelete: Cascade)
+  users        User[]     @relation(name: "UserProfileImage")
 }
 
 model ItemGroupDependencyRule {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   type          DependencyType
   argument      String
@@ -390,12 +399,14 @@ model ItemGroupDependencyRule {
   itemGroup   ItemGroup @relation(fields: [itemGroupId], references: [id], onDelete: Cascade)
   itemId      Int
   item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([itemGroupId, itemId, type])
 }
 
 model PageDependencyRule {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updateAt  DateTime @updatedAt
+  updatedAt  DateTime @updatedAt
 
   type          DependencyType
   argument      String
@@ -405,4 +416,6 @@ model PageDependencyRule {
   page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
   itemId Int
   item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, itemId, type])
 }

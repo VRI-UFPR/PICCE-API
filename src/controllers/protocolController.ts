@@ -13,10 +13,10 @@ const checkAuthorization = async (user: User, protocolId: number | undefined, ac
             break;
         case 'update':
         case 'delete':
-            // Only admins, the creator or the owners of the protocol can perform update/delete operations on it
+            // Only admins, the creator or the managers of the protocol can perform update/delete operations on it
             if (user.role !== UserRole.ADMIN) {
                 const protocol = await prismaClient.protocol.findUnique({
-                    where: { id: protocolId, OR: [{ owners: { some: { id: user.id } } }, { creatorId: user.id }] },
+                    where: { id: protocolId, OR: [{ managers: { some: { id: user.id } } }, { creatorId: user.id }] },
                 });
                 if (!protocol) throw new Error('This user is not authorized to perform this action.');
             }
@@ -29,13 +29,13 @@ const checkAuthorization = async (user: User, protocolId: number | undefined, ac
             // All users can perform getVisible operations on protocols (the result will be filtered based on the user)
             break;
         case 'get':
-            // Only admins, the creator, the owners, the appliers or the viewers of the protocol can perform get operations on it
+            // Only admins, the creator, the managers, the appliers or the viewers of the protocol can perform get operations on it
             if (user.role !== UserRole.ADMIN) {
                 const protocol = await prismaClient.protocol.findUnique({
                     where: {
                         id: protocolId,
                         OR: [
-                            { owners: { some: { id: user.id } } },
+                            { managers: { some: { id: user.id } } },
                             { appliers: { some: { id: user.id } } },
                             { viewersUser: { some: { id: user.id } } },
                             { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
@@ -59,8 +59,9 @@ const validateItem = async (type: ItemType, itemOptionsLength: number) => {
 const validateItemGroup = async (type: ItemGroupType, itemsLength: number, tableColumnsLength: number) => {
     if (
         itemsLength === 0 ||
-        (type === ItemGroupType.TABLE && tableColumnsLength === 0) ||
-        (type !== ItemGroupType.TABLE && tableColumnsLength > 0)
+        ((type === ItemGroupType.CHECKBOX_TABLE || type === ItemGroupType.RADIO_TABLE || type === ItemGroupType.TEXTBOX_TABLE) &&
+            tableColumnsLength === 0) ||
+        (type === ItemGroupType.ONE_DIMENSIONAL && tableColumnsLength > 0)
     )
         throw new Error('ItemGroup type does not match the amount of items or tableColumns.');
 };
@@ -73,26 +74,48 @@ const validateDependencies = async (protocol: any) => {
             if (!itemType) throw new Error('Invalid dependency item: must reference a previous item.');
             switch (dependency.type) {
                 case DependencyType.EXACT_ANSWER:
-                    if (itemType === ItemType.UPLOAD || itemType === ItemType.CHECKBOX)
+                    if (itemType !== ItemType.TEXTBOX && itemType !== ItemType.NUMBERBOX && itemType !== ItemType.RANGE)
                         throw new Error('Exact answer dependency not allowed for this item type.');
                     break;
-                case DependencyType.MIN_SELECTED:
+                case DependencyType.MIN:
                     if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
                         throw new Error('Min argument must be a valid integer.');
-                    if (page.dependencies.find((d: any) => d.type === DependencyType.MAX_SELECTED && d.argument <= dependency.argument))
+                    if (
+                        page.dependencies.find(
+                            (d: any) =>
+                                d.type === DependencyType.MAX && d.argument <= dependency.argument && d.itemTempId === dependency.itemTempId
+                        )
+                    )
                         throw new Error('Min argument must be less than max argument.');
-                    if (itemType !== ItemType.CHECKBOX) throw new Error('Min selected dependency only allowed for checkbox items.');
+                    if (
+                        itemType !== ItemType.CHECKBOX &&
+                        itemType !== ItemType.NUMBERBOX &&
+                        itemType !== ItemType.RANGE &&
+                        itemType !== ItemType.TEXTBOX
+                    )
+                        throw new Error('Min dependency only allowed for checkbox, numberbox, range and textbox items.');
                     break;
-                case DependencyType.MAX_SELECTED:
+                case DependencyType.MAX:
                     if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
                         throw new Error('Max argument must be a valid integer.');
-                    if (page.dependencies.find((d: any) => d.type === DependencyType.MIN_SELECTED && d.argument >= dependency.argument))
+                    if (
+                        page.dependencies.find(
+                            (d: any) =>
+                                d.type === DependencyType.MIN && d.argument >= dependency.argument && d.itemTempId === dependency.itemTempId
+                        )
+                    )
                         throw new Error('Max argument must be greater than min argument.');
-                    if (itemType !== ItemType.CHECKBOX) throw new Error('Max selected dependency only allowed for checkbox items.');
+                    if (
+                        itemType !== ItemType.CHECKBOX &&
+                        itemType !== ItemType.NUMBERBOX &&
+                        itemType !== ItemType.RANGE &&
+                        itemType !== ItemType.TEXTBOX
+                    )
+                        throw new Error('Max dependency only allowed for checkbox, numberbox, range and textbox items.');
                     break;
                 case DependencyType.OPTION_SELECTED:
-                    if (itemType !== ItemType.RADIO && itemType !== ItemType.SELECT)
-                        throw new Error('Option selected dependency only allowed for radio and select items.');
+                    if (itemType !== ItemType.RADIO && itemType !== ItemType.SELECT && itemType !== ItemType.CHECKBOX)
+                        throw new Error('Option selected dependency only allowed for radio, select and checkbox items.');
                     break;
             }
         }
@@ -102,22 +125,48 @@ const validateDependencies = async (protocol: any) => {
                 if (!itemType) throw new Error('Invalid dependency item: must reference a previous item.');
                 switch (dependency.type) {
                     case DependencyType.EXACT_ANSWER:
-                        if (itemType === ItemType.UPLOAD || itemType === ItemType.CHECKBOX)
+                        if (itemType !== ItemType.TEXTBOX && itemType !== ItemType.NUMBERBOX && itemType !== ItemType.RANGE)
                             throw new Error('Exact answer dependency not allowed for this item type.');
                         break;
-                    case DependencyType.MIN_SELECTED:
+                    case DependencyType.MIN:
                         if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
                             throw new Error('Min argument must be a valid integer.');
-                        if (page.dependencies.find((d: any) => d.type === DependencyType.MAX_SELECTED && d.argument <= dependency.argument))
+                        if (
+                            page.dependencies.find(
+                                (d: any) =>
+                                    d.type === DependencyType.MAX &&
+                                    d.argument <= dependency.argument &&
+                                    d.itemTempId === dependency.itemTempId
+                            )
+                        )
                             throw new Error('Min argument must be less than max argument.');
-                        if (itemType !== ItemType.CHECKBOX) throw new Error('Min selected dependency only allowed for checkbox items.');
+                        if (
+                            itemType !== ItemType.CHECKBOX &&
+                            itemType !== ItemType.NUMBERBOX &&
+                            itemType !== ItemType.RANGE &&
+                            itemType !== ItemType.TEXTBOX
+                        )
+                            throw new Error('Min dependency only allowed for checkbox, numberbox, range and textbox items.');
                         break;
-                    case DependencyType.MAX_SELECTED:
+                    case DependencyType.MAX:
                         if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
                             throw new Error('Max argument must be a valid integer.');
-                        if (page.dependencies.find((d: any) => d.type === DependencyType.MIN_SELECTED && d.argument >= dependency.argument))
+                        if (
+                            page.dependencies.find(
+                                (d: any) =>
+                                    d.type === DependencyType.MIN &&
+                                    d.argument >= dependency.argument &&
+                                    d.itemTempId === dependency.itemTempId
+                            )
+                        )
                             throw new Error('Max argument must be greater than min argument.');
-                        if (itemType !== ItemType.CHECKBOX) throw new Error('Max selected dependency only allowed for checkbox items.');
+                        if (
+                            itemType !== ItemType.CHECKBOX &&
+                            itemType !== ItemType.NUMBERBOX &&
+                            itemType !== ItemType.RANGE &&
+                            itemType !== ItemType.TEXTBOX
+                        )
+                            throw new Error('Max dependency only allowed for checkbox, numberbox, range and textbox items.');
                         break;
                     case DependencyType.OPTION_SELECTED:
                         if (itemType !== ItemType.RADIO && itemType !== ItemType.SELECT && itemType !== ItemType.CHECKBOX)
@@ -137,8 +186,6 @@ const validateItemValidations = async (itemType: ItemType, validations: any[]) =
     const maxValidation = validations.find((v) => v.type === ItemValidationType.MAX);
     const stepValidation = validations.find((v) => v.type === ItemValidationType.STEP);
     const mandatoryValidation = validations.find((v) => v.type === ItemValidationType.MANDATORY);
-    const minSelectedValidation = validations.find((v) => v.type === ItemValidationType.MIN_SELECTED);
-    const maxSelectedValidation = validations.find((v) => v.type === ItemValidationType.MAX_SELECTED);
 
     if (minValidation && (minValidation.argument.includes('.') || isNaN(parseFloat(minValidation.argument))))
         throw new Error('Min argument must be a valid integer.');
@@ -146,27 +193,27 @@ const validateItemValidations = async (itemType: ItemType, validations: any[]) =
         throw new Error('Max argument must be a valid integer.');
     if (stepValidation && (stepValidation.argument.includes('.') || isNaN(parseFloat(stepValidation.argument))))
         throw new Error('Step argument must be a valid integer.');
-    if (minSelectedValidation && (minSelectedValidation.argument.includes('.') || isNaN(parseFloat(minSelectedValidation.argument))))
-        throw new Error('Min selected argument must be a valid integer.');
-    if (maxSelectedValidation && (maxSelectedValidation.argument.includes('.') || isNaN(parseFloat(maxSelectedValidation.argument))))
-        throw new Error('Max selected argument must be a valid integer.');
     if (mandatoryValidation && mandatoryValidation.argument !== 'true' && mandatoryValidation.argument !== 'false')
         throw new Error('Mandatory argument must be a valid boolean.');
     if (minValidation && maxValidation && minValidation.argument >= maxValidation.argument)
         throw new Error('Min argument must be less than max argument.');
     if (minValidation && maxValidation && stepValidation && maxValidation.argument - minValidation.argument <= stepValidation.argument)
         throw new Error('Step argument must be less than the difference between min and max arguments.');
-    if (itemType === ItemType.SCALE && (!minValidation || !maxValidation || !stepValidation))
-        throw new Error('Scale items must have min, max and step.');
-    if ((maxSelectedValidation || minSelectedValidation) && itemType !== ItemType.CHECKBOX)
-        throw new Error('Min/max selected validation only allowed for checkbox items.');
-    if (stepValidation && itemType !== ItemType.SCALE) throw new Error('Step validation only allowed for scale items.');
-    if ((maxValidation || minValidation) && itemType !== ItemType.NUMBERBOX && itemType !== ItemType.SCALE)
-        throw new Error('Min and max validations only allowed for numberbox and scale items.');
+    if (itemType === ItemType.RANGE && (!minValidation || !maxValidation || !stepValidation))
+        throw new Error('Range items must have min, max and step.');
+    if (stepValidation && itemType !== ItemType.RANGE) throw new Error('Step validation only allowed for range items.');
+    if (
+        (maxValidation || minValidation) &&
+        itemType !== ItemType.NUMBERBOX &&
+        itemType !== ItemType.RANGE &&
+        itemType !== ItemType.CHECKBOX &&
+        itemType !== ItemType.TEXTBOX
+    )
+        throw new Error('Min and max validations only allowed for numberbox, textbox, range and checkbox items.');
 };
 
-const validateOwners = async (owners: (number | undefined)[], institutionId: number | null) => {
-    for (const owner of owners) {
+const validateManagers = async (managers: (number | undefined)[], institutionId: number | null) => {
+    for (const owner of managers) {
         const user = await prismaClient.user.findUnique({
             where: {
                 id: owner,
@@ -176,7 +223,7 @@ const validateOwners = async (owners: (number | undefined)[], institutionId: num
                 },
             },
         });
-        if (!user || !institutionId) throw new Error('Owners must be publishers, coordinators or admins of the same institution.');
+        if (!user || !institutionId) throw new Error('Managers must be publishers, coordinators or admins of the same institution.');
     }
 };
 
@@ -218,7 +265,7 @@ const fields = {
     title: true,
     description: true,
     createdAt: true,
-    updateAt: true,
+    updatedAt: true,
     enabled: true,
     replicable: true,
     creator: { select: { id: true, username: true } },
@@ -228,6 +275,7 @@ const fields = {
     pages: {
         orderBy: { placement: 'asc' as any },
         select: {
+            id: true,
             type: true,
             placement: true,
             itemGroups: {
@@ -265,7 +313,7 @@ const fields = {
 
 const fieldsWViewers = {
     ...fields,
-    owners: { select: { id: true, username: true } },
+    managers: { select: { id: true, username: true } },
     viewersUser: { select: { id: true, username: true } },
     viewersClassroom: { select: { id: true } },
     answersViewersUser: { select: { id: true, username: true } },
@@ -349,7 +397,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                 description: yup.string().max(3000),
                 enabled: yup.boolean().required(),
                 pages: yup.array().of(pagesSchema).min(1).required(),
-                owners: yup.array().of(yup.number()).default([]),
+                managers: yup.array().of(yup.number()).default([]),
                 visibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)).required(),
                 creatorId: yup.number().required(),
                 applicability: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)).required(),
@@ -380,8 +428,8 @@ export const createProtocol = async (req: Request, res: Response) => {
         const user = req.user as User;
         // Check if user is allowed to create a application
         await checkAuthorization(user, undefined, 'create');
-        // Check if owners are publishers, coordinators or admins of the same institution
-        await validateOwners(protocol.owners, user.institutionId);
+        // Check if managers are publishers, coordinators or admins of the same institution
+        await validateManagers(protocol.managers, user.institutionId);
         // Check if protocol placements are valid
         await validateProtocolPlacements(protocol);
         // Check if dependencies are valid
@@ -398,7 +446,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                     description: protocol.description,
                     enabled: protocol.enabled,
                     creatorId: protocol.creatorId,
-                    owners: { connect: protocol.owners.map((owner) => ({ id: owner })) },
+                    managers: { connect: protocol.managers.map((owner) => ({ id: owner })) },
                     visibility: protocol.visibility as VisibilityMode,
                     applicability: protocol.applicability as VisibilityMode,
                     answersVisibility: protocol.answersVisibility as VisibilityMode,
@@ -603,7 +651,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 description: yup.string().max(3000),
                 enabled: yup.boolean(),
                 pages: yup.array().of(updatePagesSchema).min(1).required(),
-                owners: yup.array().of(yup.number()).default([]),
+                managers: yup.array().of(yup.number()).default([]),
                 visibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)),
                 applicability: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)),
                 answersVisibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)),
@@ -631,10 +679,10 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
         protocol.pages.sort((a, b) => a.placement - b.placement);
         // User from Passport-JWT
         const user = req.user as User;
-        // Check if user is included in the owners, or if user is admin
+        // Check if user is included in the managers, or if user is admin
         await checkAuthorization(user, id, 'update');
-        // Check if owners are publishers, coordinators or admins of the same institution
-        await validateOwners(protocol.owners, user.institutionId);
+        // Check if managers are publishers, coordinators or admins of the same institution
+        await validateManagers(protocol.managers, user.institutionId);
         // Check if protocol placements are valid
         await validateProtocolPlacements(protocol);
         // Check if dependencies are valid
@@ -652,7 +700,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                     title: protocol.title,
                     description: protocol.description,
                     enabled: protocol.enabled,
-                    owners: { set: [], connect: protocol.owners.map((owner) => ({ id: owner })) },
+                    managers: { set: [], connect: protocol.managers.map((owner) => ({ id: owner })) },
                     visibility: protocol.visibility as VisibilityMode,
                     applicability: protocol.applicability as VisibilityMode,
                     answersVisibility: protocol.answersVisibility as VisibilityMode,
@@ -957,7 +1005,7 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
                 : await prismaClient.protocol.findMany({
                       where: {
                           OR: [
-                              { owners: { some: { id: user.id } } },
+                              { managers: { some: { id: user.id } } },
                               { appliers: { some: { id: user.id } } },
                               { viewersUser: { some: { id: user.id } } },
                               { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
@@ -980,7 +1028,7 @@ export const getMyProtocols = async (req: Request, res: Response): Promise<void>
         const user = req.user as User;
         // Prisma operation
         const protocols = await prismaClient.protocol.findMany({
-            where: { OR: [{ owners: { some: { id: user.id } }, creatorId: user.id }] },
+            where: { OR: [{ managers: { some: { id: user.id } }, creatorId: user.id }] },
             select: fieldsWViewers,
         });
 
@@ -1003,7 +1051,7 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
             where: {
                 id: protocolId,
                 OR: [
-                    { owners: { some: { id: user.id } } },
+                    { managers: { some: { id: user.id } } },
                     { appliers: { some: { id: user.id } } },
                     { viewersUser: { some: { id: user.id } } },
                     { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
@@ -1017,7 +1065,7 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
         const visibleProtocol =
             user.role === UserRole.ADMIN ||
             protocol.creator.id === user.id ||
-            protocol.owners.some((owner) => owner.id === user.id) ||
+            protocol.managers.some((owner) => owner.id === user.id) ||
             protocol.appliers.some((applier) => applier.id === user.id)
                 ? protocol
                 : {
@@ -1027,7 +1075,7 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
                       answersViewersUser: undefined,
                       answersViewersClassroom: undefined,
                       appliers: undefined,
-                      owners: undefined,
+                      managers: undefined,
                   };
 
         res.status(200).json({ message: 'Protocol found.', data: visibleProtocol });

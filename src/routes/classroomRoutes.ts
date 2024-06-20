@@ -95,7 +95,7 @@ import passport from '../services/passportAuth';
  *           format: date-time
  *           description: The date-time when the classroom was created.
  *           example: '2021-09-01T12:00:00Z'
- *         updateAt:
+ *         updatedAt:
  *           type: string
  *           format: date-time
  *           description: The date-time when the classroom was last updated.
