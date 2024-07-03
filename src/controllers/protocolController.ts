@@ -3,6 +3,7 @@ import { ItemType, ItemGroupType, PageType, ItemValidationType, User, UserRole, 
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
+import { unlinkSync } from 'fs';
 
 const checkAuthorization = async (user: User, protocolId: number | undefined, action: string) => {
     switch (action) {
@@ -558,6 +559,8 @@ export const createProtocol = async (req: Request, res: Response) => {
         });
         res.status(201).json({ message: 'Protocol created.', data: createdProtocol });
     } catch (error: any) {
+        const files = req.files as Express.Multer.File[];
+        for (const file of files) unlinkSync(file.path);
         res.status(400).json(errorFormatter(error));
     }
 };
@@ -829,9 +832,12 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                               });
                         tempIdMap.set(item.tempId, upsertedItem.id);
                         // Remove files that are not in the updated item
-                        await prisma.file.deleteMany({
-                            where: { id: { notIn: item.filesIds as number[] }, itemId: upsertedItem.id },
+                        const filesToDelete = await prisma.file.findMany({
+                            where: { id: { notIn: item.filesIds as number[] } },
+                            select: { id: true, path: true },
                         });
+                        for (const file of filesToDelete) unlinkSync(file.path);
+                        await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
                         const itemFiles = files
                             .filter((file) =>
                                 file.fieldname.startsWith(`pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][files]`)
@@ -864,9 +870,12 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                       },
                                   });
                             // Remove files that are not in the updated itemOption
-                            await prisma.file.deleteMany({
+                            const filesToDelete = await prisma.file.findMany({
                                 where: { id: { notIn: itemOption.filesIds as number[] }, itemOptionId: upsertedItemOption.id },
+                                select: { id: true, path: true },
                             });
+                            for (const file of filesToDelete) unlinkSync(file.path);
+                            await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
                             const itemOptionFiles = files
                                 .filter((file) =>
                                     file.fieldname.startsWith(
@@ -973,6 +982,8 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
         });
         res.status(200).json({ message: 'Protocol updated.', data: upsertedProtocol });
     } catch (error: any) {
+        const files = req.files as Express.Multer.File[];
+        for (const file of files) unlinkSync(file.path);
         res.status(400).json(errorFormatter(error));
     }
 };
