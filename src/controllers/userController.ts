@@ -64,6 +64,7 @@ const fields = {
     role: true,
     institution: { select: { id: true, name: true } },
     classrooms: { select: { id: true, name: true } },
+    profileImage: { select: { id: true, path: true } },
     acceptedTerms: true,
     createdAt: true,
     updatedAt: true,
@@ -90,16 +91,18 @@ export const createUser = async (req: Request, res: Response) => {
         const curUser = req.user as User;
         // Check if user is authorized to create a user
         await checkAuthorization(curUser, undefined, user.role as UserRole, 'create');
+        // Multer single file
+        const file = req.file as Express.Multer.File;
         // Prisma operation
         const createdUser = await prismaClient.user.create({
             data: {
-                id: user.id,
                 name: user.name,
                 username: user.username,
                 hash: user.hash,
                 role: user.role,
-                institutionId: user.institutionId,
                 classrooms: { connect: user.classrooms.map((id) => ({ id: id })) },
+                profileImage: file ? { create: { path: file.path } } : undefined,
+                institution: { connect: { id: user.institutionId } },
             },
             select: fields,
         });
@@ -124,6 +127,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
                 role: yup.string().oneOf(Object.values(UserRole)),
                 institutionId: yup.number(),
                 classrooms: yup.array().of(yup.number()),
+                profileImageId: yup.number(),
             })
             .noUnknown();
         // Yup parsing/validation
@@ -132,18 +136,28 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         const curUser = req.user as User;
         // Check if user is authorized to update the user
         await checkAuthorization(curUser, userId, user.role as UserRole, 'update');
-        // Prisma operation
-        const updatedUser = await prismaClient.user.update({
-            where: { id: userId },
-            data: {
-                name: user.name,
-                username: user.username,
-                hash: user.hash,
-                role: user.role,
-                institutionId: user.institutionId,
-                classrooms: { set: [], connect: user.classrooms?.map((id) => ({ id: id })) },
-            },
-            select: fields,
+        // Multer single file
+        const file = req.file as Express.Multer.File;
+        // Prisma transaction
+        const updatedUser = await prismaClient.$transaction(async (prisma) => {
+            await prisma.file.deleteMany({ where: { id: { not: user.profileImageId } } });
+            const updatedUser = await prisma.user.update({
+                where: { id: userId },
+                data: {
+                    name: user.name,
+                    username: user.username,
+                    hash: user.hash,
+                    role: user.role,
+                    institution: { connect: user.institutionId ? { id: user.institutionId } : undefined },
+                    classrooms: { set: [], connect: user.classrooms?.map((id) => ({ id: id })) },
+                    profileImage: {
+                        create: !user.profileImageId && file ? { path: file.path } : undefined,
+                    },
+                },
+                select: fields,
+            });
+
+            return updatedUser;
         });
 
         res.status(200).json({ message: 'User updated.', data: updatedUser });
