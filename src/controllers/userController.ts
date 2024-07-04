@@ -22,13 +22,16 @@ const checkAuthorization = async (curUser: User, userId: number | undefined, rol
         case 'update':
             if (
                 // Only admins or the user itself can perform update operations on it, respecting the hierarchy
-                (curUser.role !== UserRole.ADMIN && curUser.id !== userId) ||
-                (curUser.role === UserRole.COORDINATOR && (role === UserRole.ADMIN || role === UserRole.COORDINATOR)) ||
-                (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER) ||
-                curUser.role === UserRole.APPLIER ||
-                curUser.role === UserRole.USER
+                (curUser.role !== UserRole.ADMIN && Number(curUser.id) !== userId) ||
+                (curUser.role === UserRole.COORDINATOR && role === UserRole.ADMIN) ||
+                (curUser.role === UserRole.PUBLISHER &&
+                    role !== UserRole.USER &&
+                    role !== UserRole.APPLIER &&
+                    role !== UserRole.PUBLISHER) ||
+                (curUser.role === UserRole.APPLIER && role !== UserRole.USER && role !== UserRole.APPLIER) ||
+                (curUser.role === UserRole.USER && role !== UserRole.USER)
             ) {
-                throw new Error('This user is not authorized to perform this action');
+                throw new Error('This user is not authorized to perform this action ' + curUser.id + ' ' + userId);
             }
             break;
         case 'getAll':
