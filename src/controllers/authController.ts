@@ -5,6 +5,7 @@ import prismaClient from '../services/prismaClient';
 import jwt from 'jsonwebtoken';
 import errorFormatter from '../services/errorFormatter';
 import ms from 'ms';
+import { profile } from 'console';
 
 export const signUp = async (req: Request, res: Response) => {
     try {
@@ -34,6 +35,7 @@ export const signUp = async (req: Request, res: Response) => {
                 institutionId: signingUser.institutionId,
                 classrooms: { connect: signingUser.classrooms.map((classroomId) => ({ id: classroomId })) },
             },
+            include: { profileImage: true },
         });
         // JWT token creation
         const token = jwt.sign({ id: createdUser.id, username: createdUser.username }, process.env.JWT_SECRET as string, {
@@ -48,6 +50,7 @@ export const signUp = async (req: Request, res: Response) => {
                 token: token,
                 expiresIn: process.env.JWT_EXPIRATION,
                 institutionId: createdUser.institutionId,
+                profileImage: createdUser.profileImage ? { path: createdUser.profileImage.path } : undefined,
             },
         });
     } catch (error: any) {
@@ -65,10 +68,11 @@ export const signIn = async (req: Request, res: Response) => {
         // Yup parsing/validation
         const signingUser = await signInSchema.validate(req.body, { stripUnknown: false });
         // Prisma operation
-        const user: User = await prismaClient.user.findUniqueOrThrow({
+        const user = await prismaClient.user.findUniqueOrThrow({
             where: {
                 username: signingUser.username,
             },
+            include: { profileImage: true },
         });
         // Password check
         if (user.hash !== signingUser.hash) {
@@ -88,6 +92,7 @@ export const signIn = async (req: Request, res: Response) => {
                 token: token,
                 expiresIn: ms(process.env.JWT_EXPIRATION as string),
                 institutionId: user.institutionId,
+                profileImage: user.profileImage ? { path: user.profileImage.path } : undefined,
             },
         });
     } catch (error: any) {
@@ -98,7 +103,7 @@ export const signIn = async (req: Request, res: Response) => {
 export const passwordlessSignIn = async (req: Request, res: Response) => {
     try {
         // Prisma operation
-        const user = await prismaClient.user.findUniqueOrThrow({ where: { id: 1 } });
+        const user = await prismaClient.user.findUniqueOrThrow({ where: { id: 1 }, include: { profileImage: true } });
         // JWT token creation
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET as string, {
             expiresIn: process.env.JWT_EXPIRATION,
@@ -112,6 +117,7 @@ export const passwordlessSignIn = async (req: Request, res: Response) => {
                 token: token,
                 expiresIn: ms(process.env.JWT_EXPIRATION as string),
                 institutionId: user.institutionId,
+                profileImage: user.profileImage ? { path: user.profileImage.path } : undefined,
             },
         });
     } catch (error: any) {
@@ -122,7 +128,7 @@ export const passwordlessSignIn = async (req: Request, res: Response) => {
 export const renewSignIn = async (req: Request, res: Response) => {
     try {
         // User from Passport-JWT
-        const user = req.user as User;
+        const user = req.user as any;
         // JWT token creation
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET as string, {
             expiresIn: process.env.JWT_EXPIRATION,
@@ -136,6 +142,7 @@ export const renewSignIn = async (req: Request, res: Response) => {
                 token: token,
                 expiresIn: ms(process.env.JWT_EXPIRATION as string),
                 institutionId: user.institutionId,
+                profileImage: user.profileImage ? { path: user.profileImage.path } : undefined,
             },
         });
     } catch (error) {
