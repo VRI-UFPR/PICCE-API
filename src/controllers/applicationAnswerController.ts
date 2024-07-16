@@ -301,6 +301,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                             file.fieldname.startsWith(`itemAnswerGroups[${itemAnswerGroupIndex}][itemAnswers][${itemAnswerIndex}][files]`)
                         )
                         .map((file) => {
+                            files.splice(files.indexOf(file), 1);
                             return { path: file.path };
                         });
                     await prisma.itemAnswer.create({
@@ -314,6 +315,11 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                     });
                 }
             }
+            // Check if there are any files left
+            if (files.length > 0) {
+                throw new Error('Files not associated with any item answer detected.');
+            }
+
             // Return the created application answer with nested content included
             return await prisma.applicationAnswer.findUnique({
                 where: { id: createdApplicationAnswer.id },
@@ -442,10 +448,11 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                     await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
                     // Create new files (udpating files is not supported)
                     const itemAnswerFiles = files
-                        .filter(
-                            (file) => file.fieldname === `itemAnswerGroups[${itemAnswerGroupIndex}][itemAnswers][${itemAnswerIndex}][files]`
+                        .filter((file) =>
+                            file.fieldname.startsWith(`itemAnswerGroups[${itemAnswerGroupIndex}][itemAnswers][${itemAnswerIndex}][files]`)
                         )
                         .map((file) => {
+                            files.splice(files.indexOf(file), 1);
                             return { path: file.path, itemAnswerId: upsertedItemAnswer.id };
                         });
                     await prisma.file.createMany({ data: itemAnswerFiles });
@@ -505,6 +512,11 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                           });
                 }
             }
+            // Check if there are any files left
+            if (files.length > 0) {
+                throw new Error('Files not associated with any item answer detected.');
+            }
+
             // Return the updated application answer with nested content included
             return await prisma.applicationAnswer.findUnique({ where: { id: applicationAnswerId }, select: fields });
         });

@@ -488,7 +488,10 @@ export const createProtocol = async (req: Request, res: Response) => {
                             .filter((file) =>
                                 file.fieldname.startsWith(`pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][files]`)
                             )
-                            .map((file) => ({ path: file.path }));
+                            .map((file) => {
+                                files.splice(files.indexOf(file), 1);
+                                return { path: file.path };
+                            });
                         const createdItem = await prisma.item.create({
                             data: {
                                 text: item.text,
@@ -508,7 +511,10 @@ export const createProtocol = async (req: Request, res: Response) => {
                                         `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][itemOptions][${itemOptionId}][files]`
                                     )
                                 )
-                                .map((file) => ({ path: file.path }));
+                                .map((file) => {
+                                    files.splice(files.indexOf(file), 1);
+                                    return { path: file.path };
+                                });
 
                             const createdItemOption = await prisma.itemOption.create({
                                 data: {
@@ -554,6 +560,11 @@ export const createProtocol = async (req: Request, res: Response) => {
                     });
                 }
             }
+            // Check if there are any files left
+            if (files.length > 0) {
+                throw new Error('Files not associated with any item or option detected.');
+            }
+
             // Return the created application answer with nested content included
             return await prisma.protocol.findUnique({ where: { id: createdProtocol.id }, select: fieldsWViewers });
         });
@@ -842,7 +853,10 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                             .filter((file) =>
                                 file.fieldname.startsWith(`pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][files]`)
                             )
-                            .map((file) => ({ path: file.path, itemId: upsertedItem.id }));
+                            .map((file) => {
+                                files.splice(files.indexOf(file), 1);
+                                return { path: file.path, itemId: upsertedItem.id };
+                            });
 
                         // Create new files (updating files is not supported)
                         await prisma.file.createMany({ data: itemFiles });
@@ -882,7 +896,10 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                         `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][itemOptions][${itemOptionId}][files]`
                                     )
                                 )
-                                .map((file) => ({ path: file.path, itemOptionId: upsertedItemOption.id }));
+                                .map((file) => {
+                                    files.splice(files.indexOf(file), 1);
+                                    return { path: file.path, itemOptionId: upsertedItemOption.id };
+                                });
                             // Create new files (updating files is not supported)
                             await prisma.file.createMany({ data: itemOptionFiles });
                         }
@@ -977,9 +994,15 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                           });
                 }
             }
+            // Check if there are any files left
+            if (files.length > 0) {
+                throw new Error('Files not associated with any item or option detected.');
+            }
+
             // Return the updated application answer with nested content included
             return await prisma.protocol.findUnique({ where: { id: id }, select: fieldsWViewers });
         });
+
         res.status(200).json({ message: 'Protocol updated.', data: upsertedProtocol });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
