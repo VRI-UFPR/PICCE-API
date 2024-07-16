@@ -6,4 +6,9 @@ export const errorFormatter = (error: any) => {
     };
 };
 
+export const errorFormatterMiddleware = (error: any, req: any, res: any, next: any) => {
+    const formattedError = errorFormatter(error);
+    res.status(error.status || 500).json(formattedError);
+};
+
 export default errorFormatter;
