@@ -325,6 +325,11 @@ const fieldsWViewers = {
 export const createProtocol = async (req: Request, res: Response) => {
     try {
         // Yup schemas
+        const fileSchema = yup
+            .object()
+            .shape({ description: yup.string().max(3000), path: yup.string().required() })
+            .noUnknown();
+
         const tableColumnSchema = yup
             .object()
             .shape({ text: yup.string().min(3).max(255).required(), placement: yup.number().min(1).required() })
@@ -332,7 +337,11 @@ export const createProtocol = async (req: Request, res: Response) => {
 
         const itemOptionsSchema = yup
             .object()
-            .shape({ text: yup.string().min(3).max(255).required(), placement: yup.number().min(1).required() })
+            .shape({
+                text: yup.string().min(3).max(255).required(),
+                placement: yup.number().min(1).required(),
+                files: yup.array().of(fileSchema).default([]),
+            })
             .noUnknown();
 
         const itemValidationsSchema = yup
@@ -363,6 +372,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                 enabled: yup.boolean().required(),
                 type: yup.mixed<ItemType>().oneOf(Object.values(ItemType)).required(),
                 placement: yup.number().min(1).required(),
+                files: yup.array().of(fileSchema).default([]),
                 itemOptions: yup.array().of(itemOptionsSchema).default([]),
                 itemValidations: yup.array().of(itemValidationsSchema).default([]),
             })
@@ -484,14 +494,16 @@ export const createProtocol = async (req: Request, res: Response) => {
                         await validateItem(item.type, item.itemOptions.length);
                         // Check if itemValidations are valid
                         await validateItemValidations(item.type, item.itemValidations);
-                        const itemFiles = files
-                            .filter((file) =>
-                                file.fieldname.startsWith(`pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][files]`)
-                            )
-                            .map((file) => {
-                                files.splice(files.indexOf(file), 1);
-                                return { path: file.path };
-                            });
+                        const itemFiles = item.files.map((file, fileIndex) => {
+                            const storedFile = files.find(
+                                (f) => f.fieldname === `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][files][${fileIndex}]`
+                            );
+                            if (!storedFile) throw new Error('File not found.');
+                            return {
+                                description: file.description,
+                                path: storedFile.path,
+                            };
+                        });
                         const createdItem = await prisma.item.create({
                             data: {
                                 text: item.text,
@@ -505,16 +517,18 @@ export const createProtocol = async (req: Request, res: Response) => {
                         });
                         tempIdMap.set(item.tempId, createdItem.id);
                         for (const [itemOptionId, itemOption] of item.itemOptions.entries()) {
-                            const itemOptionFiles = files
-                                .filter((file) =>
-                                    file.fieldname.startsWith(
-                                        `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][itemOptions][${itemOptionId}][files]`
-                                    )
-                                )
-                                .map((file) => {
-                                    files.splice(files.indexOf(file), 1);
-                                    return { path: file.path };
-                                });
+                            const itemOptionFiles = itemOption.files.map((file, fileIndex) => {
+                                const storedFile = files.find(
+                                    (f) =>
+                                        f.fieldname ===
+                                        `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][itemOptions][${itemOptionId}][files][${fileIndex}]`
+                                );
+                                if (!storedFile) throw new Error('File not found.');
+                                return {
+                                    description: file.description,
+                                    path: storedFile.path,
+                                };
+                            });
 
                             const createdItemOption = await prisma.itemOption.create({
                                 data: {
@@ -581,7 +595,12 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
         // ID from params
         const id: number = parseInt(req.params.protocolId);
         // Yup schemas
-        const UpdatedTableColumnSchema = yup
+        const updateFileSchema = yup
+            .object()
+            .shape({ id: yup.number().min(1), description: yup.string().max(3000), path: yup.string().required() })
+            .noUnknown();
+
+        const updateTableColumnSchema = yup
             .object()
             .shape({ id: yup.number().min(1), text: yup.string().min(3).max(255), placement: yup.number().min(1).required() })
             .noUnknown();
@@ -592,7 +611,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 id: yup.number().min(1),
                 text: yup.string().min(3).max(255),
                 placement: yup.number().min(1).required(),
-                filesIds: yup.array().of(yup.number()).default([]),
+                files: yup.array().of(updateFileSchema).default([]),
             })
             .noUnknown();
 
@@ -627,9 +646,9 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 enabled: yup.boolean(),
                 type: yup.mixed<ItemType>().oneOf(Object.values(ItemType)).required(),
                 placement: yup.number().min(1).required(),
+                files: yup.array().of(updateFileSchema).default([]),
                 itemOptions: yup.array().of(updateItemOptionsSchema).default([]),
                 itemValidations: yup.array().of(updateItemValidationsSchema).default([]),
-                filesIds: yup.array().of(yup.number()).default([]),
             })
             .noUnknown();
 
@@ -641,7 +660,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 isRepeatable: yup.boolean(),
                 type: yup.mixed<ItemGroupType>().oneOf(Object.values(ItemGroupType)).required(),
                 items: yup.array().of(updateItemsSchema).min(1).required(),
-                tableColumns: yup.array().of(UpdatedTableColumnSchema).default([]),
+                tableColumns: yup.array().of(updateTableColumnSchema).default([]),
                 dependencies: yup.array().of(updateDependenciesSchema).default([]),
             })
             .noUnknown();
@@ -844,19 +863,22 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                         tempIdMap.set(item.tempId, upsertedItem.id);
                         // Remove files that are not in the updated item
                         const filesToDelete = await prisma.file.findMany({
-                            where: { id: { notIn: item.filesIds as number[] } },
+                            where: { id: { notIn: item.files.map((file) => file.id as number) }, itemId: upsertedItem.id },
                             select: { id: true, path: true },
                         });
                         for (const file of filesToDelete) unlinkSync(file.path);
                         await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
-                        const itemFiles = files
-                            .filter((file) =>
-                                file.fieldname.startsWith(`pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][files]`)
-                            )
-                            .map((file) => {
-                                files.splice(files.indexOf(file), 1);
-                                return { path: file.path, itemId: upsertedItem.id };
-                            });
+                        const itemFiles = item.files.map((file, fileIndex) => {
+                            const storedFile = files.find(
+                                (f) => f.fieldname === `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][files][${fileIndex}]`
+                            );
+                            if (!storedFile) throw new Error('File not found.');
+                            return {
+                                description: file.description,
+                                path: storedFile.path,
+                                itemId: upsertedItem.id,
+                            };
+                        });
 
                         // Create new files (updating files is not supported)
                         await prisma.file.createMany({ data: itemFiles });
@@ -885,21 +907,28 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                   });
                             // Remove files that are not in the updated itemOption
                             const filesToDelete = await prisma.file.findMany({
-                                where: { id: { notIn: itemOption.filesIds as number[] }, itemOptionId: upsertedItemOption.id },
+                                where: {
+                                    id: { notIn: itemOption.files.map((file) => file.id as number) },
+                                    itemOptionId: upsertedItemOption.id,
+                                },
                                 select: { id: true, path: true },
                             });
                             for (const file of filesToDelete) unlinkSync(file.path);
                             await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
-                            const itemOptionFiles = files
-                                .filter((file) =>
-                                    file.fieldname.startsWith(
-                                        `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][itemOptions][${itemOptionId}][files]`
-                                    )
-                                )
-                                .map((file) => {
-                                    files.splice(files.indexOf(file), 1);
-                                    return { path: file.path, itemOptionId: upsertedItemOption.id };
-                                });
+                            const itemOptionFiles = itemOption.files.map((file, fileIndex) => {
+                                const storedFile = files.find(
+                                    (f) =>
+                                        f.fieldname ===
+                                        `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][itemOptions][${itemOptionId}][files][${fileIndex}]`
+                                );
+                                if (!storedFile) throw new Error('File not found.');
+                                return {
+                                    description: file.description,
+                                    path: storedFile.path,
+                                    itemOptionId: upsertedItemOption.id,
+                                };
+                            });
+
                             // Create new files (updating files is not supported)
                             await prisma.file.createMany({ data: itemOptionFiles });
                         }
