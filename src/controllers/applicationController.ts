@@ -157,9 +157,14 @@ const fieldsWProtocol = {
                                     placement: true,
                                     itemOptions: {
                                         orderBy: { placement: 'asc' as any },
-                                        select: { id: true, text: true, placement: true, files: { select: { id: true, path: true } } },
+                                        select: {
+                                            id: true,
+                                            text: true,
+                                            placement: true,
+                                            files: { select: { id: true, path: true, description: true } },
+                                        },
                                     },
-                                    files: { select: { id: true, path: true } },
+                                    files: { select: { id: true, path: true, description: true } },
                                 },
                             },
                             dependencies: { select: { type: true, argument: true, itemId: true, customMessage: true } },
@@ -442,7 +447,9 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
                             },
                             files: {
                                 select: {
+                                    id: true,
                                     path: true,
+                                    description: true,
                                 },
                             },
                         },

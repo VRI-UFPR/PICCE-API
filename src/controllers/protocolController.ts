@@ -299,7 +299,7 @@ const fields = {
                                 orderBy: { placement: 'asc' as any },
                                 select: { id: true, text: true, placement: true, files: { select: { id: true, path: true } } },
                             },
-                            files: { select: { id: true, path: true } },
+                            files: { select: { id: true, path: true, description: true } },
                             itemValidations: { select: { type: true, argument: true, customMessage: true } },
                         },
                     },

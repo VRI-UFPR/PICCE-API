@@ -192,7 +192,7 @@ const fields = {
     itemAnswerGroups: {
         select: {
             id: true,
-            itemAnswers: { select: { id: true, text: true, itemId: true, files: { select: { id: true, path: true } } } },
+            itemAnswers: { select: { id: true, text: true, itemId: true, files: { select: { id: true, path: true, description: true } } } },
             optionAnswers: { select: { id: true, text: true, itemId: true, optionId: true } },
             tableAnswers: { select: { id: true, text: true, itemId: true, columnId: true } },
         },
