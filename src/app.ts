@@ -15,6 +15,7 @@ import path from 'path';
 import swaggerDocs from './config/openAPISpec';
 import swaggerUi from 'swagger-ui-express';
 import cors from 'cors';
+import { errorFormatterMiddleware } from './services/errorFormatter';
 
 // Express configuration
 const app = express();
@@ -34,7 +35,7 @@ app.use(
 );
 
 // API routes
-app.use('/api', routes);
+app.use('/api', routes, errorFormatterMiddleware);
 app.use('/uploads', express.static(path.basename('uploads')));
 
 // Server starting point

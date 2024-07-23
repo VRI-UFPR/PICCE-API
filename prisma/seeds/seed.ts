@@ -27,7 +27,7 @@ import {
 import prismaClient from '../../src/services/prismaClient';
 
 async function main() {
-    const addresses: Omit<Address, 'createdAt' | 'updateAt'>[] = [
+    const addresses: Omit<Address, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             city: 'Curitiba',
@@ -36,7 +36,7 @@ async function main() {
         },
     ];
 
-    const institutions: Omit<Institution, 'createdAt' | 'updateAt'>[] = [
+    const institutions: Omit<Institution, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             name: 'Universidade Federal do Paraná',
@@ -45,14 +45,15 @@ async function main() {
         },
     ];
 
-    const classrooms: Omit<Classroom, 'createdAt' | 'updateAt'>[] = [
+    const classrooms: Omit<Classroom, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
+            name: 'Sala 1',
             institutionId: 1,
         },
     ];
 
-    const users: (Omit<User, 'createdAt' | 'updateAt'> & { classrooms: number[] })[] = [
+    const users: (Omit<User, 'createdAt' | 'updatedAt' | 'profileImageId'> & { classrooms: number[] })[] = [
         {
             id: 1,
             name: 'Visitante',
@@ -395,7 +396,7 @@ async function main() {
         },
     ];
 
-    const picceProtocols: Omit<Protocol, 'createdAt' | 'updateAt'>[] = [
+    const picceProtocols: Omit<Protocol, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             title: 'PICCE - Exposição ao marketing e sua influência no padrão de consumo de drogas: implicações psicosociais',
@@ -578,7 +579,7 @@ async function main() {
         },
     ];
 
-    const piccePages: Omit<Page, 'createdAt' | 'updateAt'>[] = [
+    const piccePages: Omit<Page, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             protocolId: 1,
@@ -671,115 +672,115 @@ async function main() {
         },
     ];
 
-    const picceItemGroups: Omit<ItemGroup, 'createdAt' | 'updateAt'>[] = [
+    const picceItemGroups: Omit<ItemGroup, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             pageId: 1,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 2,
             pageId: 2,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 3,
             pageId: 3,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 4,
             pageId: 4,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 5,
             pageId: 5,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 6,
             pageId: 6,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 7,
             pageId: 7,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 8,
             pageId: 8,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 9,
             pageId: 9,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 10,
             pageId: 10,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 11,
             pageId: 11,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 12,
             pageId: 12,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 13,
             pageId: 13,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 14,
             pageId: 14,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 15,
             pageId: 15,
-            type: 'MULTIPLE_ITEMS',
+            type: 'ONE_DIMENSIONAL',
             placement: 1,
             isRepeatable: false,
         },
     ];
 
-    const picceItems: Omit<Item, 'createdAt' | 'updateAt'>[] = [
+    const picceItems: Omit<Item, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             groupId: 1,
@@ -6992,9 +6993,10 @@ async function main() {
         },
     ];
 
-    const picceFiles: Omit<File, 'createdAt' | 'updateAt'>[] = [
+    const picceFiles: Omit<File, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694538817/PICCE/bngbv1c6wp0ejugoulby.png',
             itemId: 7,
             itemOptionId: null,
@@ -7002,6 +7004,7 @@ async function main() {
         },
         {
             id: 2,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694540191/PICCE/Imagem_6_-_Categoria_de_Alimentos_Existentes_guia_hlwspq.png',
             itemId: 101,
             itemOptionId: null,
@@ -7009,6 +7012,7 @@ async function main() {
         },
         {
             id: 3,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694540551/PICCE/Imagem_7_-_salsichas-assadas_guia_1_hcpz6d.jpg',
             itemId: 102,
             itemOptionId: null,
@@ -7016,6 +7020,7 @@ async function main() {
         },
         {
             id: 4,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694540192/PICCE/Imagem_8_-_variedade-de-deliciosos-biscoitos-frescos_guia_ppxyme.jpg',
             itemId: 104,
             itemOptionId: null,
@@ -7023,6 +7028,7 @@ async function main() {
         },
         {
             id: 5,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694540191/PICCE/Imagem_9_-_vista-superior-de-batatas-fritas-e-sopros-de-queijo_yelbau.jpg',
             itemId: 106,
             itemOptionId: null,
@@ -7030,6 +7036,7 @@ async function main() {
         },
         {
             id: 6,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694540616/PICCE/Imagem_10_-_lollipop-marshmallows-e-vinhos_guia_1_uu5zs2.jpg',
             itemId: 108,
             itemOptionId: null,
@@ -7037,6 +7044,7 @@ async function main() {
         },
         {
             id: 7,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694540191/PICCE/Imagem_11_adjsdu.jpg',
             itemId: 110,
             itemOptionId: null,
@@ -7044,6 +7052,7 @@ async function main() {
         },
         {
             id: 8,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694540191/PICCE/Imagem_12_xdhqlq.jpg',
             itemId: 112,
             itemOptionId: null,
@@ -7051,6 +7060,7 @@ async function main() {
         },
         {
             id: 9,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697671958/ic/yuripediu/ae5uxxwp8drjzei9f91k.jpg',
             itemId: 120,
             itemOptionId: null,
@@ -7058,6 +7068,7 @@ async function main() {
         },
         {
             id: 10,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697671954/ic/yuripediu/l1axxroiayfo2az66eda.jpg',
             itemId: 120,
             itemOptionId: null,
@@ -7065,6 +7076,7 @@ async function main() {
         },
         {
             id: 11,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694548513/PICCE/jrac55mflnrbgn88kpou.jpg',
             itemId: 129,
             itemOptionId: null,
@@ -7072,6 +7084,7 @@ async function main() {
         },
         {
             id: 12,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675700/ic/diptera/utdkcjfg99sxpxqtxedy.jpg',
             itemId: 130,
             itemOptionId: null,
@@ -7079,6 +7092,7 @@ async function main() {
         },
         {
             id: 13,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675700/ic/diptera/gpq0omnokjyeos1eevep.jpg',
             itemId: 130,
             itemOptionId: null,
@@ -7086,6 +7100,7 @@ async function main() {
         },
         {
             id: 14,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675700/ic/diptera/xhittltgz8ugklh3plui.jpg',
             itemId: 130,
             itemOptionId: null,
@@ -7093,6 +7108,7 @@ async function main() {
         },
         {
             id: 15,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876428/ic/diptera/i8axgkktdfjqor1h0rxp.jpg',
             itemId: 130,
             itemOptionId: null,
@@ -7100,6 +7116,7 @@ async function main() {
         },
         {
             id: 16,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876428/ic/diptera/dnmitcoi6tf0now8ysuy.jpg',
             itemId: 130,
             itemOptionId: null,
@@ -7107,6 +7124,7 @@ async function main() {
         },
         {
             id: 17,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876428/ic/diptera/aulxw4mb9ufu2fglodnl.jpg',
             itemId: 130,
             itemOptionId: null,
@@ -7114,6 +7132,7 @@ async function main() {
         },
         {
             id: 18,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694548621/PICCE/kk7cf1wpsfjxmv54f8n1.jpg',
             itemId: 131,
             itemOptionId: null,
@@ -7121,6 +7140,7 @@ async function main() {
         },
         {
             id: 19,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675835/ic/Hymenoptera/wg9xppwtqcqkw7yaps9s.jpg',
             itemId: 132,
             itemOptionId: null,
@@ -7128,6 +7148,7 @@ async function main() {
         },
         {
             id: 20,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675834/ic/Hymenoptera/gixscufr7frxupaukeln.jpg',
             itemId: 132,
             itemOptionId: null,
@@ -7135,6 +7156,7 @@ async function main() {
         },
         {
             id: 21,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675834/ic/Hymenoptera/xmqmvlcuqzshjy8xuloz.jpg',
             itemId: 132,
             itemOptionId: null,
@@ -7142,6 +7164,7 @@ async function main() {
         },
         {
             id: 22,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876462/ic/Hymenoptera/yc3g4m0gyvtwfgyeqh8l.jpg',
             itemId: 132,
             itemOptionId: null,
@@ -7149,6 +7172,7 @@ async function main() {
         },
         {
             id: 23,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876462/ic/Hymenoptera/mhzilc6cp1ubqpyomdjj.jpg',
             itemId: 132,
             itemOptionId: null,
@@ -7156,6 +7180,7 @@ async function main() {
         },
         {
             id: 24,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876462/ic/Hymenoptera/yc3g4m0gyvtwfgyeqh8l.jpg',
             itemId: 132,
             itemOptionId: null,
@@ -7163,6 +7188,7 @@ async function main() {
         },
         {
             id: 25,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694548640/PICCE/kx0arrz2uauivp3le1jx.jpg',
             itemId: 133,
             itemOptionId: null,
@@ -7170,6 +7196,7 @@ async function main() {
         },
         {
             id: 26,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675870/ic/Lepidoptera/xq1p2ntt2hixgm3yyeyw.jpg',
             itemId: 134,
             itemOptionId: null,
@@ -7177,6 +7204,7 @@ async function main() {
         },
         {
             id: 27,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675869/ic/Lepidoptera/wywilovj07ltlta4tzvc.jpg',
             itemId: 134,
             itemOptionId: null,
@@ -7184,6 +7212,7 @@ async function main() {
         },
         {
             id: 28,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675870/ic/Lepidoptera/tkktesimk2myzsyveg5y.jpg',
             itemId: 134,
             itemOptionId: null,
@@ -7191,6 +7220,7 @@ async function main() {
         },
         {
             id: 29,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876491/ic/Lepidoptera/jag0bzhfbr5kskx6tbie.jpg',
             itemId: 134,
             itemOptionId: null,
@@ -7198,6 +7228,7 @@ async function main() {
         },
         {
             id: 30,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876491/ic/Lepidoptera/bctymontyzefos37ujyr.jpg',
             itemId: 134,
             itemOptionId: null,
@@ -7205,6 +7236,7 @@ async function main() {
         },
         {
             id: 31,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876491/ic/Lepidoptera/dlpno6f6lpod6404uv0i.jpg',
             itemId: 134,
             itemOptionId: null,
@@ -7212,6 +7244,7 @@ async function main() {
         },
         {
             id: 32,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694548698/PICCE/fgpf3cfkd7errep3y2pu.jpg',
             itemId: 135,
             itemOptionId: null,
@@ -7219,6 +7252,7 @@ async function main() {
         },
         {
             id: 33,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675925/ic/Coleoptera/szow6sgfw2iedjzmsopp.jpg',
             itemId: 136,
             itemOptionId: null,
@@ -7226,6 +7260,7 @@ async function main() {
         },
         {
             id: 34,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675925/ic/Coleoptera/rtygmvc192bts7mtgckh.jpg',
             itemId: 136,
             itemOptionId: null,
@@ -7233,6 +7268,7 @@ async function main() {
         },
         {
             id: 35,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675924/ic/Coleoptera/mc1vqim4pr9qwe8xmvll.jpg',
             itemId: 136,
             itemOptionId: null,
@@ -7240,6 +7276,7 @@ async function main() {
         },
         {
             id: 36,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876522/ic/Coleoptera/qnthb6bje7g8voafoyb6.jpg',
             itemId: 136,
             itemOptionId: null,
@@ -7247,6 +7284,7 @@ async function main() {
         },
         {
             id: 37,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876521/ic/Coleoptera/pg0upnbbyvlph1fwcdx2.jpg',
             itemId: 136,
             itemOptionId: null,
@@ -7254,6 +7292,7 @@ async function main() {
         },
         {
             id: 38,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876521/ic/Coleoptera/huwhekztlesskmv0ceo1.jpg',
             itemId: 136,
             itemOptionId: null,
@@ -7261,6 +7300,7 @@ async function main() {
         },
         {
             id: 39,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694548715/PICCE/cpppj9gtcuk9rkdmzmip.jpg',
             itemId: 137,
             itemOptionId: null,
@@ -7268,6 +7308,7 @@ async function main() {
         },
         {
             id: 40,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675968/ic/Hemiptera%20%28T1%29/szlckysziidgexyzd9zm.jpg',
             itemId: 138,
             itemOptionId: null,
@@ -7275,6 +7316,7 @@ async function main() {
         },
         {
             id: 41,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675968/ic/Hemiptera%20%28T1%29/vgcjsw6edbqlvk5i2pgj.jpg',
             itemId: 138,
             itemOptionId: null,
@@ -7282,6 +7324,7 @@ async function main() {
         },
         {
             id: 42,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675968/ic/Hemiptera%20%28T1%29/vpdowrmoigqxs5dlyko1.jpg',
             itemId: 138,
             itemOptionId: null,
@@ -7289,6 +7332,7 @@ async function main() {
         },
         {
             id: 43,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876542/ic/Hemiptera%20%28T1%29/xu4wvsxkcopmakxw4ydn.jpg',
             itemId: 138,
             itemOptionId: null,
@@ -7296,6 +7340,7 @@ async function main() {
         },
         {
             id: 44,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876543/ic/Hemiptera%20%28T1%29/w5caqf6y1zcf1v9gxt6w.jpg',
             itemId: 138,
             itemOptionId: null,
@@ -7303,6 +7348,7 @@ async function main() {
         },
         {
             id: 45,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876542/ic/Hemiptera%20%28T1%29/asmqz7g8uhhlgfbmmqpo.jpg',
             itemId: 138,
             itemOptionId: null,
@@ -7310,6 +7356,7 @@ async function main() {
         },
         {
             id: 46,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694548727/PICCE/rknmhyfsiisib5mzud1j.jpg',
             itemId: 139,
             itemOptionId: null,
@@ -7317,6 +7364,7 @@ async function main() {
         },
         {
             id: 47,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675998/ic/Hemiptera%20%28T2%29/tfvqqgux9ds2rza2zbey.jpg',
             itemId: 140,
             itemOptionId: null,
@@ -7324,6 +7372,7 @@ async function main() {
         },
         {
             id: 48,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675998/ic/Hemiptera%20%28T2%29/fza74qkyoquharza5tnt.jpg',
             itemId: 140,
             itemOptionId: null,
@@ -7331,6 +7380,7 @@ async function main() {
         },
         {
             id: 49,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697675999/ic/Hemiptera%20%28T2%29/uwr6haq7rcn8memcj32n.jpg',
             itemId: 140,
             itemOptionId: null,
@@ -7338,6 +7388,7 @@ async function main() {
         },
         {
             id: 50,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876564/ic/Hemiptera%20%28T2%29/klpmlowlkvl83imvqpyj.jpg',
             itemId: 140,
             itemOptionId: null,
@@ -7345,6 +7396,7 @@ async function main() {
         },
         {
             id: 51,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876564/ic/Hemiptera%20%28T2%29/nudso7a6rdux0ku69pbq.jpg',
             itemId: 140,
             itemOptionId: null,
@@ -7352,6 +7404,7 @@ async function main() {
         },
         {
             id: 52,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876564/ic/Hemiptera%20%28T2%29/easy2yad5rn9c68vbfb2.jpg',
             itemId: 140,
             itemOptionId: null,
@@ -7359,6 +7412,7 @@ async function main() {
         },
         {
             id: 53,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694548738/PICCE/vcb4mwmw8yqc8egtwkxp.jpg',
             itemId: 141,
             itemOptionId: null,
@@ -7366,6 +7420,7 @@ async function main() {
         },
         {
             id: 54,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676065/ic/Hemiptera%20%28T3%29/kqautgssmxp7zyohuvag.jpg',
             itemId: 142,
             itemOptionId: null,
@@ -7373,6 +7428,7 @@ async function main() {
         },
         {
             id: 55,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676065/ic/Hemiptera%20%28T3%29/f9wfemzotvwb77m71xyp.jpg',
             itemId: 142,
             itemOptionId: null,
@@ -7380,6 +7436,7 @@ async function main() {
         },
         {
             id: 56,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676065/ic/Hemiptera%20%28T3%29/bi1msbtcuy3ybnhrabjx.jpg',
             itemId: 142,
             itemOptionId: null,
@@ -7387,6 +7444,7 @@ async function main() {
         },
         {
             id: 57,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694548753/PICCE/vg0bnw7fsc6ubs3ejant.jpg',
             itemId: 143,
             itemOptionId: null,
@@ -7394,6 +7452,7 @@ async function main() {
         },
         {
             id: 58,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676145/ic/Orthoptera/krwquwjo7pqmqzo4potu.jpg',
             itemId: 144,
             itemOptionId: null,
@@ -7401,6 +7460,7 @@ async function main() {
         },
         {
             id: 59,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676145/ic/Orthoptera/xypfnm54ak6qxykzmogt.jpg',
             itemId: 144,
             itemOptionId: null,
@@ -7408,6 +7468,7 @@ async function main() {
         },
         {
             id: 60,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676145/ic/Orthoptera/ij7wnrkqelyyyyyoyach.jpg',
             itemId: 144,
             itemOptionId: null,
@@ -7415,6 +7476,7 @@ async function main() {
         },
         {
             id: 61,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876604/ic/Orthoptera/we4vmsjf7cn99zzhdfle.jpg',
             itemId: 144,
             itemOptionId: null,
@@ -7422,6 +7484,7 @@ async function main() {
         },
         {
             id: 62,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876604/ic/Orthoptera/hh2jvtmc4rjl8kzsm1fs.jpg',
             itemId: 144,
             itemOptionId: null,
@@ -7429,6 +7492,7 @@ async function main() {
         },
         {
             id: 63,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876605/ic/Orthoptera/cjwzxfaajkbuqhbvqs25.jpg',
             itemId: 144,
             itemOptionId: null,
@@ -7436,6 +7500,7 @@ async function main() {
         },
         {
             id: 64,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694548764/PICCE/cauy71igxciuwkiwziiv.jpg',
             itemId: 145,
             itemOptionId: null,
@@ -7443,6 +7508,7 @@ async function main() {
         },
         {
             id: 65,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676185/ic/Blattodea/zqzrh9nv1jvswwmdckzp.jpg',
             itemId: 146,
             itemOptionId: null,
@@ -7450,6 +7516,7 @@ async function main() {
         },
         {
             id: 66,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676185/ic/Blattodea/qlpgucfsaoklptijtnfd.jpg',
             itemId: 146,
             itemOptionId: null,
@@ -7457,6 +7524,7 @@ async function main() {
         },
         {
             id: 67,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676185/ic/Blattodea/v6uighnypx72n4rehgzj.jpg',
             itemId: 146,
             itemOptionId: null,
@@ -7464,6 +7532,7 @@ async function main() {
         },
         {
             id: 68,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694548778/PICCE/adz9xesiiv1xj4nj3fqw.jpg',
             itemId: 147,
             itemOptionId: null,
@@ -7471,6 +7540,7 @@ async function main() {
         },
         {
             id: 69,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676218/ic/Odonata/zshrbytqywuzu2h1afgd.jpg',
             itemId: 148,
             itemOptionId: null,
@@ -7478,6 +7548,7 @@ async function main() {
         },
         {
             id: 70,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676218/ic/Odonata/fa4rvifk6a3ielmetuot.jpg',
             itemId: 148,
             itemOptionId: null,
@@ -7485,6 +7556,7 @@ async function main() {
         },
         {
             id: 71,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676218/ic/Odonata/qxcdqrrpoo8q5a1ltqth.jpg',
             itemId: 148,
             itemOptionId: null,
@@ -7492,6 +7564,7 @@ async function main() {
         },
         {
             id: 72,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876635/ic/Odonata/luemkkkysgav0jdjvbbp.jpg',
             itemId: 148,
             itemOptionId: null,
@@ -7499,6 +7572,7 @@ async function main() {
         },
         {
             id: 73,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876635/ic/Odonata/q8nlfw4bsbnrywkywiec.jpg',
             itemId: 148,
             itemOptionId: null,
@@ -7506,6 +7580,7 @@ async function main() {
         },
         {
             id: 74,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699876636/ic/Odonata/gg37pwrshxh2zq1wdhzh.jpg',
             itemId: 148,
             itemOptionId: null,
@@ -7513,6 +7588,7 @@ async function main() {
         },
         {
             id: 75,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694548790/PICCE/ippoyhtwocxkai2w06eu.jpg',
             itemId: 149,
             itemOptionId: null,
@@ -7520,6 +7596,7 @@ async function main() {
         },
         {
             id: 76,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676273/ic/Dermaptera/sqgaoxxvskfkqjzpojte.jpg',
             itemId: 150,
             itemOptionId: null,
@@ -7527,6 +7604,7 @@ async function main() {
         },
         {
             id: 77,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676274/ic/Dermaptera/pknssckzxmajjdpwrmdg.jpg',
             itemId: 150,
             itemOptionId: null,
@@ -7534,6 +7612,7 @@ async function main() {
         },
         {
             id: 78,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676274/ic/Dermaptera/iywosojrpxr4dheaksb8.jpg',
             itemId: 150,
             itemOptionId: null,
@@ -7541,6 +7620,7 @@ async function main() {
         },
         {
             id: 79,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694548831/PICCE/l3sjftofoudspjuu2gki.jpg',
             itemId: 151,
             itemOptionId: null,
@@ -7548,6 +7628,7 @@ async function main() {
         },
         {
             id: 80,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676342/ic/Mantodea/dknrldvo36eqoyyaqwbs.jpg',
             itemId: 152,
             itemOptionId: null,
@@ -7555,6 +7636,7 @@ async function main() {
         },
         {
             id: 81,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676342/ic/Mantodea/jq3suoxw8j5vufzisxqi.jpg',
             itemId: 152,
             itemOptionId: null,
@@ -7562,6 +7644,7 @@ async function main() {
         },
         {
             id: 82,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697676342/ic/Mantodea/b6jjijo2ivwbyeqekqzk.jpg',
             itemId: 152,
             itemOptionId: null,
@@ -7569,6 +7652,7 @@ async function main() {
         },
         {
             id: 83,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1694548847/PICCE/gfdksojtoohycfgytpl6.jpg',
             itemId: 153,
             itemOptionId: null,
@@ -7576,6 +7660,7 @@ async function main() {
         },
         {
             id: 84,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/drgyf6g2z/image/upload/v1700186441/PICCE-8/gxak38qiwo4ltddvm4rp.jpg',
             itemId: 154,
             itemOptionId: null,
@@ -7583,6 +7668,7 @@ async function main() {
         },
         {
             id: 85,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/drgyf6g2z/image/upload/v1700186440/PICCE-8/oiqkz4tuwlmnbzyyys31.jpg',
             itemId: 154,
             itemOptionId: null,
@@ -7590,6 +7676,7 @@ async function main() {
         },
         {
             id: 86,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/drgyf6g2z/image/upload/v1700186441/PICCE-8/i7darbmnv9rcvwoyq6b1.jpg',
             itemId: 154,
             itemOptionId: null,
@@ -7597,6 +7684,7 @@ async function main() {
         },
         {
             id: 87,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1697674229/ic/yuripediu/htxdeihyvohku8o8wds7.jpg',
             itemId: 157,
             itemOptionId: null,
@@ -7604,6 +7692,7 @@ async function main() {
         },
         {
             id: 88,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345615/ic/t5/cwtsla7fqvarrnx12vih.jpg',
             itemId: 168,
             itemOptionId: null,
@@ -7611,6 +7700,7 @@ async function main() {
         },
         {
             id: 89,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345615/ic/t5/muktb1qpcsit3k78v3dm.jpg',
             itemId: 170,
             itemOptionId: null,
@@ -7618,6 +7708,7 @@ async function main() {
         },
         {
             id: 90,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345621/ic/t5/v59esx7msv57ubdpeurj.jpg',
             itemId: 172,
             itemOptionId: null,
@@ -7625,6 +7716,7 @@ async function main() {
         },
         {
             id: 91,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345618/ic/t5/lws41jisrqmp0pc7gonb.jpg',
             itemId: 174,
             itemOptionId: null,
@@ -7632,6 +7724,7 @@ async function main() {
         },
         {
             id: 92,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345616/ic/t5/x6iuxbn79zojpeytqtvd.jpg',
             itemId: 176,
             itemOptionId: null,
@@ -7639,6 +7732,7 @@ async function main() {
         },
         {
             id: 93,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345619/ic/t5/od8sk6afbhdjzcsyjn0g.jpg',
             itemId: 176,
             itemOptionId: null,
@@ -7646,6 +7740,7 @@ async function main() {
         },
         {
             id: 94,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345623/ic/t5/djab5qwawjuz0wvgxpin.jpg',
             itemId: 178,
             itemOptionId: null,
@@ -7653,6 +7748,7 @@ async function main() {
         },
         {
             id: 95,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345620/ic/t5/g15fymunisocjblyyizw.jpg',
             itemId: 180,
             itemOptionId: null,
@@ -7660,6 +7756,7 @@ async function main() {
         },
         {
             id: 96,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699962411/ic/t5/spmdj9krhi0qonjiljot.png',
             itemId: 182,
             itemOptionId: null,
@@ -7667,6 +7764,7 @@ async function main() {
         },
         {
             id: 97,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345623/ic/t5/scte59nes3bmr4v0byfk.jpg',
             itemId: 184,
             itemOptionId: null,
@@ -7674,6 +7772,7 @@ async function main() {
         },
         {
             id: 98,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345623/ic/t5/rvhmr5evxsft6mrfsqnu.jpg',
             itemId: 186,
             itemOptionId: null,
@@ -7681,6 +7780,7 @@ async function main() {
         },
         {
             id: 99,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345624/ic/t5/vqt8vmnnegcsiysypxj9.jpg',
             itemId: 188,
             itemOptionId: null,
@@ -7688,6 +7788,7 @@ async function main() {
         },
         {
             id: 100,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345598/ic/t5/u90uyruiei7dcwlobvdr.jpg',
             itemId: 190,
             itemOptionId: null,
@@ -7695,6 +7796,7 @@ async function main() {
         },
         {
             id: 101,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345624/ic/t5/lucil1yrwescqematfo2.jpg',
             itemId: 190,
             itemOptionId: null,
@@ -7702,6 +7804,7 @@ async function main() {
         },
         {
             id: 102,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345597/ic/t5/vczt1fgzlknoit0ojqlx.jpg',
             itemId: 192,
             itemOptionId: null,
@@ -7709,6 +7812,7 @@ async function main() {
         },
         {
             id: 103,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345599/ic/t5/cuvqddd0h39gmdnc0j6r.jpg',
             itemId: 192,
             itemOptionId: null,
@@ -7716,6 +7820,7 @@ async function main() {
         },
         {
             id: 104,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345596/ic/t5/osqz9cswmkggihcb7hkb.jpg',
             itemId: 194,
             itemOptionId: null,
@@ -7723,6 +7828,7 @@ async function main() {
         },
         {
             id: 105,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345603/ic/t5/c1yluq7dzfklmucjtk0i.jpg',
             itemId: 196,
             itemOptionId: null,
@@ -7730,6 +7836,7 @@ async function main() {
         },
         {
             id: 106,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345602/ic/t5/zemyacws3qor9aafgw24.jpg',
             itemId: 196,
             itemOptionId: null,
@@ -7737,6 +7844,7 @@ async function main() {
         },
         {
             id: 107,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345601/ic/t5/qgts8pu29mpdbspgqdg4.jpg',
             itemId: 198,
             itemOptionId: null,
@@ -7744,6 +7852,7 @@ async function main() {
         },
         {
             id: 108,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345603/ic/t5/ddzqhnledq8ftgsfkypg.jpg',
             itemId: 198,
             itemOptionId: null,
@@ -7751,6 +7860,7 @@ async function main() {
         },
         {
             id: 109,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345615/ic/t5/rknzqzmjowdpreffybph.jpg',
             itemId: 200,
             itemOptionId: null,
@@ -7758,6 +7868,7 @@ async function main() {
         },
         {
             id: 110,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345604/ic/t5/ehz3i0013nw9kiy8triz.jpg',
             itemId: 200,
             itemOptionId: null,
@@ -7765,6 +7876,7 @@ async function main() {
         },
         {
             id: 111,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345610/ic/t5/tluhxwltiolxldebbbmw.jpg',
             itemId: 202,
             itemOptionId: null,
@@ -7772,6 +7884,7 @@ async function main() {
         },
         {
             id: 112,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345615/ic/t5/ajrtzd53yvtvm8zz4n9i.jpg',
             itemId: 202,
             itemOptionId: null,
@@ -7779,6 +7892,7 @@ async function main() {
         },
         {
             id: 113,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345612/ic/t5/eaftqndck8n5hnmoyrhd.jpg',
             itemId: 204,
             itemOptionId: null,
@@ -7786,6 +7900,7 @@ async function main() {
         },
         {
             id: 114,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345614/ic/t5/pjwmg0m47qwjdpltgz9b.jpg',
             itemId: 204,
             itemOptionId: null,
@@ -7793,6 +7908,7 @@ async function main() {
         },
         {
             id: 115,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345616/ic/t5/hothfvu1a0ezgpuxc36t.jpg',
             itemId: 206,
             itemOptionId: null,
@@ -7800,6 +7916,7 @@ async function main() {
         },
         {
             id: 116,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345615/ic/t5/ppds5iehaqlozgyp48vx.jpg',
             itemId: 208,
             itemOptionId: null,
@@ -7807,6 +7924,7 @@ async function main() {
         },
         {
             id: 117,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345618/ic/t5/xprbnrbekcjxvlmym1tq.jpg',
             itemId: 210,
             itemOptionId: null,
@@ -7814,6 +7932,7 @@ async function main() {
         },
         {
             id: 118,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345621/ic/t5/j9zoic3ezpp4bmirmiuv.jpg',
             itemId: 212,
             itemOptionId: null,
@@ -7821,6 +7940,7 @@ async function main() {
         },
         {
             id: 119,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345622/ic/t5/sjwcsptvwmjfxm1s2sfd.jpg',
             itemId: 214,
             itemOptionId: null,
@@ -7828,6 +7948,7 @@ async function main() {
         },
         {
             id: 120,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345617/ic/t5/hjpquj72abmi6lta3mls.jpg',
             itemId: 214,
             itemOptionId: null,
@@ -7835,6 +7956,7 @@ async function main() {
         },
         {
             id: 121,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699962707/ic/t5/repteis/cjjqrbfocyoncmb7s2eu.jpg',
             itemId: 217,
             itemOptionId: null,
@@ -7842,6 +7964,7 @@ async function main() {
         },
         {
             id: 122,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699962708/ic/t5/repteis/uaxjwppcq42inumbjbmh.jpg',
             itemId: 219,
             itemOptionId: null,
@@ -7849,6 +7972,7 @@ async function main() {
         },
         {
             id: 123,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699962708/ic/t5/repteis/ygfcnafj8l59adnfnx24.jpg',
             itemId: 221,
             itemOptionId: null,
@@ -7856,6 +7980,7 @@ async function main() {
         },
         {
             id: 124,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699962708/ic/t5/repteis/herhecubbjbmkjduujry.jpg',
             itemId: 223,
             itemOptionId: null,
@@ -7863,6 +7988,7 @@ async function main() {
         },
         {
             id: 125,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699962709/ic/t5/repteis/arlmei6bfcqzs4fpwmkn.jpg',
             itemId: 225,
             itemOptionId: null,
@@ -7870,6 +7996,7 @@ async function main() {
         },
         {
             id: 126,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699962709/ic/t5/repteis/eg2t211cvkrkrt1j1zu9.jpg',
             itemId: 227,
             itemOptionId: null,
@@ -7877,6 +8004,7 @@ async function main() {
         },
         {
             id: 127,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699962709/ic/t5/repteis/ytw0vkuaot3m2alns4zi.png',
             itemId: 230,
             itemOptionId: null,
@@ -7884,6 +8012,7 @@ async function main() {
         },
         {
             id: 128,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699962709/ic/t5/repteis/qqe7bvaiisahxonohcex.png',
             itemId: 232,
             itemOptionId: null,
@@ -7891,6 +8020,7 @@ async function main() {
         },
         {
             id: 129,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699962710/ic/t5/repteis/i2rzuyavly6vmufxs2pi.jpg',
             itemId: 234,
             itemOptionId: null,
@@ -7898,6 +8028,7 @@ async function main() {
         },
         {
             id: 130,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699962709/ic/t5/repteis/cirlm1hwqh61xe0bzbmw.jpg',
             itemId: 236,
             itemOptionId: null,
@@ -7905,6 +8036,7 @@ async function main() {
         },
         {
             id: 131,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695345595/ic/t5/k36fqrt8sssfe2sadddt.jpg',
             itemId: 238,
             itemOptionId: null,
@@ -7912,6 +8044,7 @@ async function main() {
         },
         {
             id: 132,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699963021/ic/t5/repteis/duuoetoukfaxopsigzkt.jpg',
             itemId: 240,
             itemOptionId: null,
@@ -7919,6 +8052,7 @@ async function main() {
         },
         {
             id: 133,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699962710/ic/t5/repteis/qr3jtizqcxf2gyrdabmt.jpg',
             itemId: 242,
             itemOptionId: null,
@@ -7926,6 +8060,7 @@ async function main() {
         },
         {
             id: 134,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700265998/ic/t11%20agua/glj2tuwusxcmwsv5z2hk.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -7933,6 +8068,7 @@ async function main() {
         },
         {
             id: 135,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700270491/ic/t11%20agua/d8rotknfpqfj0pk4b4fc.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -7940,6 +8076,7 @@ async function main() {
         },
         {
             id: 136,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700270779/ic/t11%20agua/oajhuw693zff4geiarqn.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -7947,6 +8084,7 @@ async function main() {
         },
         {
             id: 137,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700265998/ic/t11%20agua/qntyiqnun3lngr6xhogq.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -7954,6 +8092,7 @@ async function main() {
         },
         {
             id: 138,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700266000/ic/t11%20agua/eshgd5jj2mtapw1t8v4r.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -7961,6 +8100,7 @@ async function main() {
         },
         {
             id: 139,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700266000/ic/t11%20agua/pyjgzecgednun0ymkklu.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -7968,6 +8108,7 @@ async function main() {
         },
         {
             id: 140,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700266000/ic/t11%20agua/anqzrebr0cqcyky5w11k.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -7975,6 +8116,7 @@ async function main() {
         },
         {
             id: 141,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700270780/ic/t11%20agua/vxqmxnqgcfasscmfdtbs.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -7982,6 +8124,7 @@ async function main() {
         },
         {
             id: 142,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700265998/ic/t11%20agua/ljozq6ghswpbpubhdykm.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -7989,6 +8132,7 @@ async function main() {
         },
         {
             id: 143,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700265999/ic/t11%20agua/gjj9dncct92jgdcuad0c.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -7996,6 +8140,7 @@ async function main() {
         },
         {
             id: 144,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700270780/ic/t11%20agua/kbxc198nm4p5c2kyizn8.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -8003,6 +8148,7 @@ async function main() {
         },
         {
             id: 145,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700266001/ic/t11%20agua/ekk8fbkpkfx2p48eatax.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -8010,6 +8156,7 @@ async function main() {
         },
         {
             id: 146,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700266001/ic/t11%20agua/gn5bthpvkkn3pj1dcxrn.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -8017,6 +8164,7 @@ async function main() {
         },
         {
             id: 147,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700266001/ic/t11%20agua/qhid4any5btuh1xlfp1q.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -8024,6 +8172,7 @@ async function main() {
         },
         {
             id: 148,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700266001/ic/t11%20agua/kabnu0brlx289pujk5ul.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -8031,6 +8180,7 @@ async function main() {
         },
         {
             id: 149,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700266001/ic/t11%20agua/jvgzdiygh7ywau4p7yql.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -8038,6 +8188,7 @@ async function main() {
         },
         {
             id: 150,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700266001/ic/t11%20agua/wyqhiltlwvub6sv9ucf1.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -8045,6 +8196,7 @@ async function main() {
         },
         {
             id: 151,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700266002/ic/t11%20agua/jimpt5iwwz0n2nru4qp8.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -8052,6 +8204,7 @@ async function main() {
         },
         {
             id: 152,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700266011/ic/t11%20agua/wh1wfoje5zoroj7dfbu2.jpg',
             itemId: 268,
             itemOptionId: null,
@@ -8059,6 +8212,7 @@ async function main() {
         },
         {
             id: 153,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1700266020/ic/t11%20agua/u6gsc6qudhvtk7gchcgj.jpg',
             itemId: 292,
             itemOptionId: null,
@@ -8066,6 +8220,7 @@ async function main() {
         },
         {
             id: 154,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694692605/ic/x6hsmpsz1ki7xckqfk8i.jpg',
             itemId: 325,
             itemOptionId: null,
@@ -8073,6 +8228,7 @@ async function main() {
         },
         {
             id: 155,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694692607/ic/d3ynhz8liapbdoj7xjnu.jpg',
             itemId: 325,
             itemOptionId: null,
@@ -8080,6 +8236,7 @@ async function main() {
         },
         {
             id: 156,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694692610/ic/cg2lp3gte8w9nogezyvr.jpg',
             itemId: 325,
             itemOptionId: null,
@@ -8087,6 +8244,7 @@ async function main() {
         },
         {
             id: 157,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694692607/ic/zqmgfrik8tkbwdhojizt.jpg',
             itemId: 325,
             itemOptionId: null,
@@ -8094,6 +8252,7 @@ async function main() {
         },
         {
             id: 158,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694692608/ic/omkxdluxclqgsdoug4hl.jpg',
             itemId: 325,
             itemOptionId: null,
@@ -8101,6 +8260,7 @@ async function main() {
         },
         {
             id: 159,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694692611/ic/ysadwuyhryoncy4vngnj.jpg',
             itemId: 325,
             itemOptionId: null,
@@ -8108,6 +8268,7 @@ async function main() {
         },
         {
             id: 160,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694692615/ic/g2lj8vvqvrs6he4r6h2j.jpg',
             itemId: 325,
             itemOptionId: null,
@@ -8115,6 +8276,7 @@ async function main() {
         },
         {
             id: 161,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694692613/ic/opd3lv0c1dqcuz0e7cp4.jpg',
             itemId: 325,
             itemOptionId: null,
@@ -8122,6 +8284,7 @@ async function main() {
         },
         {
             id: 162,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694692614/ic/rrgiv9f3wlzimidec2ns.jpg',
             itemId: 325,
             itemOptionId: null,
@@ -8129,6 +8292,7 @@ async function main() {
         },
         {
             id: 163,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693684/ic/eburiitk07147xd9qqev.jpg',
             itemId: 327,
             itemOptionId: null,
@@ -8136,6 +8300,7 @@ async function main() {
         },
         {
             id: 164,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693684/ic/oc8o19lt1wqxymk8ergd.jpg',
             itemId: 327,
             itemOptionId: null,
@@ -8143,6 +8308,7 @@ async function main() {
         },
         {
             id: 165,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693685/ic/k4trtv8qqmlwvssyn4uy.jpg',
             itemId: 327,
             itemOptionId: null,
@@ -8150,6 +8316,7 @@ async function main() {
         },
         {
             id: 166,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693686/ic/kaazpnpndrieu3ierggc.jpg',
             itemId: 329,
             itemOptionId: null,
@@ -8157,6 +8324,7 @@ async function main() {
         },
         {
             id: 167,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693686/ic/qketpylbi5wxlp71jxw2.jpg',
             itemId: 329,
             itemOptionId: null,
@@ -8164,6 +8332,7 @@ async function main() {
         },
         {
             id: 168,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693691/ic/eff7ncjb2spd4ezues2n.jpg',
             itemId: 329,
             itemOptionId: null,
@@ -8171,6 +8340,7 @@ async function main() {
         },
         {
             id: 169,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693692/ic/oneczce69sduq6p807lp.jpg',
             itemId: 329,
             itemOptionId: null,
@@ -8178,6 +8348,7 @@ async function main() {
         },
         {
             id: 170,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693711/ic/vxkfzaipdbvqcph6hgun.svg',
             itemId: 332,
             itemOptionId: null,
@@ -8185,6 +8356,7 @@ async function main() {
         },
         {
             id: 171,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693709/ic/dq5rxnndaav2fjuaggxx.svg',
             itemId: 332,
             itemOptionId: null,
@@ -8192,6 +8364,7 @@ async function main() {
         },
         {
             id: 172,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693710/ic/qxgbnzkdcyxniwdlcsqd.jpg',
             itemId: 332,
             itemOptionId: null,
@@ -8199,6 +8372,7 @@ async function main() {
         },
         {
             id: 173,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693708/ic/wtxgfjbom6o3yir2jywx.svg',
             itemId: 332,
             itemOptionId: null,
@@ -8206,6 +8380,7 @@ async function main() {
         },
         {
             id: 174,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693710/ic/zjreun3llxwxygjhq3h4.jpg',
             itemId: 332,
             itemOptionId: null,
@@ -8213,6 +8388,7 @@ async function main() {
         },
         {
             id: 175,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693708/ic/r7ubk1yddlu3jfpalv6f.jpg',
             itemId: 332,
             itemOptionId: null,
@@ -8220,6 +8396,7 @@ async function main() {
         },
         {
             id: 176,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693708/ic/ets4yuz7swapg3d4io1h.jpg',
             itemId: 332,
             itemOptionId: null,
@@ -8227,6 +8404,7 @@ async function main() {
         },
         {
             id: 177,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694695746/ic/u6behcvwrnapcnpfln1e.jpg',
             itemId: 332,
             itemOptionId: null,
@@ -8234,6 +8412,7 @@ async function main() {
         },
         {
             id: 178,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693711/ic/fwmdxpzzdhuxpyump67p.jpg',
             itemId: 332,
             itemOptionId: null,
@@ -8241,6 +8420,7 @@ async function main() {
         },
         {
             id: 179,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693692/ic/vecalqfychhi9axjnwql.jpg',
             itemId: 332,
             itemOptionId: null,
@@ -8248,6 +8428,7 @@ async function main() {
         },
         {
             id: 180,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693688/ic/nvk8fxwdz6yjfz60bkb7.png',
             itemId: 334,
             itemOptionId: null,
@@ -8255,6 +8436,7 @@ async function main() {
         },
         {
             id: 181,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699848200/ic/t2/gkrkhc5fjsnfkhnmp0yj.jpg',
             itemId: 334,
             itemOptionId: null,
@@ -8262,6 +8444,7 @@ async function main() {
         },
         {
             id: 182,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693687/ic/wuxnixzpsdqv8r5namr5.png',
             itemId: 334,
             itemOptionId: null,
@@ -8269,6 +8452,7 @@ async function main() {
         },
         {
             id: 183,
+            description: 'Imagem',
             path: 'https://nenc.gov.ua/old/GLOBE/Other/Munsell%20soil%20colour%20chart.pdf',
             itemId: 334,
             itemOptionId: null,
@@ -8276,6 +8460,7 @@ async function main() {
         },
         {
             id: 184,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693694/ic/vj4pucopyitzefg1lfde.jpg',
             itemId: 340,
             itemOptionId: null,
@@ -8283,6 +8468,7 @@ async function main() {
         },
         {
             id: 185,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693694/ic/kk38cl13vge47cqljv1w.jpg',
             itemId: 340,
             itemOptionId: null,
@@ -8290,6 +8476,7 @@ async function main() {
         },
         {
             id: 186,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693698/ic/kekfxavu9nddrtz75yna.jpg',
             itemId: 340,
             itemOptionId: null,
@@ -8297,6 +8484,7 @@ async function main() {
         },
         {
             id: 187,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693698/ic/qlpk8oekhw6udfcetnjv.jpg',
             itemId: 342,
             itemOptionId: null,
@@ -8304,6 +8492,7 @@ async function main() {
         },
         {
             id: 188,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693698/ic/x3f2rppy0dahfdnt8u0f.jpg',
             itemId: 342,
             itemOptionId: null,
@@ -8311,6 +8500,7 @@ async function main() {
         },
         {
             id: 189,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693699/ic/v4bwseaasqxxtyckh4cn.jpg',
             itemId: 344,
             itemOptionId: null,
@@ -8318,6 +8508,7 @@ async function main() {
         },
         {
             id: 190,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693699/ic/s9j7ohj47ijk0pt4rlpi.jpg',
             itemId: 344,
             itemOptionId: null,
@@ -8325,6 +8516,7 @@ async function main() {
         },
         {
             id: 191,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693700/ic/akhgkxdlw6zxo7ra4s4r.jpg',
             itemId: 344,
             itemOptionId: null,
@@ -8332,6 +8524,7 @@ async function main() {
         },
         {
             id: 192,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693705/ic/ipetmghdpbclgunike3k.jpg',
             itemId: 344,
             itemOptionId: null,
@@ -8339,6 +8532,7 @@ async function main() {
         },
         {
             id: 193,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699957176/ic/t9/e5zjh3edbvudksvrvgse.png',
             itemId: 346,
             itemOptionId: null,
@@ -8346,6 +8540,7 @@ async function main() {
         },
         {
             id: 194,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693704/ic/oqqnu7sctfzvkvdza0u7.jpg',
             itemId: 346,
             itemOptionId: null,
@@ -8353,6 +8548,7 @@ async function main() {
         },
         {
             id: 195,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693704/ic/avfybotrbqmxjxj7e9zn.jpg',
             itemId: 346,
             itemOptionId: null,
@@ -8360,6 +8556,7 @@ async function main() {
         },
         {
             id: 196,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693704/ic/niqcv7xyvixev5wu4rux.jpg',
             itemId: 346,
             itemOptionId: null,
@@ -8367,6 +8564,7 @@ async function main() {
         },
         {
             id: 197,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693706/ic/xgmk0xxsukbgvxfkip9q.jpg',
             itemId: 349,
             itemOptionId: null,
@@ -8374,6 +8572,7 @@ async function main() {
         },
         {
             id: 198,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693709/ic/sp0sc5fjpxlqdshatunx.jpg',
             itemId: 349,
             itemOptionId: null,
@@ -8381,6 +8580,7 @@ async function main() {
         },
         {
             id: 199,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694693708/ic/uafqhvrxvrc3jewb8a4a.jpg',
             itemId: 349,
             itemOptionId: null,
@@ -8388,6 +8588,7 @@ async function main() {
         },
         {
             id: 200,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1695587160/PICCE/a56zqwhonkxfnj4l9wau.jpg',
             itemId: 362,
             itemOptionId: null,
@@ -8395,6 +8596,7 @@ async function main() {
         },
         {
             id: 201,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkzjnsqqs/image/upload/v1697634951/i3txtfcol8zxl2suat5c.jpg',
             itemId: 362,
             itemOptionId: null,
@@ -8402,6 +8604,7 @@ async function main() {
         },
         {
             id: 202,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1695587207/PICCE/ob75a2jdmdmir3pdbfga.jpg',
             itemId: 362,
             itemOptionId: null,
@@ -8409,6 +8612,7 @@ async function main() {
         },
         {
             id: 203,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkzjnsqqs/image/upload/v1697634942/fa3wlh7bbdw3vnwjvbup.jpg',
             itemId: 362,
             itemOptionId: null,
@@ -8416,6 +8620,7 @@ async function main() {
         },
         {
             id: 204,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1695587259/PICCE/vk1jbpf0cwmmrjg8vseg.jpg',
             itemId: 362,
             itemOptionId: null,
@@ -8423,6 +8628,7 @@ async function main() {
         },
         {
             id: 205,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkzjnsqqs/image/upload/v1697634951/erhk7jbmkhkyno7fyaw3.jpg',
             itemId: 362,
             itemOptionId: null,
@@ -8430,6 +8636,7 @@ async function main() {
         },
         {
             id: 206,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1695587359/PICCE/mwsj7wpy0eb0y15wvmwd.jpg',
             itemId: 362,
             itemOptionId: null,
@@ -8437,6 +8644,7 @@ async function main() {
         },
         {
             id: 207,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkzjnsqqs/image/upload/v1697634933/n9kjbjrh9xfne5tryoft.jpg',
             itemId: 362,
             itemOptionId: null,
@@ -8444,6 +8652,7 @@ async function main() {
         },
         {
             id: 208,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700510985/PICCE/Plantas%20medicinais/mxherslzekinz2kjectb.jpg',
             itemId: 371,
             itemOptionId: null,
@@ -8451,6 +8660,7 @@ async function main() {
         },
         {
             id: 209,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700510985/PICCE/Plantas%20medicinais/zniwktgs58ukpuihkfpf.jpg',
             itemId: 371,
             itemOptionId: null,
@@ -8458,6 +8668,7 @@ async function main() {
         },
         {
             id: 210,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700510985/PICCE/Plantas%20medicinais/vikdstk5zs9iszzzn3wu.jpg',
             itemId: 371,
             itemOptionId: null,
@@ -8465,6 +8676,7 @@ async function main() {
         },
         {
             id: 211,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700511214/PICCE/Plantas%20medicinais/fanlpyra3dwubierpqsp.jpg',
             itemId: 371,
             itemOptionId: null,
@@ -8472,6 +8684,7 @@ async function main() {
         },
         {
             id: 212,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700510987/PICCE/Plantas%20medicinais/ffeagsizun8gsoytlxlp.jpg',
             itemId: 372,
             itemOptionId: null,
@@ -8479,6 +8692,7 @@ async function main() {
         },
         {
             id: 213,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700510985/PICCE/Plantas%20medicinais/y0ufkxb2p3lon4wq30vp.jpg',
             itemId: 372,
             itemOptionId: null,
@@ -8486,6 +8700,7 @@ async function main() {
         },
         {
             id: 214,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700510986/PICCE/Plantas%20medicinais/jegwefb6cwbxu51vkyy7.jpg',
             itemId: 372,
             itemOptionId: null,
@@ -8493,6 +8708,7 @@ async function main() {
         },
         {
             id: 215,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700511214/PICCE/Plantas%20medicinais/nrqegvyedee54tc3zwho.jpg',
             itemId: 372,
             itemOptionId: null,
@@ -8500,6 +8716,7 @@ async function main() {
         },
         {
             id: 216,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700510986/PICCE/Plantas%20medicinais/eikdqx9kqujzc90ncfxs.jpg',
             itemId: 372,
             itemOptionId: null,
@@ -8507,6 +8724,7 @@ async function main() {
         },
         {
             id: 217,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700510987/PICCE/Plantas%20medicinais/utueoq1sozmr4cymgbtk.jpg',
             itemId: 372,
             itemOptionId: null,
@@ -8514,6 +8732,7 @@ async function main() {
         },
         {
             id: 218,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700511215/PICCE/Plantas%20medicinais/utgmvbjdhf1xqwkw2bai.jpg',
             itemId: 372,
             itemOptionId: null,
@@ -8521,6 +8740,7 @@ async function main() {
         },
         {
             id: 219,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700510987/PICCE/Plantas%20medicinais/cvasnqv8bsblsmut5kze.jpg',
             itemId: 372,
             itemOptionId: null,
@@ -8528,6 +8748,7 @@ async function main() {
         },
         {
             id: 220,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700510989/PICCE/Plantas%20medicinais/xlhnagimoqjcnkmif06a.jpg',
             itemId: 373,
             itemOptionId: null,
@@ -8535,6 +8756,7 @@ async function main() {
         },
         {
             id: 221,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700510988/PICCE/Plantas%20medicinais/qimhvauil10dvqhnqy2g.jpg',
             itemId: 373,
             itemOptionId: null,
@@ -8542,6 +8764,7 @@ async function main() {
         },
         {
             id: 222,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700510988/PICCE/Plantas%20medicinais/thhrrdotepvdtop6xlt1.jpg',
             itemId: 373,
             itemOptionId: null,
@@ -8549,6 +8772,7 @@ async function main() {
         },
         {
             id: 223,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700510988/PICCE/Plantas%20medicinais/jnmlo2jm485kp8bi3ive.jpg',
             itemId: 373,
             itemOptionId: null,
@@ -8556,6 +8780,7 @@ async function main() {
         },
         {
             id: 224,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539171/PICCE/Plantas%20medicinais/Foto_9_-_Gengibre_zghfdq.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8563,6 +8788,7 @@ async function main() {
         },
         {
             id: 225,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539218/PICCE/Plantas%20medicinais/Foto_11_-_Ip%C3%AA_b8zm07.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8570,6 +8796,7 @@ async function main() {
         },
         {
             id: 226,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539192/PICCE/Plantas%20medicinais/Foto_12_-_Ip%C3%AA_ukxpzi.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8577,6 +8804,7 @@ async function main() {
         },
         {
             id: 227,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539218/PICCE/Plantas%20medicinais/Foto_13_-_Losna_atij5t.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8584,6 +8812,7 @@ async function main() {
         },
         {
             id: 228,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539197/PICCE/Plantas%20medicinais/Foto_14_-_Col%C3%B4nia_ncayzy.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8591,6 +8820,7 @@ async function main() {
         },
         {
             id: 229,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539171/PICCE/Plantas%20medicinais/Foto_15_-_Col%C3%B4nia_bdbg0p.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8598,6 +8828,7 @@ async function main() {
         },
         {
             id: 230,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539171/PICCE/Plantas%20medicinais/Foto_16-_Salgueiro_Branco_xgsdzo.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8605,6 +8836,7 @@ async function main() {
         },
         {
             id: 231,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539191/PICCE/Plantas%20medicinais/Foto_17_-_Aroeira_yg8bj0.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8612,6 +8844,7 @@ async function main() {
         },
         {
             id: 232,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539197/PICCE/Plantas%20medicinais/Foto_18_-_Aroeira_j2alqt.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8619,6 +8852,7 @@ async function main() {
         },
         {
             id: 233,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539198/PICCE/Plantas%20medicinais/Foto_19_-_Goaiabeira_jjhxq6.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8626,6 +8860,7 @@ async function main() {
         },
         {
             id: 234,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539210/PICCE/Plantas%20medicinais/Foto_20_-_Goiabeira_gcb4qr.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8633,6 +8868,7 @@ async function main() {
         },
         {
             id: 235,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539218/PICCE/Plantas%20medicinais/Foto_21-_Goiabeira_o31med.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8640,6 +8876,7 @@ async function main() {
         },
         {
             id: 236,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539218/PICCE/Plantas%20medicinais/Foto_22-_Cascara_Sagrada_lkv1p9.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8647,6 +8884,7 @@ async function main() {
         },
         {
             id: 237,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539198/PICCE/Plantas%20medicinais/Foto_23_-_Boldo_z0zvk5.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8654,6 +8892,7 @@ async function main() {
         },
         {
             id: 238,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539192/PICCE/Plantas%20medicinais/Foto_24_-_Boldo_hud02q.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8661,6 +8900,7 @@ async function main() {
         },
         {
             id: 239,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539171/PICCE/Plantas%20medicinais/Foto_25-_Pic%C3%A3o_Preto_xlxkye.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8668,6 +8908,7 @@ async function main() {
         },
         {
             id: 240,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539174/PICCE/Plantas%20medicinais/Foto_26_-_Rom%C3%A3_visiev.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8675,6 +8916,7 @@ async function main() {
         },
         {
             id: 241,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539203/PICCE/Plantas%20medicinais/Foto_27_-_Rom%C3%A3_dqmrc3.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8682,6 +8924,7 @@ async function main() {
         },
         {
             id: 242,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539218/PICCE/Plantas%20medicinais/Foto_28_-_Rom%C3%A3_jsjl4v.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8689,6 +8932,7 @@ async function main() {
         },
         {
             id: 243,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539174/PICCE/Plantas%20medicinais/Foto_29_-_Carqueja_lzdw5k.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8696,6 +8940,7 @@ async function main() {
         },
         {
             id: 244,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539185/PICCE/Plantas%20medicinais/Foto_30_-_Carqueja_wynflq.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8703,6 +8948,7 @@ async function main() {
         },
         {
             id: 245,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539178/PICCE/Plantas%20medicinais/Foto_31_-_Funcho_ggptb1.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8710,6 +8956,7 @@ async function main() {
         },
         {
             id: 246,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539185/PICCE/Plantas%20medicinais/Foto_32_-_Funcho_ouvgwn.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8717,6 +8964,7 @@ async function main() {
         },
         {
             id: 247,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539204/PICCE/Plantas%20medicinais/Foto_33-_Funcho_ccegpe.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8724,6 +8972,7 @@ async function main() {
         },
         {
             id: 248,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539173/PICCE/Plantas%20medicinais/Foto_34_-Maracuja_vjexnn.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8731,6 +8980,7 @@ async function main() {
         },
         {
             id: 249,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539179/PICCE/Plantas%20medicinais/Foto_35_-_Maracuj%C3%A1_omtbek.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8738,6 +8988,7 @@ async function main() {
         },
         {
             id: 250,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539224/PICCE/Plantas%20medicinais/Foto_36_-Maracuj%C3%A1_pygz8s.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8745,6 +8996,7 @@ async function main() {
         },
         {
             id: 251,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539192/PICCE/Plantas%20medicinais/Foto_37_-_Erva_do_Bicho_sph4mu.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8752,6 +9004,7 @@ async function main() {
         },
         {
             id: 252,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539211/PICCE/Plantas%20medicinais/Foto_38_-_Erva_do_Bicho_xfhetq.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8759,6 +9012,7 @@ async function main() {
         },
         {
             id: 253,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539204/PICCE/Plantas%20medicinais/Foto_39_-_Espinheira_Sant_nhi5te.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8766,6 +9020,7 @@ async function main() {
         },
         {
             id: 254,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539191/PICCE/Plantas%20medicinais/Foto_40_-_Espinheira_Sant_mgmjpj.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8773,6 +9028,7 @@ async function main() {
         },
         {
             id: 255,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539192/PICCE/Plantas%20medicinais/Foto_41-_Espinheira_Sant_cxrwra.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8780,6 +9036,7 @@ async function main() {
         },
         {
             id: 256,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539172/PICCE/Plantas%20medicinais/Foto_42_-_Jurubeba_bto4d4.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8787,6 +9044,7 @@ async function main() {
         },
         {
             id: 257,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539173/PICCE/Plantas%20medicinais/Foto_43_-_Jurubeba_w0uuzr.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8794,6 +9052,7 @@ async function main() {
         },
         {
             id: 258,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539179/PICCE/Plantas%20medicinais/Foto_44-_Jurubeba_yf7lwo.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8801,6 +9060,7 @@ async function main() {
         },
         {
             id: 259,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539173/PICCE/Plantas%20medicinais/Foto_45_-_Jurubeba_zmi5eb.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8808,6 +9068,7 @@ async function main() {
         },
         {
             id: 260,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539203/PICCE/Plantas%20medicinais/Foto_46-_Amora_iljvwn.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8815,6 +9076,7 @@ async function main() {
         },
         {
             id: 261,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539211/PICCE/Plantas%20medicinais/Foto_47_-_Amora_mql6vp.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8822,6 +9084,7 @@ async function main() {
         },
         {
             id: 262,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539179/PICCE/Plantas%20medicinais/Foto_48_-_Arruda_i9cuqd.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8829,6 +9092,7 @@ async function main() {
         },
         {
             id: 263,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539197/PICCE/Plantas%20medicinais/Foto_49_-_Arruda_plecsl.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8836,6 +9100,7 @@ async function main() {
         },
         {
             id: 264,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539191/PICCE/Plantas%20medicinais/Foto_49-_Pau_ferro_lcwcvr.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8843,6 +9108,7 @@ async function main() {
         },
         {
             id: 265,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539218/PICCE/Plantas%20medicinais/Foto_50_-_Pau_ferro_kbeq8c.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8850,6 +9116,7 @@ async function main() {
         },
         {
             id: 266,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539198/PICCE/Plantas%20medicinais/Foto_51_-_Pau_Ferro_qry0q5.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8857,6 +9124,7 @@ async function main() {
         },
         {
             id: 267,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539204/PICCE/Plantas%20medicinais/Foto_52_-_Cal%C3%AAndula_t5u6a9.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8864,6 +9132,7 @@ async function main() {
         },
         {
             id: 268,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539174/PICCE/Plantas%20medicinais/Foto_53_-_Cal%C3%AAndula_xepzj6.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8871,6 +9140,7 @@ async function main() {
         },
         {
             id: 269,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539217/PICCE/Plantas%20medicinais/Foto_54_-_Pitanga_iv1hex.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8878,6 +9148,7 @@ async function main() {
         },
         {
             id: 270,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539210/PICCE/Plantas%20medicinais/Foto_55-_Pitanga_ticvjj.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8885,6 +9156,7 @@ async function main() {
         },
         {
             id: 271,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539180/PICCE/Plantas%20medicinais/Foto_56_-_Abacateiro_upeva2.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8892,6 +9164,7 @@ async function main() {
         },
         {
             id: 272,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539185/PICCE/Plantas%20medicinais/Foto_57_-_Abacateiro_fvmmk5.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8899,6 +9172,7 @@ async function main() {
         },
         {
             id: 273,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539185/PICCE/Plantas%20medicinais/Foto_58_-_Quebra_Pedra_ef5ms3.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8906,6 +9180,7 @@ async function main() {
         },
         {
             id: 274,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539210/PICCE/Plantas%20medicinais/Foto_59_-_Quebra_Pedra_q2vknx.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8913,6 +9188,7 @@ async function main() {
         },
         {
             id: 275,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539185/PICCE/Plantas%20medicinais/Foto_60_-_Salsa_zw68wf.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8920,6 +9196,7 @@ async function main() {
         },
         {
             id: 276,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539198/PICCE/Plantas%20medicinais/Foto_61-_Salsa_bubtth.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8927,6 +9204,7 @@ async function main() {
         },
         {
             id: 277,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539172/PICCE/Plantas%20medicinais/Foto_62_-_Babosa_kyo93k.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8934,6 +9212,7 @@ async function main() {
         },
         {
             id: 278,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539180/PICCE/Plantas%20medicinais/Foto_63_-_Babosa_j3wpqe.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8941,6 +9220,7 @@ async function main() {
         },
         {
             id: 279,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539185/PICCE/Plantas%20medicinais/Foto_64_-_Curcuma_lrpg2f.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8948,6 +9228,7 @@ async function main() {
         },
         {
             id: 280,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539204/PICCE/Plantas%20medicinais/Foto_65_-_Curcuma_k95czr.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8955,6 +9236,7 @@ async function main() {
         },
         {
             id: 281,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539173/PICCE/Plantas%20medicinais/Foto_66_-_Curcuma_viyowv.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8962,6 +9244,7 @@ async function main() {
         },
         {
             id: 282,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539179/PICCE/Plantas%20medicinais/Foto_67-_Arnica_ock25j.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8969,6 +9252,7 @@ async function main() {
         },
         {
             id: 283,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539171/PICCE/Plantas%20medicinais/Foto_68_-_Arnica_jnplik.png',
             itemId: 383,
             itemOptionId: null,
@@ -8976,6 +9260,7 @@ async function main() {
         },
         {
             id: 284,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539203/PICCE/Plantas%20medicinais/Foto_69_-_Erva_Baleeira_lisxnf.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8983,6 +9268,7 @@ async function main() {
         },
         {
             id: 285,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539210/PICCE/Plantas%20medicinais/Foto_70_-_Erva_Baleeira_bvleen.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8990,6 +9276,7 @@ async function main() {
         },
         {
             id: 286,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539191/PICCE/Plantas%20medicinais/Foto_71-_pata_de_Vaca_wcaz6q.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -8997,6 +9284,7 @@ async function main() {
         },
         {
             id: 287,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539203/PICCE/Plantas%20medicinais/Foto_72-_Pata_de_Vaca_kkudee.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9004,6 +9292,7 @@ async function main() {
         },
         {
             id: 288,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539173/PICCE/Plantas%20medicinais/Foto_73_-_Ch%C3%A1_de_Bugre_dqjr8f.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9011,6 +9300,7 @@ async function main() {
         },
         {
             id: 289,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539224/PICCE/Plantas%20medicinais/Foto_74-_Ch%C3%A1_de_Bugre_vsphuf.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9018,6 +9308,7 @@ async function main() {
         },
         {
             id: 290,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539186/PICCE/Plantas%20medicinais/Foto_75_-_Guaco_xpswjn.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9025,6 +9316,7 @@ async function main() {
         },
         {
             id: 291,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539185/PICCE/Plantas%20medicinais/Foto_76_-_Guaco_o9jddv.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9032,6 +9324,7 @@ async function main() {
         },
         {
             id: 292,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539179/PICCE/Plantas%20medicinais/Foto_77-_Alfavaca_g6w8hb.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9039,6 +9332,7 @@ async function main() {
         },
         {
             id: 293,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539172/PICCE/Plantas%20medicinais/Foto_78-_Tanchagem_p1evkx.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9046,6 +9340,7 @@ async function main() {
         },
         {
             id: 294,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539186/PICCE/Plantas%20medicinais/Foto_79_-_Tanchagem_ogfx2r.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9053,6 +9348,7 @@ async function main() {
         },
         {
             id: 295,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539173/PICCE/Plantas%20medicinais/Foto_80_-_Assa_Peixe_iukwfg.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9060,6 +9356,7 @@ async function main() {
         },
         {
             id: 296,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539174/PICCE/Plantas%20medicinais/Foto_81_-_Assa_Peixe_wiwqw6.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9067,6 +9364,7 @@ async function main() {
         },
         {
             id: 297,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539171/PICCE/Plantas%20medicinais/Foto_82_-_Camomila_zidags.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9074,6 +9372,7 @@ async function main() {
         },
         {
             id: 298,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539179/PICCE/Plantas%20medicinais/Foto_83_-_Camomila_zou653.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9081,6 +9380,7 @@ async function main() {
         },
         {
             id: 299,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539170/PICCE/Plantas%20medicinais/Foto_84-_Copaiba_flytzm.png',
             itemId: 383,
             itemOptionId: null,
@@ -9088,6 +9388,7 @@ async function main() {
         },
         {
             id: 300,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539211/PICCE/Plantas%20medicinais/Foto_85_-Copaiba_odgrxo.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9095,6 +9396,7 @@ async function main() {
         },
         {
             id: 301,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539210/PICCE/Plantas%20medicinais/poejo_qanxzj.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9102,6 +9404,7 @@ async function main() {
         },
         {
             id: 302,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1700539173/PICCE/Plantas%20medicinais/urtiga_branca_ry1avr.jpg',
             itemId: 383,
             itemOptionId: null,
@@ -9109,6 +9412,7 @@ async function main() {
         },
         {
             id: 303,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694468735/PICCE/sala._ecuppf.jpg',
             itemId: 387,
             itemOptionId: null,
@@ -9116,6 +9420,7 @@ async function main() {
         },
         {
             id: 304,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694468735/PICCE/lampada_noxv3h.jpg',
             itemId: 387,
             itemOptionId: null,
@@ -9123,6 +9428,7 @@ async function main() {
         },
         {
             id: 305,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694467449/PICCE/PICCE_Guia-de-campo-13_Eficiencia_energetica-14_on3gg9.jpg',
             itemId: 451,
             itemOptionId: null,
@@ -9130,6 +9436,7 @@ async function main() {
         },
         {
             id: 306,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694467450/PICCE/PICCE_Guia-de-campo-13_Eficiencia_energetica-15_afqza5.jpg',
             itemId: 451,
             itemOptionId: null,
@@ -9137,6 +9444,7 @@ async function main() {
         },
         {
             id: 307,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694467449/PICCE/PICCE_Guia-de-campo-13_Eficiencia_energetica-16_k7m7ay.jpg',
             itemId: 451,
             itemOptionId: null,
@@ -9144,6 +9452,7 @@ async function main() {
         },
         {
             id: 308,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694467449/PICCE/PICCE_Guia-de-campo-13_Eficiencia_energetica-17_mpeym5.jpg',
             itemId: 451,
             itemOptionId: null,
@@ -9151,6 +9460,7 @@ async function main() {
         },
         {
             id: 309,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694467450/PICCE/PICCE_Guia-de-campo-13_Eficiencia_energetica-18_mvhhnm.jpg',
             itemId: 451,
             itemOptionId: null,
@@ -9158,6 +9468,7 @@ async function main() {
         },
         {
             id: 310,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1694467450/PICCE/PICCE_Guia-de-campo-13_Eficiencia_energetica-19_ua3ky6.jpg',
             itemId: 451,
             itemOptionId: null,
@@ -9165,6 +9476,7 @@ async function main() {
         },
         {
             id: 311,
+            description: 'Imagem',
             path: 'https://lh5.googleusercontent.com/QGBFKo5euIvJvmbgj5V_XTHM5eO306OpUCF1QW674hU4QjDdIqxjhDB8p-b10CR1Du4j77jWYk8xajrtLuaZ2R6hpBZtaRhKI7OcH0tfc0sJzU41qgJ0fPywlcKIqvevUw=w740',
             itemId: 459,
             itemOptionId: null,
@@ -9172,6 +9484,7 @@ async function main() {
         },
         {
             id: 312,
+            description: 'Imagem',
             path: 'https://lh3.googleusercontent.com/O4DhKLZZUcW39-lHR517VxNHrYRRsnveeROO-YuYHtd-E1_-yCGstL6TvtB5226SV8k7xWUjBIBEs33DFbG5Wq2tLMj8BPbAiM1vBJ24LWMBwb7RM5MFXIO20e4Cn7o4dw=w688',
             itemId: 463,
             itemOptionId: null,
@@ -9179,6 +9492,7 @@ async function main() {
         },
         {
             id: 313,
+            description: 'Imagem',
             path: 'https://lh6.googleusercontent.com/LHxUfag-QgDQRHCsMjn55Wo0v59NGZdiaVboq1sDhBVkhFMjywhn0-hdD8hgYFmo1cKNhuCO37ywXLHYc_erTSfRgDxB4uLZOJl1eX03uFnCxwTFLttjttmkAOZ_G7ogYA=w711',
             itemId: 464,
             itemOptionId: null,
@@ -9186,6 +9500,7 @@ async function main() {
         },
         {
             id: 314,
+            description: 'Imagem',
             path: 'https://lh3.googleusercontent.com/KqPdB7XbenrNai957fA7kWXiK_CyE4jxM_0avLVD02UDmglU3dhy0PWwLofgbMfWLT4V3Ccs3rrPTmFhM5j35lKaKv7mA5vva15veHnKUwWMkWnTZPiogUQh2CGx9AZioQ=w740',
             itemId: 465,
             itemOptionId: null,
@@ -9193,6 +9508,7 @@ async function main() {
         },
         {
             id: 315,
+            description: 'Imagem',
             path: 'https://lh3.googleusercontent.com/UocutDMCxbzci5mkSA6pOxHUtd3TFWt_EiXWR7NvxrirZaSku8lC4ECEI68OVrv_lYvEJTZlYVkb2vCrWNiRMzQnKbCdJzPi0aIeZ3Yfw5OhaHtbnQkGdQypzLoQcyM30Q=w740',
             itemId: 480,
             itemOptionId: null,
@@ -9200,6 +9516,7 @@ async function main() {
         },
         {
             id: 316,
+            description: 'Imagem',
             path: 'https://lh6.googleusercontent.com/8bDNEfwce80iCDPV9dy-dOtMb9UFuuYpM-BvEfuxTwberTLh-sKRs_nVOtMjkCY8CqyD5zfD9ZpA5Ccl70KAeYgBivTsTY-GuopBEQvqAUC9aamLIItBD-OI7AvuRRuxkw=w740',
             itemId: 483,
             itemOptionId: null,
@@ -9207,6 +9524,7 @@ async function main() {
         },
         {
             id: 317,
+            description: 'Imagem',
             path: 'https://lh3.googleusercontent.com/CdHjJKGrIliUQzu_GRhk5UIalnDMJFRhXAJU0R9I-04CD_2M_bHkDk11GBAOl7F26NmKlKY9l8OoQvYi53jVFumxxJzHtMr_zojjS6K0YBO5tH9VJ5sl8K0hz2oNYUFA8w=w740',
             itemId: 488,
             itemOptionId: null,
@@ -9214,6 +9532,7 @@ async function main() {
         },
         {
             id: 318,
+            description: 'Imagem',
             path: 'https://lh6.googleusercontent.com/ZMGja-ZX000A_-FnVqAq_Tz83kDNbrj40PSLRj6XZwv-67ZCLkt1zyxRoNcgIGd0X60Wjltxcjj81kpO2c2ZnkMjHUOfmjpAnbtehbabWRdpWO1CXUeKadTJjqd_x1WA4Q=w7401',
             itemId: 491,
             itemOptionId: null,
@@ -9221,6 +9540,7 @@ async function main() {
         },
         {
             id: 319,
+            description: 'Imagem',
             path: 'https://lh6.googleusercontent.com/aWXiAUQb1uXAWcT2Quf1ckBkUX6jWmh5dHXRvjYGmYipRviI1TLxhAhgj8UWJJ64GbtXvzmBkqZhU20zgdhYq70oWAraz9Zb4Jjg7KmsxMoNSTkxC5jB5dCtGVzRkUnuAg=w740',
             itemId: 492,
             itemOptionId: null,
@@ -9228,6 +9548,7 @@ async function main() {
         },
         {
             id: 320,
+            description: 'Imagem',
             path: 'https://lh5.googleusercontent.com/dexcTGgDscLYHtEuEYJ0KS4mlIJcNqbWYYHwjsTLtw6J3OCQdqjtM3Ov59P7bT9vv-J7sRcOct3BLdgovpiyVPLZ8rBwhTZk4CoUFPk3iJkIt8rxABecr5eRKnu2PRtxwg=w740',
             itemId: 495,
             itemOptionId: null,
@@ -9235,6 +9556,7 @@ async function main() {
         },
         {
             id: 321,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899041/ic/t4/fmybecypmptgk302pf1w.png',
             itemId: 501,
             itemOptionId: null,
@@ -9242,6 +9564,7 @@ async function main() {
         },
         {
             id: 322,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899042/ic/t4/jurmbte44ghgs9cpjzps.png',
             itemId: 501,
             itemOptionId: null,
@@ -9249,6 +9572,7 @@ async function main() {
         },
         {
             id: 323,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899047/ic/t4/jqhouqnwlkiemxpl9qk9.jpg',
             itemId: 501,
             itemOptionId: null,
@@ -9256,6 +9580,7 @@ async function main() {
         },
         {
             id: 324,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899043/ic/t4/h2twdidpn2gx1u8neixm.png',
             itemId: 501,
             itemOptionId: null,
@@ -9263,6 +9588,7 @@ async function main() {
         },
         {
             id: 325,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899042/ic/t4/x2ebjujtjvbzela0oyg6.png',
             itemId: 501,
             itemOptionId: null,
@@ -9270,6 +9596,7 @@ async function main() {
         },
         {
             id: 326,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899042/ic/t4/qx0kgfrrizfbt12l9xdd.png',
             itemId: 501,
             itemOptionId: null,
@@ -9277,6 +9604,7 @@ async function main() {
         },
         {
             id: 327,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899042/ic/t4/b8euh7r1ytnnorfyt0pt.png',
             itemId: 501,
             itemOptionId: null,
@@ -9284,6 +9612,7 @@ async function main() {
         },
         {
             id: 328,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899043/ic/t4/jutjmrw9y9b9qywkuspe.png',
             itemId: 501,
             itemOptionId: null,
@@ -9291,6 +9620,7 @@ async function main() {
         },
         {
             id: 329,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695821250/ic/yuripediu/y8zzg6eyxhalrbrq1eab.jpg',
             itemId: 501,
             itemOptionId: null,
@@ -9298,6 +9628,7 @@ async function main() {
         },
         {
             id: 330,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899041/ic/t4/fuppc634eworykht8nau.png',
             itemId: 510,
             itemOptionId: null,
@@ -9305,6 +9636,7 @@ async function main() {
         },
         {
             id: 331,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899047/ic/t4/ilgzlusemvjse0vsfvsu.png',
             itemId: 510,
             itemOptionId: null,
@@ -9312,6 +9644,7 @@ async function main() {
         },
         {
             id: 332,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899043/ic/t4/bpwz0j5sswy26shprpdb.png',
             itemId: 510,
             itemOptionId: null,
@@ -9319,6 +9652,7 @@ async function main() {
         },
         {
             id: 333,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695821250/ic/yuripediu/gtofegjz587tg1ztmcoj.jpg',
             itemId: 510,
             itemOptionId: null,
@@ -9326,6 +9660,7 @@ async function main() {
         },
         {
             id: 334,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695821250/ic/yuripediu/qggf74j2rpticojofjru.jpg',
             itemId: 510,
             itemOptionId: null,
@@ -9333,6 +9668,7 @@ async function main() {
         },
         {
             id: 335,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899044/ic/t4/oh4vyyszctx1x5qpfxjk.png',
             itemId: 526,
             itemOptionId: null,
@@ -9340,6 +9676,7 @@ async function main() {
         },
         {
             id: 336,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899044/ic/t4/wa4mbqm7uyu8h9jslscg.png',
             itemId: 526,
             itemOptionId: null,
@@ -9347,6 +9684,7 @@ async function main() {
         },
         {
             id: 337,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899044/ic/t4/uer7arjnqniyfel5wwfl.png',
             itemId: 526,
             itemOptionId: null,
@@ -9354,6 +9692,7 @@ async function main() {
         },
         {
             id: 338,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899045/ic/t4/y1qyyv6ok7ixpojnsjlh.png',
             itemId: 526,
             itemOptionId: null,
@@ -9361,6 +9700,7 @@ async function main() {
         },
         {
             id: 339,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899045/ic/t4/acy56821dyx0odhobp8t.png',
             itemId: 526,
             itemOptionId: null,
@@ -9368,6 +9708,7 @@ async function main() {
         },
         {
             id: 340,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899045/ic/t4/acy56821dyx0odhobp8t.png',
             itemId: 526,
             itemOptionId: null,
@@ -9375,6 +9716,7 @@ async function main() {
         },
         {
             id: 341,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1695821250/ic/yuripediu/oy6ryip2khhkixfxikph.jpg',
             itemId: 526,
             itemOptionId: null,
@@ -9382,6 +9724,7 @@ async function main() {
         },
         {
             id: 342,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899046/ic/t4/nlgizp6u5nvfxzrdeyof.png',
             itemId: 539,
             itemOptionId: null,
@@ -9389,6 +9732,7 @@ async function main() {
         },
         {
             id: 343,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899046/ic/t4/xsoeuqml8l9ryy1gh4ig.png',
             itemId: 539,
             itemOptionId: null,
@@ -9396,6 +9740,7 @@ async function main() {
         },
         {
             id: 344,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899045/ic/t4/elflk4jmzpx1kdkgtehc.png',
             itemId: 566,
             itemOptionId: null,
@@ -9403,6 +9748,7 @@ async function main() {
         },
         {
             id: 345,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899046/ic/t4/wips9stfezk0tm5yexsn.png',
             itemId: 566,
             itemOptionId: null,
@@ -9410,6 +9756,7 @@ async function main() {
         },
         {
             id: 346,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1694899041/ic/t4/zjcab5xbjmgpa73sgwyl.png',
             itemId: 566,
             itemOptionId: null,
@@ -9417,6 +9764,7 @@ async function main() {
         },
         {
             id: 347,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695339631/PICCE/lxdoynuuxjlgnenk2p44.png',
             itemId: 583,
             itemOptionId: null,
@@ -9424,6 +9772,7 @@ async function main() {
         },
         {
             id: 348,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695339655/PICCE/hd5kwr4i0eyjb87aivr4.png',
             itemId: 583,
             itemOptionId: null,
@@ -9431,6 +9780,7 @@ async function main() {
         },
         {
             id: 349,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695340658/PICCE/c2injf6kiphcmgtrgtbt.png',
             itemId: 583,
             itemOptionId: null,
@@ -9438,6 +9788,7 @@ async function main() {
         },
         {
             id: 350,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695339671/PICCE/hbdz96nuty0x8vutwjlb.png',
             itemId: 583,
             itemOptionId: null,
@@ -9445,6 +9796,7 @@ async function main() {
         },
         {
             id: 351,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695340731/PICCE/imqfcotqo1h7hchsydhv.png',
             itemId: 583,
             itemOptionId: null,
@@ -9452,6 +9804,7 @@ async function main() {
         },
         {
             id: 352,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695339690/PICCE/cwa3mqinop4w5cg87fyy.png',
             itemId: 583,
             itemOptionId: null,
@@ -9459,6 +9812,7 @@ async function main() {
         },
         {
             id: 353,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695340802/PICCE/v4lnpl1thnmgfyphqe6l.png',
             itemId: 583,
             itemOptionId: null,
@@ -9466,6 +9820,7 @@ async function main() {
         },
         {
             id: 354,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695339707/PICCE/x4pwqlipe42lnjqvkxct.png',
             itemId: 583,
             itemOptionId: null,
@@ -9473,6 +9828,7 @@ async function main() {
         },
         {
             id: 355,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695340880/PICCE/wqco2ktmoykmpoytgnre.png',
             itemId: 583,
             itemOptionId: null,
@@ -9480,6 +9836,7 @@ async function main() {
         },
         {
             id: 356,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695339727/PICCE/xfdcrgxeqsfuviiqyee4.png',
             itemId: 583,
             itemOptionId: null,
@@ -9487,6 +9844,7 @@ async function main() {
         },
         {
             id: 357,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695340926/PICCE/d1ff5gb3oqddubzjcuek.png',
             itemId: 583,
             itemOptionId: null,
@@ -9494,6 +9852,7 @@ async function main() {
         },
         {
             id: 358,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695339742/PICCE/inizcrxzvw4isb2odtre.png',
             itemId: 583,
             itemOptionId: null,
@@ -9501,6 +9860,7 @@ async function main() {
         },
         {
             id: 359,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695340977/PICCE/hoooamstzsrvjksay9ei.png',
             itemId: 583,
             itemOptionId: null,
@@ -9508,6 +9868,7 @@ async function main() {
         },
         {
             id: 360,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695339758/PICCE/uvmwjwiioiid9ubsosgf.png',
             itemId: 583,
             itemOptionId: null,
@@ -9515,6 +9876,7 @@ async function main() {
         },
         {
             id: 361,
+            description: 'Imagem',
             path: 'http://res.cloudinary.com/dbxjlnwlo/image/upload/v1695341003/PICCE/mqrgppd1irm7jwf0unpc.png',
             itemId: 583,
             itemOptionId: null,
@@ -9522,6 +9884,7 @@ async function main() {
         },
         {
             id: 362,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dkhf17vah/image/upload/v1699844313/ic/t9/uxkjw69uijrepphwlrhj.jpg',
             itemId: 585,
             itemOptionId: null,
@@ -9529,6 +9892,7 @@ async function main() {
         },
         {
             id: 363,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847607/PICCE/Cobertura%20de%20solo/pontos_cardeais_colorido_4_vga1va.png',
             itemId: 618,
             itemOptionId: null,
@@ -9536,6 +9900,7 @@ async function main() {
         },
         {
             id: 364,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847607/PICCE/Cobertura%20de%20solo/Floresta_Katiane_wvyclg.jpg',
             itemId: 623,
             itemOptionId: null,
@@ -9543,6 +9908,7 @@ async function main() {
         },
         {
             id: 365,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847605/PICCE/Cobertura%20de%20solo/Bosque_Katiane_e6dgc5.jpg',
             itemId: 627,
             itemOptionId: null,
@@ -9550,6 +9916,7 @@ async function main() {
         },
         {
             id: 366,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847601/PICCE/Cobertura%20de%20solo/Arbustos_-_Mariangela_xasr4h.jpg',
             itemId: 631,
             itemOptionId: null,
@@ -9557,6 +9924,7 @@ async function main() {
         },
         {
             id: 367,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847603/PICCE/Cobertura%20de%20solo/Grama_alta_-_Tamara_gi8lpa.jpg',
             itemId: 635,
             itemOptionId: null,
@@ -9564,6 +9932,7 @@ async function main() {
         },
         {
             id: 368,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847607/PICCE/Cobertura%20de%20solo/Grama-_Fernanda_wtdcno.jpg',
             itemId: 639,
             itemOptionId: null,
@@ -9571,6 +9940,7 @@ async function main() {
         },
         {
             id: 369,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847607/PICCE/Cobertura%20de%20solo/Restinga_-_Anna_aowgef.jpg',
             itemId: 643,
             itemOptionId: null,
@@ -9578,6 +9948,7 @@ async function main() {
         },
         {
             id: 370,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847601/PICCE/Cobertura%20de%20solo/%C3%81rea_cultivada_-_Anna_nxudmw.jpg',
             itemId: 647,
             itemOptionId: null,
@@ -9585,6 +9956,7 @@ async function main() {
         },
         {
             id: 371,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847609/PICCE/Cobertura%20de%20solo/Solo_exposto_-_Tiago_Ferreira_wel2ip.jpg',
             itemId: 651,
             itemOptionId: null,
@@ -9592,6 +9964,7 @@ async function main() {
         },
         {
             id: 372,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847600/PICCE/Cobertura%20de%20solo/Cost%C3%A3o_rochoso_-_Tamara_w5gpzq.jpg',
             itemId: 655,
             itemOptionId: null,
@@ -9599,6 +9972,7 @@ async function main() {
         },
         {
             id: 373,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847600/PICCE/Cobertura%20de%20solo/Areia_-_Tamara_mqumet.jpg',
             itemId: 659,
             itemOptionId: null,
@@ -9606,6 +9980,7 @@ async function main() {
         },
         {
             id: 374,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847601/PICCE/Cobertura%20de%20solo/%C3%A1gua_doce_-_Tamara_fxxe1z.jpg',
             itemId: 663,
             itemOptionId: null,
@@ -9613,6 +9988,7 @@ async function main() {
         },
         {
             id: 375,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847605/PICCE/Cobertura%20de%20solo/Manguezal_-_Anna_xiaqyv.jpg',
             itemId: 667,
             itemOptionId: null,
@@ -9620,6 +9996,7 @@ async function main() {
         },
         {
             id: 376,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847606/PICCE/Cobertura%20de%20solo/Mar_-_Tamara_aabfyo.jpg',
             itemId: 671,
             itemOptionId: null,
@@ -9627,6 +10004,7 @@ async function main() {
         },
         {
             id: 377,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847610/PICCE/Cobertura%20de%20solo/unnamed_3_po61ve.jpg',
             itemId: 675,
             itemOptionId: null,
@@ -9634,6 +10012,7 @@ async function main() {
         },
         {
             id: 378,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847609/PICCE/Cobertura%20de%20solo/unnamed_1_etgc7v.jpg',
             itemId: 679,
             itemOptionId: null,
@@ -9641,6 +10020,7 @@ async function main() {
         },
         {
             id: 379,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847609/PICCE/Cobertura%20de%20solo/estacionamento_rmfyei.jpg',
             itemId: 683,
             itemOptionId: null,
@@ -9648,6 +10028,7 @@ async function main() {
         },
         {
             id: 380,
+            description: 'Imagem',
             path: 'https://res.cloudinary.com/dbxjlnwlo/image/upload/v1699847725/PICCE/Cobertura%20de%20solo/estrada-larga-com-edificios-de-ambos-os-lados_dvl7h6.png',
             itemId: 687,
             itemOptionId: null,
@@ -9655,7 +10036,7 @@ async function main() {
         },
     ];
 
-    const picceItemOptions: Omit<ItemOption, 'createdAt' | 'updateAt'>[] = [
+    const picceItemOptions: Omit<ItemOption, 'createdAt' | 'updatedAt'>[] = [
         {
             id: 1,
             itemId: 3,

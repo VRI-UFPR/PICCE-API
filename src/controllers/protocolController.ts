@@ -9,67 +9,340 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import {
-    Protocol,
-    ItemType,
-    ItemGroupType,
-    PageType,
-    ItemValidationType,
-    User,
-    Item,
-    UserRole,
-    ItemGroup,
-    VisibilityMode,
-} from '@prisma/client';
+import { ItemType, ItemGroupType, PageType, ItemValidationType, User, UserRole, VisibilityMode, DependencyType } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
+import { unlinkSync } from 'fs';
 
-export const checkAuthorizationToCreate = async (creator: User) => {
-    const user = await prismaClient.user.findUnique({
-        where: {
-            id: creator.id,
-            role: {
-                not: {
-                    in: [UserRole.USER, UserRole.APLICATOR],
-                },
-            },
-        },
-    });
-    if (!user) throw new Error('This user is not authorized to create a protocol.');
-};
-
-export const checkAuthorizationToUpdateAndDeleteProtocol = async (user: User, protocolId: number) => {
-    if (user.role !== UserRole.ADMIN) {
-        const protocol = await prismaClient.protocol.findUnique({
-            where: {
-                id: protocolId,
-                owners: { some: { id: user.id } },
-            },
-        });
-        if (!protocol) throw new Error('This user is not authorized to alter this application.');
+const checkAuthorization = async (user: User, protocolId: number | undefined, action: string) => {
+    switch (action) {
+        case 'create':
+            // Only publishers, coordinators and admins can perform create operations on protocols
+            if (user.role === UserRole.USER || user.role === UserRole.APPLIER)
+                throw new Error('This user is not authorized to perform this action.');
+            break;
+        case 'update':
+        case 'delete':
+            // Only admins, the creator or the managers of the protocol can perform update/delete operations on it
+            if (user.role !== UserRole.ADMIN) {
+                const protocol = await prismaClient.protocol.findUnique({
+                    where: { id: protocolId, OR: [{ managers: { some: { id: user.id } } }, { creatorId: user.id }] },
+                });
+                if (!protocol) throw new Error('This user is not authorized to perform this action.');
+            }
+            break;
+        case 'getAll':
+            // Only admins can perform getAll operations on protocols
+            if (user.role !== UserRole.ADMIN) throw new Error('This user is not authorized to perform this action.');
+            break;
+        case 'getVisible':
+            // All users can perform getVisible operations on protocols (the result will be filtered based on the user)
+            break;
+        case 'get':
+            // Only admins, the creator, the managers, the appliers or the viewers of the protocol can perform get operations on it
+            if (user.role !== UserRole.ADMIN) {
+                const protocol = await prismaClient.protocol.findUnique({
+                    where: {
+                        id: protocolId,
+                        OR: [
+                            { managers: { some: { id: user.id } } },
+                            { appliers: { some: { id: user.id } } },
+                            { viewersUser: { some: { id: user.id } } },
+                            { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                            { creatorId: user.id },
+                            { visibility: VisibilityMode.PUBLIC },
+                        ],
+                    },
+                });
+                if (!protocol) throw new Error('This user is not authorized to perform this action.');
+            }
+            break;
     }
 };
 
-export const validateItem = async (type: ItemType, itemOptionsLength: number, tableColumnsLength: number) => {
-    if (!(type === ItemType.CHECKBOX || type === ItemType.RADIO || type === ItemType.SELECT)) {
-        if (itemOptionsLength !== 0) throw new Error('Options not allowed.');
-    } else if (itemOptionsLength < 2) throw new Error('Not enough options.');
+const validateItem = async (type: ItemType, itemOptionsLength: number) => {
+    if (type === ItemType.CHECKBOX || type === ItemType.RADIO || type === ItemType.SELECT) {
+        if (itemOptionsLength < 2) throw new Error('Not enough options.');
+    } else if (itemOptionsLength !== 0) throw new Error('Options not allowed.');
+};
 
-    if (type !== ItemType.SCALE) {
-        if (tableColumnsLength !== 0) throw new Error('Columns not allowed.');
-    } else if (tableColumnsLength === 0) throw new Error('Scale items must have at least one column.');
+const validateItemGroup = async (type: ItemGroupType, itemsLength: number, tableColumnsLength: number) => {
+    if (
+        itemsLength === 0 ||
+        ((type === ItemGroupType.CHECKBOX_TABLE || type === ItemGroupType.RADIO_TABLE || type === ItemGroupType.TEXTBOX_TABLE) &&
+            tableColumnsLength === 0) ||
+        (type === ItemGroupType.ONE_DIMENSIONAL && tableColumnsLength > 0)
+    )
+        throw new Error('ItemGroup type does not match the amount of items or tableColumns.');
+};
+
+const validateDependencies = async (protocol: any) => {
+    const previousItemsTempIds = new Map<number, ItemType>();
+    for (const page of protocol.pages) {
+        for (const dependency of page.dependencies) {
+            const itemType = previousItemsTempIds.get(dependency.itemTempId);
+            if (!itemType) throw new Error('Invalid dependency item: must reference a previous item.');
+            switch (dependency.type) {
+                case DependencyType.EXACT_ANSWER:
+                    if (itemType !== ItemType.TEXTBOX && itemType !== ItemType.NUMBERBOX && itemType !== ItemType.RANGE)
+                        throw new Error('Exact answer dependency not allowed for this item type.');
+                    break;
+                case DependencyType.MIN:
+                    if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
+                        throw new Error('Min argument must be a valid integer.');
+                    if (
+                        page.dependencies.find(
+                            (d: any) =>
+                                d.type === DependencyType.MAX && d.argument <= dependency.argument && d.itemTempId === dependency.itemTempId
+                        )
+                    )
+                        throw new Error('Min argument must be less than max argument.');
+                    if (
+                        itemType !== ItemType.CHECKBOX &&
+                        itemType !== ItemType.NUMBERBOX &&
+                        itemType !== ItemType.RANGE &&
+                        itemType !== ItemType.TEXTBOX
+                    )
+                        throw new Error('Min dependency only allowed for checkbox, numberbox, range and textbox items.');
+                    break;
+                case DependencyType.MAX:
+                    if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
+                        throw new Error('Max argument must be a valid integer.');
+                    if (
+                        page.dependencies.find(
+                            (d: any) =>
+                                d.type === DependencyType.MIN && d.argument >= dependency.argument && d.itemTempId === dependency.itemTempId
+                        )
+                    )
+                        throw new Error('Max argument must be greater than min argument.');
+                    if (
+                        itemType !== ItemType.CHECKBOX &&
+                        itemType !== ItemType.NUMBERBOX &&
+                        itemType !== ItemType.RANGE &&
+                        itemType !== ItemType.TEXTBOX
+                    )
+                        throw new Error('Max dependency only allowed for checkbox, numberbox, range and textbox items.');
+                    break;
+                case DependencyType.OPTION_SELECTED:
+                    if (itemType !== ItemType.RADIO && itemType !== ItemType.SELECT && itemType !== ItemType.CHECKBOX)
+                        throw new Error('Option selected dependency only allowed for radio, select and checkbox items.');
+                    break;
+            }
+        }
+        for (const itemGroup of page.itemGroups) {
+            for (const dependency of itemGroup.dependencies) {
+                const itemType = previousItemsTempIds.get(dependency.itemTempId);
+                if (!itemType) throw new Error('Invalid dependency item: must reference a previous item.');
+                switch (dependency.type) {
+                    case DependencyType.EXACT_ANSWER:
+                        if (itemType !== ItemType.TEXTBOX && itemType !== ItemType.NUMBERBOX && itemType !== ItemType.RANGE)
+                            throw new Error('Exact answer dependency not allowed for this item type.');
+                        break;
+                    case DependencyType.MIN:
+                        if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
+                            throw new Error('Min argument must be a valid integer.');
+                        if (
+                            page.dependencies.find(
+                                (d: any) =>
+                                    d.type === DependencyType.MAX &&
+                                    d.argument <= dependency.argument &&
+                                    d.itemTempId === dependency.itemTempId
+                            )
+                        )
+                            throw new Error('Min argument must be less than max argument.');
+                        if (
+                            itemType !== ItemType.CHECKBOX &&
+                            itemType !== ItemType.NUMBERBOX &&
+                            itemType !== ItemType.RANGE &&
+                            itemType !== ItemType.TEXTBOX
+                        )
+                            throw new Error('Min dependency only allowed for checkbox, numberbox, range and textbox items.');
+                        break;
+                    case DependencyType.MAX:
+                        if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
+                            throw new Error('Max argument must be a valid integer.');
+                        if (
+                            page.dependencies.find(
+                                (d: any) =>
+                                    d.type === DependencyType.MIN &&
+                                    d.argument >= dependency.argument &&
+                                    d.itemTempId === dependency.itemTempId
+                            )
+                        )
+                            throw new Error('Max argument must be greater than min argument.');
+                        if (
+                            itemType !== ItemType.CHECKBOX &&
+                            itemType !== ItemType.NUMBERBOX &&
+                            itemType !== ItemType.RANGE &&
+                            itemType !== ItemType.TEXTBOX
+                        )
+                            throw new Error('Max dependency only allowed for checkbox, numberbox, range and textbox items.');
+                        break;
+                    case DependencyType.OPTION_SELECTED:
+                        if (itemType !== ItemType.RADIO && itemType !== ItemType.SELECT && itemType !== ItemType.CHECKBOX)
+                            throw new Error('Option selected dependency only allowed for radio, select and checkbox items.');
+                        break;
+                }
+            }
+            for (const item of itemGroup.items) {
+                previousItemsTempIds.set(item.tempId, item.type);
+            }
+        }
+    }
+};
+
+const validateItemValidations = async (itemType: ItemType, validations: any[]) => {
+    const minValidation = validations.find((v) => v.type === ItemValidationType.MIN);
+    const maxValidation = validations.find((v) => v.type === ItemValidationType.MAX);
+    const stepValidation = validations.find((v) => v.type === ItemValidationType.STEP);
+    const mandatoryValidation = validations.find((v) => v.type === ItemValidationType.MANDATORY);
+
+    if (minValidation && (minValidation.argument.includes('.') || isNaN(parseFloat(minValidation.argument))))
+        throw new Error('Min argument must be a valid integer.');
+    if (maxValidation && (maxValidation.argument.includes('.') || isNaN(parseFloat(maxValidation.argument))))
+        throw new Error('Max argument must be a valid integer.');
+    if (stepValidation && (stepValidation.argument.includes('.') || isNaN(parseFloat(stepValidation.argument))))
+        throw new Error('Step argument must be a valid integer.');
+    if (mandatoryValidation && mandatoryValidation.argument !== 'true' && mandatoryValidation.argument !== 'false')
+        throw new Error('Mandatory argument must be a valid boolean.');
+    if (minValidation && maxValidation && minValidation.argument >= maxValidation.argument)
+        throw new Error('Min argument must be less than max argument.');
+    if (minValidation && maxValidation && stepValidation && maxValidation.argument - minValidation.argument <= stepValidation.argument)
+        throw new Error('Step argument must be less than the difference between min and max arguments.');
+    if (itemType === ItemType.RANGE && (!minValidation || !maxValidation || !stepValidation))
+        throw new Error('Range items must have min, max and step.');
+    if (stepValidation && itemType !== ItemType.RANGE) throw new Error('Step validation only allowed for range items.');
+    if (
+        (maxValidation || minValidation) &&
+        itemType !== ItemType.NUMBERBOX &&
+        itemType !== ItemType.RANGE &&
+        itemType !== ItemType.CHECKBOX &&
+        itemType !== ItemType.TEXTBOX
+    )
+        throw new Error('Min and max validations only allowed for numberbox, textbox, range and checkbox items.');
+};
+
+const validateManagers = async (managers: (number | undefined)[], institutionId: number | null) => {
+    for (const owner of managers) {
+        const user = await prismaClient.user.findUnique({
+            where: {
+                id: owner,
+                institutionId: institutionId,
+                role: {
+                    in: [UserRole.PUBLISHER, UserRole.COORDINATOR, UserRole.ADMIN],
+                },
+            },
+        });
+        if (!user || !institutionId) throw new Error('Managers must be publishers, coordinators or admins of the same institution.');
+    }
+};
+
+const validateProtocolPlacements = async (protocol: any) => {
+    const pagesPlacements = [];
+    for (const page of protocol.pages) {
+        pagesPlacements.push(page.placement);
+        const itemGroupsPlacements = [];
+        for (const itemGroup of page.itemGroups) {
+            itemGroupsPlacements.push(itemGroup.placement);
+            const itemsPlacements = [];
+            for (const item of itemGroup.items) {
+                itemsPlacements.push(item.placement);
+                const itemOptionsPlacements = [];
+                for (const itemOption of item.itemOptions) itemOptionsPlacements.push(itemOption.placement);
+                await validatePlacements(itemOptionsPlacements);
+            }
+            await validatePlacements(itemsPlacements);
+            const tableColumnsPlacements = [];
+            for (const tableColumn of itemGroup.tableColumns) tableColumnsPlacements.push(tableColumn.placement);
+            await validatePlacements(tableColumnsPlacements);
+        }
+        await validatePlacements(itemGroupsPlacements);
+    }
+    await validatePlacements(pagesPlacements);
+};
+
+const validatePlacements = async (placements: number[]) => {
+    if (placements.length > 0) {
+        const placementSet = new Set<number>(placements);
+        placements.sort((a, b) => a - b);
+        if (placementSet.size !== placements.length || placements[0] !== 1 || placements[placements.length - 1] !== placements.length)
+            throw new Error('Invalid placement values: must be unique, consecutive and start from 1.');
+    }
+};
+
+const fields = {
+    id: true,
+    title: true,
+    description: true,
+    createdAt: true,
+    updatedAt: true,
+    enabled: true,
+    replicable: true,
+    creator: { select: { id: true, username: true } },
+    applicability: true,
+    visibility: true,
+    answersVisibility: true,
+    pages: {
+        orderBy: { placement: 'asc' as any },
+        select: {
+            id: true,
+            type: true,
+            placement: true,
+            itemGroups: {
+                orderBy: { placement: 'asc' as any },
+                select: {
+                    id: true,
+                    type: true,
+                    placement: true,
+                    isRepeatable: true,
+                    items: {
+                        orderBy: { placement: 'asc' as any },
+                        select: {
+                            id: true,
+                            text: true,
+                            description: true,
+                            type: true,
+                            placement: true,
+                            enabled: true,
+                            itemOptions: {
+                                orderBy: { placement: 'asc' as any },
+                                select: { id: true, text: true, placement: true, files: { select: { id: true, path: true } } },
+                            },
+                            files: { select: { id: true, path: true, description: true } },
+                            itemValidations: { select: { type: true, argument: true, customMessage: true } },
+                        },
+                    },
+                    tableColumns: { select: { id: true, text: true, placement: true } },
+                    dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
+                },
+            },
+            dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
+        },
+    },
+};
+
+const fieldsWViewers = {
+    ...fields,
+    managers: { select: { id: true, username: true } },
+    viewersUser: { select: { id: true, username: true } },
+    viewersClassroom: { select: { id: true } },
+    answersViewersUser: { select: { id: true, username: true } },
+    answersViewersClassroom: { select: { id: true } },
+    appliers: { select: { id: true, username: true } },
 };
 
 export const createProtocol = async (req: Request, res: Response) => {
     try {
         // Yup schemas
+        const fileSchema = yup
+            .object()
+            .shape({ description: yup.string().max(3000), path: yup.string().required() })
+            .noUnknown();
+
         const tableColumnSchema = yup
             .object()
-            .shape({
-                text: yup.string().min(3).max(255).required(),
-                placement: yup.number().min(1).required(),
-            })
+            .shape({ text: yup.string().min(3).max(255).required(), placement: yup.number().min(1).required() })
             .noUnknown();
 
         const itemOptionsSchema = yup
@@ -77,27 +350,39 @@ export const createProtocol = async (req: Request, res: Response) => {
             .shape({
                 text: yup.string().min(3).max(255).required(),
                 placement: yup.number().min(1).required(),
+                files: yup.array().of(fileSchema).default([]),
             })
             .noUnknown();
 
         const itemValidationsSchema = yup
             .object()
             .shape({
-                type: yup.string().oneOf(Object.values(ItemValidationType)).required(),
+                type: yup.mixed<ItemValidationType>().oneOf(Object.values(ItemValidationType)).required(),
                 argument: yup.string().required(),
-                customMessage: yup.string().required(),
-                itemId: yup.number().required(),
+                customMessage: yup.string(),
+            })
+            .noUnknown();
+
+        const dependenciesSchema = yup
+            .object()
+            .shape({
+                type: yup.mixed<DependencyType>().oneOf(Object.values(DependencyType)).required(),
+                argument: yup.string().required(),
+                customMessage: yup.string(),
+                itemTempId: yup.number().min(1).required(),
             })
             .noUnknown();
 
         const itemsSchema = yup
             .object()
             .shape({
+                tempId: yup.number().min(1).required(),
                 text: yup.string().min(3).max(3000).required(),
-                description: yup.string().max(3000).notRequired(),
+                description: yup.string().max(3000),
                 enabled: yup.boolean().required(),
-                type: yup.string().oneOf(Object.values(ItemType)).required(),
+                type: yup.mixed<ItemType>().oneOf(Object.values(ItemType)).required(),
                 placement: yup.number().min(1).required(),
+                files: yup.array().of(fileSchema).default([]),
                 itemOptions: yup.array().of(itemOptionsSchema).default([]),
                 itemValidations: yup.array().of(itemValidationsSchema).default([]),
             })
@@ -108,8 +393,9 @@ export const createProtocol = async (req: Request, res: Response) => {
             .shape({
                 placement: yup.number().min(1).required(),
                 isRepeatable: yup.boolean().required(),
-                type: yup.string().oneOf(Object.values(ItemGroupType)).required(),
+                type: yup.mixed<ItemGroupType>().oneOf(Object.values(ItemGroupType)).required(),
                 items: yup.array().of(itemsSchema).min(1).required(),
+                dependencies: yup.array().of(dependenciesSchema).default([]),
                 tableColumns: yup.array().of(tableColumnSchema).default([]),
             })
             .noUnknown();
@@ -118,8 +404,9 @@ export const createProtocol = async (req: Request, res: Response) => {
             .object()
             .shape({
                 placement: yup.number().min(1).required(),
-                type: yup.string().oneOf(Object.values(PageType)).required(),
+                type: yup.mixed<PageType>().oneOf(Object.values(PageType)).required(),
                 itemGroups: yup.array().of(itemGroupsSchema).default([]),
+                dependencies: yup.array().of(dependenciesSchema).default([]),
             })
             .noUnknown();
 
@@ -131,10 +418,11 @@ export const createProtocol = async (req: Request, res: Response) => {
                 description: yup.string().max(3000),
                 enabled: yup.boolean().required(),
                 pages: yup.array().of(pagesSchema).min(1).required(),
-                owners: yup.array().of(yup.number()).default([]),
-                visibility: yup.string().oneOf(Object.values(VisibilityMode)).required(),
-                applicability: yup.string().oneOf(Object.values(VisibilityMode)).required(),
-                answersVisibility: yup.string().oneOf(Object.values(VisibilityMode)).required(),
+                managers: yup.array().of(yup.number()).default([]),
+                visibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)).required(),
+                creatorId: yup.number().required(),
+                applicability: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)).required(),
+                answersVisibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)).required(),
                 viewersUser: yup.array().of(yup.number()).default([]),
                 viewersClassroom: yup.array().of(yup.number()).default([]),
                 answersViewersUser: yup.array().of(yup.number()).default([]),
@@ -143,25 +431,34 @@ export const createProtocol = async (req: Request, res: Response) => {
                 replicable: yup.boolean().required(),
             })
             .noUnknown();
-
-        const user = req.user as User;
-        // Check if user is allowed to create a application
-        await checkAuthorizationToCreate(user);
-
         // Yup parsing/validation
         const protocol = await createProtocolSchema.validate(req.body, { stripUnknown: true });
-
-        // Check if publisher is the only owner
-        if (user.role === UserRole.PUBLISHER && protocol.owners.includes(user.id) && protocol.owners.length > 1) {
-            throw new Error('Publisher must be the only owner.');
+        // Sort elements by placement
+        for (const page of protocol.pages) {
+            page.itemGroups.sort((a, b) => a.placement - b.placement);
+            for (const itemGroup of page.itemGroups) {
+                for (const item of itemGroup.items) {
+                    item.itemOptions.sort((a, b) => a.placement - b.placement);
+                }
+                itemGroup.items.sort((a, b) => a.placement - b.placement);
+                itemGroup.tableColumns.sort((a, b) => a.placement - b.placement);
+            }
         }
-
+        protocol.pages.sort((a, b) => a.placement - b.placement);
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is allowed to create a application
+        await checkAuthorization(user, undefined, 'create');
+        // Check if managers are publishers, coordinators or admins of the same institution
+        await validateManagers(protocol.managers, user.institutionId);
+        // Check if protocol placements are valid
+        await validateProtocolPlacements(protocol);
+        // Check if dependencies are valid
+        await validateDependencies(protocol);
         // Multer files
         const files = req.files as Express.Multer.File[];
-
-        // Create a set to store encountered placement values to prevent duplicate placemets
-        const placementSet = new Set<number>();
-
+        // Create map table for tempIds
+        const tempIdMap = new Map<number, number>();
         // Prisma transaction
         const createdProtocol = await prismaClient.$transaction(async (prisma) => {
             const createdProtocol = await prisma.protocol.create({
@@ -169,67 +466,26 @@ export const createProtocol = async (req: Request, res: Response) => {
                     title: protocol.title,
                     description: protocol.description,
                     enabled: protocol.enabled,
-                    creatorId: 1,
-                    owners: {
-                        connect: protocol.owners.map((owner) => {
-                            return { id: owner };
-                        }),
-                    },
+                    creatorId: protocol.creatorId,
+                    managers: { connect: protocol.managers.map((owner) => ({ id: owner })) },
                     visibility: protocol.visibility as VisibilityMode,
                     applicability: protocol.applicability as VisibilityMode,
                     answersVisibility: protocol.answersVisibility as VisibilityMode,
-                    viewersUser: {
-                        connect: protocol.viewersUser.map((viewer) => {
-                            return { id: viewer };
-                        }),
-                    },
-                    viewersClassroom: {
-                        connect: protocol.viewersClassroom.map((viewer) => {
-                            return { id: viewer };
-                        }),
-                    },
-                    answersViewersUser: {
-                        connect: protocol.answersViewersUser.map((viewer) => {
-                            return { id: viewer };
-                        }),
-                    },
-                    answersViewersClassroom: {
-                        connect: protocol.answersViewersClassroom.map((viewer) => {
-                            return { id: viewer };
-                        }),
-                    },
-                    appliers: {
-                        connect: protocol.appliers.map((applier) => {
-                            return { id: applier };
-                        }),
-                    },
+                    viewersUser: { connect: protocol.viewersUser.map((viewer) => ({ id: viewer })) },
+                    viewersClassroom: { connect: protocol.viewersClassroom.map((viewer) => ({ id: viewer })) },
+                    answersViewersUser: { connect: protocol.answersViewersUser.map((viewer) => ({ id: viewer })) },
+                    answersViewersClassroom: { connect: protocol.answersViewersClassroom.map((viewer) => ({ id: viewer })) },
+                    appliers: { connect: protocol.appliers.map((applier) => ({ id: applier })) },
                     replicable: protocol.replicable,
                 },
             });
             // Create nested pages as well as nested itemGroups, items, itemOptions and itemValidations
             for (const [pageId, page] of protocol.pages.entries()) {
-                // Checks for duplicate placement values
-                for (const page of protocol.pages) {
-                    if (placementSet.has(page.placement)) throw new Error('Duplicate placement value found for pages.');
-                    placementSet.add(page.placement);
-                }
-                placementSet.clear();
-
                 const createdPage = await prisma.page.create({
-                    data: {
-                        placement: page.placement,
-                        protocolId: createdProtocol.id,
-                        type: page.type,
-                    },
+                    data: { placement: page.placement, protocolId: createdProtocol.id, type: page.type },
                 });
                 for (const [itemGroupId, itemGroup] of page.itemGroups.entries()) {
-                    // Checks for duplicate placement values
-                    for (const itemGroup of page.itemGroups) {
-                        if (placementSet.has(itemGroup.placement)) throw new Error('Duplicate placement value found for item Group.');
-                        placementSet.add(itemGroup.placement);
-                    }
-                    placementSet.clear();
-
+                    await validateItemGroup(itemGroup.type, itemGroup.items.length, itemGroup.tableColumns.length);
                     const createdItemGroup = await prisma.itemGroup.create({
                         data: {
                             placement: itemGroup.placement,
@@ -239,36 +495,25 @@ export const createProtocol = async (req: Request, res: Response) => {
                         },
                     });
                     for (const [tableColumnId, tableColumn] of itemGroup.tableColumns.entries()) {
-                        // Checks for duplicate placement values
-                        for (const tableColumn of itemGroup.tableColumns) {
-                            if (placementSet.has(tableColumn.placement))
-                                throw new Error('Reapeated tableColumn placement type not allowed.');
-                            placementSet.add(tableColumn.placement);
-                        }
-                        placementSet.clear();
-
                         const createdTableColumn = await prisma.tableColumn.create({
-                            data: {
-                                text: tableColumn.text,
-                                placement: tableColumn.placement,
-                                groupId: createdItemGroup.id,
-                            },
+                            data: { text: tableColumn.text, placement: tableColumn.placement, groupId: createdItemGroup.id },
                         });
                     }
                     for (const [itemId, item] of itemGroup.items.entries()) {
-                        // Checks for duplicate placement values
-                        for (const item of itemGroup.items) {
-                            if (placementSet.has(item.placement)) throw new Error('Reapeated item placement type not allowed.');
-                            placementSet.add(item.placement);
-                        }
-                        placementSet.clear();
-                        // Checks if item has the allowed amount of itemOptions and tableColumns
-                        await validateItem(item.type, item.itemOptions.length, itemGroup.tableColumns.length);
-                        const itemFiles = files
-                            .filter((file) => file.fieldname === `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][files]`)
-                            .map((file) => {
-                                return { path: file.path };
-                            });
+                        // Check if item has the allowed amount of itemOptions and tableColumns
+                        await validateItem(item.type, item.itemOptions.length);
+                        // Check if itemValidations are valid
+                        await validateItemValidations(item.type, item.itemValidations);
+                        const itemFiles = item.files.map((file, fileIndex) => {
+                            const storedFile = files.find(
+                                (f) => f.fieldname === `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][files][${fileIndex}]`
+                            );
+                            if (!storedFile) throw new Error('File not found.');
+                            return {
+                                description: file.description,
+                                path: storedFile.path,
+                            };
+                        });
                         const createdItem = await prisma.item.create({
                             data: {
                                 text: item.text,
@@ -277,38 +522,30 @@ export const createProtocol = async (req: Request, res: Response) => {
                                 groupId: createdItemGroup.id,
                                 type: item.type,
                                 placement: item.placement,
-                                files: {
-                                    create: itemFiles,
-                                },
+                                files: { create: itemFiles },
                             },
                         });
+                        tempIdMap.set(item.tempId, createdItem.id);
                         for (const [itemOptionId, itemOption] of item.itemOptions.entries()) {
-                            // Checks for duplicate placement values
-                            for (const itemOption of item.itemOptions) {
-                                if (placementSet.has(itemOption.placement))
-                                    throw new Error('Duplicate placement value found for item Option.');
-                                placementSet.add(itemOption.placement);
-                            }
-                            placementSet.clear();
-
-                            const itemOptionFiles = files
-                                .filter(
-                                    (file) =>
-                                        file.fieldname ===
-                                        `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][itemOptions][${itemOptionId}][files]`
-                                )
-                                .map((file) => {
-                                    return { path: file.path };
-                                });
+                            const itemOptionFiles = itemOption.files.map((file, fileIndex) => {
+                                const storedFile = files.find(
+                                    (f) =>
+                                        f.fieldname ===
+                                        `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][itemOptions][${itemOptionId}][files][${fileIndex}]`
+                                );
+                                if (!storedFile) throw new Error('File not found.');
+                                return {
+                                    description: file.description,
+                                    path: storedFile.path,
+                                };
+                            });
 
                             const createdItemOption = await prisma.itemOption.create({
                                 data: {
                                     text: itemOption.text,
                                     placement: itemOption.placement,
                                     itemId: createdItem.id,
-                                    files: {
-                                        create: itemOptionFiles,
-                                    },
+                                    files: { create: itemOptionFiles },
                                 },
                             });
                         }
@@ -323,39 +560,42 @@ export const createProtocol = async (req: Request, res: Response) => {
                             });
                         }
                     }
+                    for (const [dependencyId, dependency] of itemGroup.dependencies.entries()) {
+                        const createdDependency = await prisma.itemGroupDependencyRule.create({
+                            data: {
+                                type: dependency.type,
+                                argument: dependency.argument,
+                                customMessage: dependency.customMessage,
+                                itemGroupId: createdItemGroup.id,
+                                itemId: tempIdMap.get(dependency.itemTempId) as number,
+                            },
+                        });
+                    }
+                }
+                for (const [dependencyId, dependency] of page.dependencies.entries()) {
+                    const createdDependency = await prisma.pageDependencyRule.create({
+                        data: {
+                            type: dependency.type,
+                            argument: dependency.argument,
+                            customMessage: dependency.customMessage,
+                            pageId: createdPage.id,
+                            itemId: tempIdMap.get(dependency.itemTempId) as number,
+                        },
+                    });
                 }
             }
+            // Check if there are any files left
+            if (files.length > 0) {
+                throw new Error('Files not associated with any item or option detected.');
+            }
+
             // Return the created application answer with nested content included
-            return await prisma.protocol.findUnique({
-                where: {
-                    id: createdProtocol.id,
-                },
-                include: {
-                    pages: {
-                        include: {
-                            itemGroups: {
-                                include: {
-                                    items: {
-                                        include: {
-                                            itemOptions: {
-                                                include: {
-                                                    files: true,
-                                                },
-                                            },
-                                            itemValidations: true,
-                                            files: true,
-                                        },
-                                    },
-                                    tableColumns: true,
-                                },
-                            },
-                        },
-                    },
-                },
-            });
+            return await prisma.protocol.findUnique({ where: { id: createdProtocol.id }, select: fieldsWViewers });
         });
         res.status(201).json({ message: 'Protocol created.', data: createdProtocol });
     } catch (error: any) {
+        const files = req.files as Express.Multer.File[];
+        for (const file of files) unlinkSync(file.path);
         res.status(400).json(errorFormatter(error));
     }
 };
@@ -364,77 +604,85 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
     try {
         // ID from params
         const id: number = parseInt(req.params.protocolId);
-
         // Yup schemas
-        const UpdatedTableColumnSchema = yup
+        const updateFileSchema = yup
             .object()
-            .shape({
-                id: yup.number(),
-                text: yup.string().min(3).max(255).required(),
-                placement: yup.number().min(1).required(),
-                groupId: yup.number(),
-            })
+            .shape({ id: yup.number().min(1), description: yup.string().max(3000), path: yup.string().required() })
+            .noUnknown();
+
+        const updateTableColumnSchema = yup
+            .object()
+            .shape({ id: yup.number().min(1), text: yup.string().min(3).max(255), placement: yup.number().min(1).required() })
             .noUnknown();
 
         const updateItemOptionsSchema = yup
             .object()
             .shape({
-                id: yup.number(),
+                id: yup.number().min(1),
                 text: yup.string().min(3).max(255),
                 placement: yup.number().min(1).required(),
-                itemId: yup.number(),
-                filesIds: yup.array().of(yup.number()).default([]),
+                files: yup.array().of(updateFileSchema).default([]),
             })
             .noUnknown();
 
         const updateItemValidationsSchema = yup
             .object()
             .shape({
-                id: yup.number(),
-                type: yup.string().oneOf(Object.values(ItemValidationType)),
+                id: yup.number().min(1),
+                type: yup.mixed<ItemValidationType>().oneOf(Object.values(ItemValidationType)),
                 argument: yup.string(),
                 customMessage: yup.string(),
-                itemId: yup.number(),
+            })
+            .noUnknown();
+
+        const updateDependenciesSchema = yup
+            .object()
+            .shape({
+                id: yup.number().min(1),
+                type: yup.mixed<DependencyType>().oneOf(Object.values(DependencyType)).required(),
+                argument: yup.string().required(),
+                customMessage: yup.string(),
+                itemTempId: yup.number().min(1).required(),
             })
             .noUnknown();
 
         const updateItemsSchema = yup
             .object()
             .shape({
-                id: yup.number(),
+                id: yup.number().min(1),
+                tempId: yup.number().min(1).required(),
                 text: yup.string().min(3).max(3000),
-                description: yup.string().max(3000).notRequired(),
+                description: yup.string().max(3000),
                 enabled: yup.boolean(),
-                groupId: yup.number(),
-                type: yup.string().oneOf(Object.values(ItemType)).required(),
+                type: yup.mixed<ItemType>().oneOf(Object.values(ItemType)).required(),
                 placement: yup.number().min(1).required(),
+                files: yup.array().of(updateFileSchema).default([]),
                 itemOptions: yup.array().of(updateItemOptionsSchema).default([]),
                 itemValidations: yup.array().of(updateItemValidationsSchema).default([]),
-                filesIds: yup.array().of(yup.number()).default([]),
             })
             .noUnknown();
 
         const updateItemGroupsSchema = yup
             .object()
             .shape({
-                id: yup.number(),
+                id: yup.number().min(1),
                 placement: yup.number().min(1).required(),
                 isRepeatable: yup.boolean(),
-                pageId: yup.number(),
-                type: yup.string().oneOf(Object.values(ItemGroupType)),
+                type: yup.mixed<ItemGroupType>().oneOf(Object.values(ItemGroupType)).required(),
                 items: yup.array().of(updateItemsSchema).min(1).required(),
-                tableColumns: yup.array().of(UpdatedTableColumnSchema).default([]),
+                tableColumns: yup.array().of(updateTableColumnSchema).default([]),
+                dependencies: yup.array().of(updateDependenciesSchema).default([]),
             })
             .noUnknown();
 
         const updatePagesSchema = yup
             .object()
             .shape({
-                id: yup.number(),
+                id: yup.number().min(1),
                 placement: yup.number().min(1).required(),
-                protocolId: yup.number(),
-                type: yup.string().oneOf(Object.values(PageType)),
+                type: yup.mixed<PageType>().oneOf(Object.values(PageType)).required(),
                 itemGroups: yup.array().of(updateItemGroupsSchema).min(1).required(),
+                dependencies: yup.array().of(updateDependenciesSchema).default([]),
             })
             .noUnknown();
 
@@ -446,121 +694,80 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 description: yup.string().max(3000),
                 enabled: yup.boolean(),
                 pages: yup.array().of(updatePagesSchema).min(1).required(),
-                owners: yup.array().of(yup.number()).default([]),
-                visibility: yup.string().oneOf(Object.values(VisibilityMode)),
-                applicability: yup.string().oneOf(Object.values(VisibilityMode)),
-                answersVisibility: yup.string().oneOf(Object.values(VisibilityMode)),
+                managers: yup.array().of(yup.number()).default([]),
+                visibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)),
+                applicability: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)),
+                answersVisibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)),
                 viewersUser: yup.array().of(yup.number()).default([]),
                 viewersClassroom: yup.array().of(yup.number()).default([]),
                 answersViewersUser: yup.array().of(yup.number()).default([]),
                 answersViewersClassroom: yup.array().of(yup.number()).default([]),
                 appliers: yup.array().of(yup.number()).default([]),
-                replicable: yup.boolean().required(),
+                replicable: yup.boolean(),
             })
             .noUnknown();
-
         // Yup parsing/validation
         const protocol = await updateProtocolSchema.validate(req.body, { stripUnknown: true });
-
+        // Sort elements by placement
+        for (const page of protocol.pages) {
+            page.itemGroups.sort((a, b) => a.placement - b.placement);
+            for (const itemGroup of page.itemGroups) {
+                for (const item of itemGroup.items) {
+                    item.itemOptions.sort((a, b) => a.placement - b.placement);
+                }
+                itemGroup.items.sort((a, b) => a.placement - b.placement);
+                itemGroup.tableColumns.sort((a, b) => a.placement - b.placement);
+            }
+        }
+        protocol.pages.sort((a, b) => a.placement - b.placement);
+        // User from Passport-JWT
         const user = req.user as User;
-
-        // Check if user is included in the owners, or if user is admin
-        await checkAuthorizationToUpdateAndDeleteProtocol(user, id);
-
-        // Check if publisher remains the only owner
-        if (user.role === UserRole.PUBLISHER)
-            if (!protocol.owners.includes(user.id)) throw new Error('This user is not authorized to remove themselves from owners.');
-            else if (protocol.owners.length > 1) throw new Error('Publisher must be the only owner.');
-
+        // Check if user is included in the managers, or if user is admin
+        await checkAuthorization(user, id, 'update');
+        // Check if managers are publishers, coordinators or admins of the same institution
+        await validateManagers(protocol.managers, user.institutionId);
+        // Check if protocol placements are valid
+        await validateProtocolPlacements(protocol);
+        // Check if dependencies are valid
+        await validateDependencies(protocol);
         //Multer files
         const files = req.files as Express.Multer.File[];
-
-        // Create a set to store encountered placement values to prevent duplicate placemets
-        const placementSet = new Set<number>();
-
+        // Create map table for tempIds
+        const tempIdMap = new Map<number, number>();
         // Prisma transaction
         const upsertedProtocol = await prismaClient.$transaction(async (prisma) => {
             // Update protocol
             await prisma.protocol.update({
-                where: {
-                    id: id,
-                },
+                where: { id: id },
                 data: {
                     title: protocol.title,
                     description: protocol.description,
                     enabled: protocol.enabled,
-                    owners: {
-                        set: [],
-                        connect: protocol.owners.map((owner) => {
-                            return { id: owner };
-                        }),
-                    },
+                    managers: { set: [], connect: protocol.managers.map((owner) => ({ id: owner })) },
                     visibility: protocol.visibility as VisibilityMode,
                     applicability: protocol.applicability as VisibilityMode,
                     answersVisibility: protocol.answersVisibility as VisibilityMode,
-                    viewersUser: {
-                        set: [],
-                        connect: protocol.viewersUser.map((viewer) => {
-                            return { id: viewer };
-                        }),
-                    },
-                    viewersClassroom: {
-                        set: [],
-                        connect: protocol.viewersClassroom.map((viewer) => {
-                            return { id: viewer };
-                        }),
-                    },
-                    answersViewersUser: {
-                        set: [],
-                        connect: protocol.answersViewersUser.map((viewer) => {
-                            return { id: viewer };
-                        }),
-                    },
-                    answersViewersClassroom: {
-                        set: [],
-                        connect: protocol.answersViewersClassroom.map((viewer) => {
-                            return { id: viewer };
-                        }),
-                    },
-                    appliers: {
-                        set: [],
-                        connect: protocol.appliers.map((applier) => {
-                            return { id: applier };
-                        }),
-                    },
+                    viewersUser: { set: [], connect: protocol.viewersUser.map((viewer) => ({ id: viewer })) },
+                    viewersClassroom: { set: [], connect: protocol.viewersClassroom.map((viewer) => ({ id: viewer })) },
+                    answersViewersUser: { set: [], connect: protocol.answersViewersUser.map((viewer) => ({ id: viewer })) },
+                    answersViewersClassroom: { set: [], connect: protocol.answersViewersClassroom.map((viewer) => ({ id: viewer })) },
+                    appliers: { set: [], connect: protocol.appliers.map((applier) => ({ id: applier })) },
                     replicable: protocol.replicable,
                 },
             });
             // Remove pages that are not in the updated protocol
             await prisma.page.deleteMany({
                 where: {
-                    id: {
-                        notIn: protocol.pages.filter((page) => page.id).map((page) => page.id as number),
-                    },
+                    id: { notIn: protocol.pages.filter((page) => page.id).map((page) => page.id as number) },
                     protocolId: id,
                 },
             });
             // Update existing pages or create new ones
             for (const [pageId, page] of protocol.pages.entries()) {
-                // Check if page has the correct protocolId
-                if (page.protocolId !== protocol.id) throw new Error('Page does not belong to current protocol.');
-                // Checks for duplicate placement values
-                for (const page of protocol.pages) {
-                    if (placementSet.has(page.placement)) throw new Error('Duplicate placement value found for pages.');
-                    placementSet.add(page.placement);
-                }
-                placementSet.clear();
-
                 const upsertedPage = page.id
                     ? await prisma.page.update({
-                          where: {
-                              id: page.id,
-                              protocolId: id,
-                          },
-                          data: {
-                              placement: page.placement,
-                              type: page.type,
-                          },
+                          where: { id: page.id, protocolId: id },
+                          data: { placement: page.placement, type: page.type },
                       })
                     : await prisma.page.create({
                           data: {
@@ -572,29 +779,17 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 // Remove itemGroups that are not in the updated page
                 await prisma.itemGroup.deleteMany({
                     where: {
-                        id: {
-                            notIn: page.itemGroups.filter((itemGroup) => itemGroup.id).map((itemGroup) => itemGroup.id as number),
-                        },
+                        id: { notIn: page.itemGroups.filter((itemGroup) => itemGroup.id).map((itemGroup) => itemGroup.id as number) },
                         pageId: upsertedPage.id,
                     },
                 });
                 // Update existing itemGroups or create new ones
                 for (const [itemGroupId, itemGroup] of page.itemGroups.entries()) {
-                    // Check if itemGroup has the correct pageId
-                    if (itemGroup.pageId !== page.id) throw new Error('Item Group does not belong to current page.');
-                    // Checks for duplicate placement values
-                    for (const itemGroup of page.itemGroups) {
-                        if (placementSet.has(itemGroup.placement)) throw new Error('Duplicate placement value found for item Group.');
-                        placementSet.add(itemGroup.placement);
-                    }
-                    placementSet.clear();
+                    validateItemGroup(itemGroup.type, itemGroup.items.length, itemGroup.tableColumns.length);
 
                     const upsertedItemGroup = itemGroup.id
                         ? await prisma.itemGroup.update({
-                              where: {
-                                  id: itemGroup.id,
-                                  pageId: upsertedPage.id,
-                              },
+                              where: { id: itemGroup.id, pageId: upsertedPage.id },
                               data: {
                                   placement: itemGroup.placement,
                                   isRepeatable: itemGroup.isRepeatable,
@@ -622,27 +817,13 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                     });
                     // Update existing tableColumns or create new ones
                     for (const [tableColumnId, tableColumn] of itemGroup.tableColumns.entries()) {
-                        // Check if tableColumn has the correct groupId
-                        if (tableColumn.groupId !== itemGroup.id) throw new Error('Table Column does not belong to current item group.');
-                        // Checks for duplicate placement values
-                        for (const tableColumn of itemGroup.tableColumns) {
-                            if (placementSet.has(tableColumn.placement))
-                                throw new Error('Duplicate placement value found for table Column.');
-                            placementSet.add(tableColumn.placement);
-                        }
-                        placementSet.clear();
-
                         const upsertedTableColumn = tableColumn.id
                             ? await prisma.tableColumn.update({
                                   where: {
                                       groupId: upsertedItemGroup.id,
                                       id: tableColumn.id,
                                   },
-                                  data: {
-                                      text: tableColumn.text,
-                                      placement: tableColumn.placement,
-                                      groupId: upsertedItemGroup.id as number,
-                                  },
+                                  data: { text: tableColumn.text, placement: tableColumn.placement },
                               })
                             : await prisma.tableColumn.create({
                                   data: {
@@ -655,25 +836,16 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                     // Remove items that are not in the updated itemGroup
                     await prisma.item.deleteMany({
                         where: {
-                            id: {
-                                notIn: itemGroup.items.filter((item) => item.id).map((item) => item.id as number),
-                            },
+                            id: { notIn: itemGroup.items.filter((item) => item.id).map((item) => item.id as number) },
                             groupId: upsertedItemGroup.id,
                         },
                     });
                     // Update existing items or create new ones
                     for (const [itemId, item] of itemGroup.items.entries()) {
-                        // Check if item has the correct groupId
-                        if (item.groupId !== itemGroup.id) throw new Error('Item does not belong to current item group.');
                         // Check if item has the allowed amount of itemOptions and tableColumns
-                        await validateItem(item.type, item.itemOptions.length, itemGroup.tableColumns.length);
-                        // Checks for duplicate placement values
-                        for (const item of itemGroup.items) {
-                            if (placementSet.has(item.placement)) throw new Error('Duplicate placement value found for item.');
-                            placementSet.add(item.placement);
-                        }
-                        placementSet.clear();
-
+                        await validateItem(item.type, item.itemOptions.length);
+                        // Check if itemValidations are valid
+                        await validateItemValidations(item.type, item.itemValidations);
                         const upsertedItem = item.id
                             ? await prisma.item.update({
                                   where: {
@@ -698,25 +870,28 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                       placement: item.placement as number,
                                   },
                               });
+                        tempIdMap.set(item.tempId, upsertedItem.id);
                         // Remove files that are not in the updated item
-                        await prisma.file.deleteMany({
-                            where: {
-                                id: {
-                                    notIn: item.filesIds as number[],
-                                },
-                                itemId: upsertedItem.id,
-                            },
+                        const filesToDelete = await prisma.file.findMany({
+                            where: { id: { notIn: item.files.map((file) => file.id as number) }, itemId: upsertedItem.id },
+                            select: { id: true, path: true },
                         });
-                        const itemFiles = files
-                            .filter((file) => file.fieldname === `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][files]`)
-                            .map((file) => {
-                                return { path: file.path, itemId: upsertedItem.id };
-                            });
+                        for (const file of filesToDelete) unlinkSync(file.path);
+                        await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
+                        const itemFiles = item.files.map((file, fileIndex) => {
+                            const storedFile = files.find(
+                                (f) => f.fieldname === `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][files][${fileIndex}]`
+                            );
+                            if (!storedFile) throw new Error('File not found.');
+                            return {
+                                description: file.description,
+                                path: storedFile.path,
+                                itemId: upsertedItem.id,
+                            };
+                        });
 
                         // Create new files (updating files is not supported)
-                        await prisma.file.createMany({
-                            data: itemFiles,
-                        });
+                        await prisma.file.createMany({ data: itemFiles });
                         // Remove itemOptions that are not in the updated item
                         await prisma.itemOption.deleteMany({
                             where: {
@@ -728,26 +903,10 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                         });
                         // Update existing itemOptions or create new ones
                         for (const [itemOptionId, itemOption] of item.itemOptions.entries()) {
-                            // Check if itemOption has the correct itemId
-                            if (itemOption.itemId !== item.id) throw new Error('Item Option does not belong to current item.');
-                            // Checks for duplicate placement values
-                            for (const itemOption of item.itemOptions) {
-                                if (placementSet.has(itemOption.placement))
-                                    throw new Error('Duplicate placement value found for item Option.');
-                                placementSet.add(itemOption.placement);
-                            }
-                            placementSet.clear();
-
                             const upsertedItemOption = itemOption.id
                                 ? await prisma.itemOption.update({
-                                      where: {
-                                          id: itemOption.id,
-                                          itemId: upsertedItem.id,
-                                      },
-                                      data: {
-                                          text: itemOption.text,
-                                          placement: itemOption.placement,
-                                      },
+                                      where: { id: itemOption.id, itemId: upsertedItem.id },
+                                      data: { text: itemOption.text, placement: itemOption.placement },
                                   })
                                 : await prisma.itemOption.create({
                                       data: {
@@ -757,27 +916,31 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                       },
                                   });
                             // Remove files that are not in the updated itemOption
-                            await prisma.file.deleteMany({
+                            const filesToDelete = await prisma.file.findMany({
                                 where: {
-                                    id: {
-                                        notIn: itemOption.filesIds as number[],
-                                    },
+                                    id: { notIn: itemOption.files.map((file) => file.id as number) },
                                     itemOptionId: upsertedItemOption.id,
                                 },
+                                select: { id: true, path: true },
                             });
-                            const itemOptionFiles = files
-                                .filter(
-                                    (file) =>
-                                        file.fieldname ===
-                                        `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][itemOptions][${itemOptionId}][files]`
-                                )
-                                .map((file) => {
-                                    return { path: file.path, itemOptionId: upsertedItemOption.id };
-                                });
+                            for (const file of filesToDelete) unlinkSync(file.path);
+                            await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
+                            const itemOptionFiles = itemOption.files.map((file, fileIndex) => {
+                                const storedFile = files.find(
+                                    (f) =>
+                                        f.fieldname ===
+                                        `pages[${pageId}][itemGroups][${itemGroupId}][items][${itemId}][itemOptions][${itemOptionId}][files][${fileIndex}]`
+                                );
+                                if (!storedFile) throw new Error('File not found.');
+                                return {
+                                    description: file.description,
+                                    path: storedFile.path,
+                                    itemOptionId: upsertedItemOption.id,
+                                };
+                            });
+
                             // Create new files (updating files is not supported)
-                            await prisma.file.createMany({
-                                data: itemOptionFiles,
-                            });
+                            await prisma.file.createMany({ data: itemOptionFiles });
                         }
                         // Remove itemValidations that are not in the updated item
                         await prisma.itemValidation.deleteMany({
@@ -792,15 +955,9 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                         });
                         // Update existing itemValidations or create new ones
                         for (const [itemValidationId, itemValidation] of item.itemValidations.entries()) {
-                            // Check if itemValidation has the correct itemId
-                            if (itemValidation.itemId !== item.id) throw new Error('Item Validation does not belong to current item.');
-
                             const upsertedItemValidation = itemValidation.id
                                 ? await prisma.itemValidation.update({
-                                      where: {
-                                          id: itemValidation.id,
-                                          itemId: upsertedItem.id,
-                                      },
+                                      where: { id: itemValidation.id, itemId: upsertedItem.id },
                                       data: {
                                           type: itemValidation.type,
                                           argument: itemValidation.argument,
@@ -817,71 +974,138 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                   });
                         }
                     }
+                    // Remove dependencies that are not in the updated itemGroup
+                    await prisma.itemGroupDependencyRule.deleteMany({
+                        where: {
+                            id: {
+                                notIn: itemGroup.dependencies
+                                    .filter((dependency) => dependency.id)
+                                    .map((dependency) => dependency.id as number),
+                            },
+                            itemGroupId: upsertedItemGroup.id,
+                        },
+                    });
+                    // Update existing dependencies or create new ones
+                    for (const [dependencyId, dependency] of itemGroup.dependencies.entries()) {
+                        const upsertedDependency = dependency.id
+                            ? await prisma.itemGroupDependencyRule.update({
+                                  where: { id: dependency.id, itemGroupId: upsertedItemGroup.id },
+                                  data: {
+                                      argument: dependency.argument,
+                                      customMessage: dependency.customMessage,
+                                  },
+                              })
+                            : await prisma.itemGroupDependencyRule.create({
+                                  data: {
+                                      type: dependency.type as DependencyType,
+                                      argument: dependency.argument as string,
+                                      customMessage: dependency.customMessage as string,
+                                      itemGroupId: upsertedItemGroup.id as number,
+                                      itemId: tempIdMap.get(dependency.itemTempId) as number,
+                                  },
+                              });
+                    }
+                }
+                // Remove dependencies that are not in the updated page
+                await prisma.pageDependencyRule.deleteMany({
+                    where: {
+                        id: {
+                            notIn: page.dependencies.filter((dependency) => dependency.id).map((dependency) => dependency.id as number),
+                        },
+                        pageId: upsertedPage.id,
+                    },
+                });
+                // Update existing dependencies or create new ones
+                for (const [dependencyId, dependency] of page.dependencies.entries()) {
+                    const upsertedDependency = dependency.id
+                        ? await prisma.pageDependencyRule.update({
+                              where: { id: dependency.id, pageId: upsertedPage.id },
+                              data: { argument: dependency.argument, customMessage: dependency.customMessage },
+                          })
+                        : await prisma.pageDependencyRule.create({
+                              data: {
+                                  type: dependency.type as DependencyType,
+                                  argument: dependency.argument as string,
+                                  customMessage: dependency.customMessage as string,
+                                  pageId: upsertedPage.id as number,
+                                  itemId: tempIdMap.get(dependency.itemTempId) as number,
+                              },
+                          });
                 }
             }
+            // Check if there are any files left
+            if (files.length > 0) {
+                throw new Error('Files not associated with any item or option detected.');
+            }
+
             // Return the updated application answer with nested content included
-            return await prisma.protocol.findUnique({
-                where: {
-                    id: id,
-                },
-                include: {
-                    pages: {
-                        include: {
-                            itemGroups: {
-                                include: {
-                                    items: {
-                                        include: {
-                                            itemOptions: {
-                                                include: {
-                                                    files: true,
-                                                },
-                                            },
-                                            itemValidations: true,
-                                            files: true,
-                                        },
-                                    },
-                                    tableColumns: true,
-                                },
-                            },
-                        },
-                    },
-                },
-            });
+            return await prisma.protocol.findUnique({ where: { id: id }, select: fieldsWViewers });
         });
+
         res.status(200).json({ message: 'Protocol updated.', data: upsertedProtocol });
     } catch (error: any) {
+        const files = req.files as Express.Multer.File[];
+        for (const file of files) unlinkSync(file.path);
         res.status(400).json(errorFormatter(error));
     }
 };
 
 export const getAllProtocols = async (req: Request, res: Response): Promise<void> => {
     try {
-        // Get all protocols with nested content included
-        const protocol: Protocol[] = await prismaClient.protocol.findMany({
-            include: {
-                pages: {
-                    include: {
-                        itemGroups: {
-                            include: {
-                                items: {
-                                    include: {
-                                        itemOptions: {
-                                            include: {
-                                                files: true,
-                                            },
-                                        },
-                                        itemValidations: true,
-                                        files: true,
-                                    },
-                                },
-                                tableColumns: true,
-                            },
-                        },
-                    },
-                },
-            },
-        });
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is allowed to get all protocols
+        await checkAuthorization(user, undefined, 'getAll');
+        // Prisma operation
+        const protocol = await prismaClient.protocol.findMany({ select: fieldsWViewers });
+
         res.status(200).json({ message: 'All protocols found.', data: protocol });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const getVisibleProtocols = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is allowed to get visible protocols
+        await checkAuthorization(user, undefined, 'getVisible');
+        // Prisma operation
+        const protocols =
+            user.role === UserRole.ADMIN
+                ? await prismaClient.protocol.findMany({ select: fieldsWViewers })
+                : await prismaClient.protocol.findMany({
+                      where: {
+                          OR: [
+                              { managers: { some: { id: user.id } } },
+                              { appliers: { some: { id: user.id } } },
+                              { viewersUser: { some: { id: user.id } } },
+                              { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                              { creatorId: user.id },
+                              { visibility: VisibilityMode.PUBLIC },
+                          ],
+                      },
+                      select: fields,
+                  });
+
+        res.status(200).json({ message: 'Visible protocols found.', data: protocols });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const getMyProtocols = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Prisma operation
+        const protocols = await prismaClient.protocol.findMany({
+            where: { OR: [{ managers: { some: { id: user.id } }, creatorId: user.id }] },
+            select: fieldsWViewers,
+        });
+
+        res.status(200).json({ message: 'My protocols found.', data: protocols });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -890,38 +1114,46 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
 export const getProtocol = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
-        const id: number = parseInt(req.params.protocolId);
-
+        const protocolId: number = parseInt(req.params.protocolId);
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is allowed to get the protocol
+        await checkAuthorization(user, protocolId, 'get');
         // Get protocol with nested content included
-        const protocol: Protocol = await prismaClient.protocol.findUniqueOrThrow({
+        const protocol = await prismaClient.protocol.findUniqueOrThrow({
             where: {
-                id,
+                id: protocolId,
+                OR: [
+                    { managers: { some: { id: user.id } } },
+                    { appliers: { some: { id: user.id } } },
+                    { viewersUser: { some: { id: user.id } } },
+                    { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                    { creatorId: user.id },
+                    { visibility: VisibilityMode.PUBLIC },
+                ],
             },
-            include: {
-                pages: {
-                    include: {
-                        itemGroups: {
-                            include: {
-                                items: {
-                                    include: {
-                                        itemOptions: {
-                                            include: {
-                                                files: true,
-                                            },
-                                        },
-                                        itemValidations: true,
-                                        files: true,
-                                    },
-                                },
-                                tableColumns: true,
-                            },
-                        },
-                    },
-                },
-            },
+            select: fieldsWViewers,
         });
 
-        res.status(200).json({ message: 'Protocol found.', data: protocol });
+        const visibleProtocol =
+            user.role !== UserRole.USER &&
+            (user.role === UserRole.ADMIN ||
+                protocol.creator.id === user.id ||
+                protocol.managers.some((owner) => owner.id === user.id) ||
+                protocol.appliers.some((applier) => applier.id === user.id) ||
+                protocol.applicability === VisibilityMode.PUBLIC)
+                ? protocol
+                : {
+                      ...protocol,
+                      viewersUser: undefined,
+                      viewersClassroom: undefined,
+                      answersViewersUser: undefined,
+                      answersViewersClassroom: undefined,
+                      appliers: undefined,
+                      managers: undefined,
+                  };
+
+        res.status(200).json({ message: 'Protocol found.', data: visibleProtocol });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -931,16 +1163,12 @@ export const deleteProtocol = async (req: Request, res: Response): Promise<void>
     try {
         // ID from params
         const id: number = parseInt(req.params.protocolId);
-
-        // Check if user is included in the owners, or if user is admin
-        await checkAuthorizationToUpdateAndDeleteProtocol(req.user as User, id);
-
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is allowed to delete the protocol
+        await checkAuthorization(user, id, 'delete');
         // Delete protocol
-        const deletedProtocol: Protocol = await prismaClient.protocol.delete({
-            where: {
-                id,
-            },
-        });
+        const deletedProtocol = await prismaClient.protocol.delete({ where: { id }, select: { id: true } });
 
         res.status(200).json({ message: 'Protocol deleted.', data: deletedProtocol });
     } catch (error: any) {
