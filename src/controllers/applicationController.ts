@@ -161,6 +161,7 @@ const fieldsWProtocol = {
                                     },
                                     files: { select: { id: true, path: true } },
                                 },
+                                itemValidations: { select: { type: true, argument: true, customMessage: true } },
                             },
                             dependencies: { select: { type: true, argument: true, itemId: true, customMessage: true } },
                         },
