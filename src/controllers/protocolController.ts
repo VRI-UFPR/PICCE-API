@@ -833,7 +833,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                         tempIdMap.set(item.tempId, upsertedItem.id);
                         // Remove files that are not in the updated item
                         const filesToDelete = await prisma.file.findMany({
-                            where: { id: { notIn: item.filesIds as number[] } },
+                            where: { id: { notIn: item.filesIds as number[] }, itemId: upsertedItem.id },
                             select: { id: true, path: true },
                         });
                         for (const file of filesToDelete) unlinkSync(file.path);
