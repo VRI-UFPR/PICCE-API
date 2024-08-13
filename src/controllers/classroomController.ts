@@ -14,6 +14,12 @@ const fields = {
     updatedAt: true,
 };
 
+const publicFields = {
+    id: true,
+    name: true,
+    users: { select: { id: true, name: true, username: true, role: true } },
+};
+
 // Only admins or the coordinator of the institution can perform C-UD operations on classrooms
 const checkAuthorization = async (user: User, classroomId: number | undefined, institutionId: number | undefined, action: string) => {
     switch (action) {
@@ -51,6 +57,11 @@ const checkAuthorization = async (user: User, classroomId: number | undefined, i
                 }
             }
             break;
+        case 'search':
+            if (user.role === UserRole.USER) {
+                throw new Error('This user is not authorized to perform this action');
+            }
+            break;
         case 'getMy':
             // All users can perform get my classrooms operation (the result will be filtered based on the user)
             break;
@@ -64,7 +75,7 @@ export const createClassroom = async (req: Request, res: Response) => {
             .object()
             .shape({
                 id: yup.number().min(1),
-                name: yup.string().min(1).max(255).required(),
+                name: yup.string().min(3).max(255).required(),
                 institutionId: yup.number().required(),
                 users: yup.array().of(yup.number()).min(2).required(),
             })
@@ -98,7 +109,7 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
         // Yup schemas
         const updateClassroomSchema = yup
             .object()
-            .shape({ name: yup.string().min(1).max(255), users: yup.array().of(yup.number()).min(2) })
+            .shape({ name: yup.string().min(3).max(255), users: yup.array().of(yup.number()).min(2) })
             .noUnknown();
         // Yup parsing/validation
         const classroom = await updateClassroomSchema.validate(req.body);
@@ -164,6 +175,33 @@ export const getMyClassrooms = async (req: Request, res: Response): Promise<void
         });
 
         res.status(200).json({ message: 'My classrooms found.', data: classrooms });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const searchClassroomByName = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // User from passport-jwt
+        const curUser = req.user as User;
+        // Check if user is authorized to search users
+        await checkAuthorization(curUser, undefined, undefined, 'search');
+        // Yup schemas
+        const searchUserSchema = yup
+            .object()
+            .shape({
+                term: yup.string().min(3).max(20).required(),
+            })
+            .noUnknown();
+        // Yup parsing/validation
+        const { term } = await searchUserSchema.validate(req.body);
+        // Prisma operation
+        const classrooms = await prismaClient.classroom.findMany({
+            where: { name: { startsWith: term } },
+            select: publicFields,
+        });
+
+        res.status(200).json({ message: 'Searched classrooms found.', data: classrooms });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
