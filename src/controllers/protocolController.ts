@@ -315,10 +315,10 @@ const fields = {
 const fieldsWViewers = {
     ...fields,
     managers: { select: { id: true, username: true } },
-    viewersUser: { select: { id: true, username: true } },
-    viewersClassroom: { select: { id: true } },
-    answersViewersUser: { select: { id: true, username: true } },
-    answersViewersClassroom: { select: { id: true } },
+    viewersUser: { select: { id: true, username: true, classrooms: { select: { id: true, name: true } } } },
+    viewersClassroom: { select: { id: true, name: true, users: { select: { id: true, username: true } } } },
+    answersViewersUser: { select: { id: true, username: true, classrooms: { select: { id: true, name: true } } } },
+    answersViewersClassroom: { select: { id: true, name: true, users: { select: { id: true, username: true } } } },
     appliers: { select: { id: true, username: true } },
 };
 

@@ -120,10 +120,14 @@ const fields = {
 
 const fieldsWViewers = {
     ...fields,
-    viewersUser: { select: { id: true, username: true } },
-    viewersClassroom: { select: { id: true, institution: { select: { name: true } } } },
-    answersViewersUser: { select: { id: true, username: true } },
-    answersViewersClassroom: { select: { id: true, institution: { select: { name: true } } } },
+    viewersUser: { select: { id: true, username: true, classrooms: { select: { id: true, name: true } } } },
+    viewersClassroom: {
+        select: { id: true, name: true, institution: { select: { name: true } }, users: { select: { id: true, username: true } } },
+    },
+    answersViewersUser: { select: { id: true, username: true, classrooms: { select: { id: true, name: true } } } },
+    answersViewersClassroom: {
+        select: { id: true, name: true, institution: { select: { name: true } }, users: { select: { id: true, username: true } } },
+    },
 };
 
 const fieldsWProtocol = {
