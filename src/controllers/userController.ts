@@ -3,7 +3,7 @@ import { User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
-import { unlinkSync } from 'fs';
+import { unlinkSync, existsSync } from 'fs';
 
 // Only admins or the user itself can perform --UD operations on users
 const checkAuthorization = async (curUser: User, userId: number | undefined, role: UserRole | undefined, action: string) => {
@@ -127,7 +127,7 @@ export const createUser = async (req: Request, res: Response) => {
         res.status(201).json({ message: 'User created.', data: createdUser });
     } catch (error: any) {
         const file = req.file as Express.Multer.File;
-        if (file) unlinkSync(file.path);
+        if (file) if (existsSync(file.path)) unlinkSync(file.path);
         res.status(400).json(errorFormatter(error));
     }
 };
@@ -163,7 +163,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
                 where: { id: { not: user.profileImageId }, users: { some: { id: userId } } },
                 select: { id: true, path: true },
             });
-            for (const file of filesToDelete) unlinkSync(file.path);
+            for (const file of filesToDelete) if (existsSync(file.path)) unlinkSync(file.path);
             await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
             const updatedUser = await prisma.user.update({
                 where: { id: userId },
@@ -187,7 +187,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         res.status(200).json({ message: 'User updated.', data: updatedUser });
     } catch (error: any) {
         const file = req.file as Express.Multer.File;
-        if (file) unlinkSync(file.path);
+        if (file) if (existsSync(file.path)) unlinkSync(file.path);
         res.status(400).json(errorFormatter(error));
     }
 };
