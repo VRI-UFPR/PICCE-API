@@ -25,7 +25,7 @@ const checkAuthorization = async (user: User, classroomId: number | undefined, i
     switch (action) {
         case 'create':
             // Only ADMINs or members of an institution can perform create operations on its classrooms
-            if (user.role !== UserRole.ADMIN && (user.role === UserRole.USER || user.institutionId !== institutionId)) {
+            if (user.role !== UserRole.ADMIN && (user.role === UserRole.USER || (institutionId && user.institutionId !== institutionId))) {
                 throw new Error('This user is not authorized to perform this action');
             }
             break;
@@ -36,7 +36,12 @@ const checkAuthorization = async (user: User, classroomId: number | undefined, i
                 const classroom = await prismaClient.classroom.findUnique({
                     where: user.institutionId ? { id: classroomId, institutionId: user.institutionId } : { id: classroomId },
                 });
-                if (user.role === UserRole.USER || user.role === UserRole.APPLIER || !user.institutionId || !classroom) {
+                if (
+                    user.role === UserRole.USER ||
+                    user.role === UserRole.APPLIER ||
+                    (institutionId && institutionId !== user.institutionId) ||
+                    !classroom
+                ) {
                     throw new Error('This user is not authorized to perform this action');
                 }
             }
@@ -74,9 +79,8 @@ export const createClassroom = async (req: Request, res: Response) => {
         const createClassroomSchema = yup
             .object()
             .shape({
-                id: yup.number().min(1),
                 name: yup.string().min(3).max(255).required(),
-                institutionId: yup.number().required(),
+                institutionId: yup.number(),
                 users: yup.array().of(yup.number()).min(2).required(),
             })
             .noUnknown();
@@ -89,9 +93,8 @@ export const createClassroom = async (req: Request, res: Response) => {
         // Prisma operation
         const createdClassroom: Classroom = await prismaClient.classroom.create({
             data: {
-                id: classroom.id,
                 name: classroom.name,
-                institutionId: classroom.institutionId,
+                institution: { connect: classroom.institutionId ? { id: classroom.institutionId } : undefined },
                 users: { connect: classroom.users.map((id) => ({ id: id })) },
             },
         });
@@ -109,18 +112,26 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
         // Yup schemas
         const updateClassroomSchema = yup
             .object()
-            .shape({ name: yup.string().min(3).max(255), users: yup.array().of(yup.number()).min(2) })
+            .shape({
+                name: yup.string().min(3).max(255),
+                institutionId: yup.number(),
+                users: yup.array().of(yup.number()).min(2),
+            })
             .noUnknown();
         // Yup parsing/validation
         const classroom = await updateClassroomSchema.validate(req.body);
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is authorized to update this classroom
-        await checkAuthorization(user, classroomId, undefined, 'update');
+        await checkAuthorization(user, classroomId, classroom.institutionId, 'update');
         // Prisma operation
         const updatedClassroom = await prismaClient.classroom.update({
             where: { id: classroomId },
-            data: { name: classroom.name, users: { set: [], connect: classroom.users?.map((id) => ({ id: id })) } },
+            data: {
+                name: classroom.name,
+                institution: { disconnect: true, connect: classroom.institutionId ? { id: classroom.institutionId } : undefined },
+                users: { set: [], connect: classroom.users?.map((id) => ({ id: id })) },
+            },
             select: fields,
         });
 
