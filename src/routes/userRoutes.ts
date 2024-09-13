@@ -1,6 +1,6 @@
 import express from 'express';
 import uploader from '../services/multerUploader';
-import { createUser, updateUser, getAllUsers, getUser, deleteUser } from '../controllers/userController';
+import { createUser, updateUser, getAllUsers, getUser, deleteUser, searchUserByUsername } from '../controllers/userController';
 import passport from '../services/passportAuth';
 
 /**
@@ -286,6 +286,52 @@ router.get('/getAllUsers', passport.authenticate('jwt', { session: false }), upl
  *               message: Internal Server Error.
  */
 router.get('/getUser/:userId', passport.authenticate('jwt', { session: false }), uploader.none(), getUser);
+
+/**
+ * @swagger
+ * /api/user/searchUserByUsername:
+ *   post:
+ *     summary: Search users by username
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - term
+ *             properties:
+ *               term:
+ *                 type: string
+ *                 description: The term to search for
+ *                 example: "john"
+ *     responses:
+ *       200:
+ *         description: The list of users found
+ *         content:
+ *           application/json:
+ *             message: Users found.
+ *             data:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/GetUser'
+ *       400:
+ *         description: Request data validation failed
+ *         content:
+ *           application/json:
+ *             error:
+ *               message: Bad Request.
+ *       500:
+ *         description: Some server error happened
+ *         content:
+ *           application/json:
+ *             error:
+ *               message: Internal Server Error.
+ */
+router.post('/searchUserByUsername', passport.authenticate('jwt', { session: false }), uploader.none(), searchUserByUsername);
 
 /**
  * @swagger

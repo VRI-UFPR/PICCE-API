@@ -7,6 +7,7 @@ import {
     getClassroom,
     deleteClassroom,
     getMyClassrooms,
+    searchClassroomByName,
 } from '../controllers/classroomController';
 import passport from '../services/passportAuth';
 
@@ -275,6 +276,52 @@ router.get('/getMyClassrooms', passport.authenticate('jwt', { session: false }),
  *               message: Internal Server Error.
  */
 router.get('/getClassroom/:classroomId', passport.authenticate('jwt', { session: false }), uploader.none(), getClassroom);
+
+/**
+ * @swagger
+ * /api/classroom/searchClassroomByName:
+ *   post:
+ *     summary: Search classrooms by name
+ *     tags: [Classroom]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - term
+ *             properties:
+ *               term:
+ *                 type: string
+ *                 description: The search term
+ *                 example: 'New York'
+ *     responses:
+ *       200:
+ *         description: The list of classrooms that match the search term
+ *         content:
+ *           application/json:
+ *             message: Searched classrooms found.
+ *             data:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/GetClassroom'
+ *       400:
+ *         description: Request data validation failed
+ *         content:
+ *           application/json:
+ *             error:
+ *               message: Bad Request.
+ *       500:
+ *         description: Some error occurred while searching classrooms.
+ *         content:
+ *           application/json:
+ *             error:
+ *               message: Internal Server Error.
+ */
+router.post('/searchClassroomByName', passport.authenticate('jwt', { session: false }), uploader.none(), searchClassroomByName);
 
 /**
  * @swagger

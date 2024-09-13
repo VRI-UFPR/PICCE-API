@@ -3,7 +3,7 @@ import { User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
-import { unlinkSync } from 'fs';
+import { unlinkSync, existsSync } from 'fs';
 
 // Only admins or the user itself can perform --UD operations on users
 const checkAuthorization = async (curUser: User, userId: number | undefined, role: UserRole | undefined, action: string) => {
@@ -31,7 +31,7 @@ const checkAuthorization = async (curUser: User, userId: number | undefined, rol
                 (curUser.role === UserRole.APPLIER && role !== UserRole.USER && role !== UserRole.APPLIER) ||
                 (curUser.role === UserRole.USER && role !== UserRole.USER)
             ) {
-                throw new Error('This user is not authorized to perform this action ' + curUser.id + ' ' + userId);
+                throw new Error('This user is not authorized to perform this action');
             }
             break;
         case 'getAll':
@@ -49,6 +49,11 @@ const checkAuthorization = async (curUser: User, userId: number | undefined, rol
                 if (!user || !user.institutionId || (curUser.role === UserRole.USER && curUser.id !== userId)) {
                     throw new Error('This user is not authorized to perform this action');
                 }
+            }
+            break;
+        case 'search':
+            if (curUser.role === UserRole.USER) {
+                throw new Error('This user is not authorized to perform this action');
             }
             break;
         case 'delete':
@@ -72,6 +77,14 @@ const fields = {
     acceptedTerms: true,
     createdAt: true,
     updatedAt: true,
+};
+
+const publicFields = {
+    id: true,
+    name: true,
+    username: true,
+    institution: { select: { id: true, name: true } },
+    classrooms: { select: { id: true, name: true } },
 };
 
 export const createUser = async (req: Request, res: Response) => {
@@ -114,7 +127,7 @@ export const createUser = async (req: Request, res: Response) => {
         res.status(201).json({ message: 'User created.', data: createdUser });
     } catch (error: any) {
         const file = req.file as Express.Multer.File;
-        if (file) unlinkSync(file.path);
+        if (file) if (existsSync(file.path)) unlinkSync(file.path);
         res.status(400).json(errorFormatter(error));
     }
 };
@@ -150,7 +163,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
                 where: { id: { not: user.profileImageId }, users: { some: { id: userId } } },
                 select: { id: true, path: true },
             });
-            for (const file of filesToDelete) unlinkSync(file.path);
+            for (const file of filesToDelete) if (existsSync(file.path)) unlinkSync(file.path);
             await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
             const updatedUser = await prisma.user.update({
                 where: { id: userId },
@@ -174,7 +187,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         res.status(200).json({ message: 'User updated.', data: updatedUser });
     } catch (error: any) {
         const file = req.file as Express.Multer.File;
-        if (file) unlinkSync(file.path);
+        if (file) if (existsSync(file.path)) unlinkSync(file.path);
         res.status(400).json(errorFormatter(error));
     }
 };
@@ -206,6 +219,33 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
         const user = await prismaClient.user.findUniqueOrThrow({ where: { id: userId }, select: fields });
 
         res.status(200).json({ message: 'User found.', data: user });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const searchUserByUsername = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // User from passport-jwt
+        const curUser = req.user as User;
+        // Check if user is authorized to search users
+        await checkAuthorization(curUser, undefined, undefined, 'search');
+        // Yup schemas
+        const searchUserSchema = yup
+            .object()
+            .shape({
+                term: yup.string().min(3).max(20).required(),
+            })
+            .noUnknown();
+        // Yup parsing/validation
+        const { term } = await searchUserSchema.validate(req.body);
+        // Prisma operation
+        const users = await prismaClient.user.findMany({
+            where: { username: { startsWith: term } },
+            select: publicFields,
+        });
+
+        res.status(200).json({ message: 'Searched users found.', data: users });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
