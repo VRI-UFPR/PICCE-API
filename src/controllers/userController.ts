@@ -6,7 +6,13 @@ import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
 
 // Only admins or the user itself can perform --UD operations on users
-const checkAuthorization = async (curUser: User, userId: number | undefined, role: UserRole | undefined, action: string) => {
+const checkAuthorization = async (
+    curUser: User,
+    userId: number | undefined,
+    role: UserRole | undefined,
+    institutionId: number | undefined,
+    action: string
+) => {
     switch (action) {
         case 'create':
             // Only USERs and APPLIERs can't perform create operations on users, other roles need to respect the hierarchy
@@ -14,7 +20,8 @@ const checkAuthorization = async (curUser: User, userId: number | undefined, rol
                 (curUser.role === UserRole.COORDINATOR && (role === UserRole.ADMIN || role === UserRole.COORDINATOR)) ||
                 (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER) ||
                 curUser.role === UserRole.APPLIER ||
-                curUser.role === UserRole.USER
+                curUser.role === UserRole.USER ||
+                (institutionId && curUser.institutionId !== institutionId)
             ) {
                 throw new Error('This user is not authorized to perform this action');
             }
@@ -98,7 +105,7 @@ export const createUser = async (req: Request, res: Response) => {
                 username: yup.string().min(3).max(20).required(),
                 hash: yup.string().required(),
                 role: yup.string().oneOf(Object.values(UserRole)).required(),
-                institutionId: yup.number().required(),
+                institutionId: yup.number(),
                 classrooms: yup.array().of(yup.number()).default([]),
             })
             .noUnknown();
@@ -107,7 +114,7 @@ export const createUser = async (req: Request, res: Response) => {
         // User from Passport-JWT
         const curUser = req.user as User;
         // Check if user is authorized to create a user
-        await checkAuthorization(curUser, undefined, user.role as UserRole, 'create');
+        await checkAuthorization(curUser, undefined, user.role as UserRole, user.institutionId, 'create');
         // Multer single file
         const file = req.file as Express.Multer.File;
         // Prisma operation
@@ -119,7 +126,7 @@ export const createUser = async (req: Request, res: Response) => {
                 role: user.role,
                 classrooms: { connect: user.classrooms.map((id) => ({ id: id })) },
                 profileImage: file ? { create: { path: file.path } } : undefined,
-                institution: { connect: { id: user.institutionId } },
+                institution: { connect: user.institutionId ? { id: user.institutionId } : undefined },
             },
             select: fields,
         });
@@ -154,7 +161,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         // User from Passport-JWT
         const curUser = req.user as User;
         // Check if user is authorized to update the user
-        await checkAuthorization(curUser, userId, user.role as UserRole, 'update');
+        await checkAuthorization(curUser, userId, user.role as UserRole, undefined, 'update');
         // Multer single file
         const file = req.file as Express.Multer.File;
         // Prisma transaction
@@ -172,7 +179,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
                     username: user.username,
                     hash: user.hash,
                     role: user.role,
-                    institution: { connect: user.institutionId ? { id: user.institutionId } : undefined },
+                    institution: { disconnect: true, connect: user.institutionId ? { id: user.institutionId } : undefined },
                     classrooms: { set: [], connect: user.classrooms?.map((id) => ({ id: id })) },
                     profileImage: {
                         create: !user.profileImageId && file ? { path: file.path } : undefined,
@@ -197,7 +204,7 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
         // User from Passport-JWT
         const curUser = req.user as User;
         // Check if user is authorized to get all users
-        await checkAuthorization(curUser, undefined, undefined, 'getAll');
+        await checkAuthorization(curUser, undefined, undefined, undefined, 'getAll');
         // Prisma operation
         const users = await prismaClient.user.findMany({ select: fields });
 
@@ -214,7 +221,7 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
         // User from Passport-JWT
         const curUser = req.user as User;
         // Check if user is authorized to get the user
-        await checkAuthorization(curUser, userId, undefined, 'get');
+        await checkAuthorization(curUser, userId, undefined, undefined, 'get');
         // Prisma operation
         const user = await prismaClient.user.findUniqueOrThrow({ where: { id: userId }, select: fields });
 
@@ -229,7 +236,7 @@ export const searchUserByUsername = async (req: Request, res: Response): Promise
         // User from passport-jwt
         const curUser = req.user as User;
         // Check if user is authorized to search users
-        await checkAuthorization(curUser, undefined, undefined, 'search');
+        await checkAuthorization(curUser, undefined, undefined, undefined, 'search');
         // Yup schemas
         const searchUserSchema = yup
             .object()
@@ -258,7 +265,7 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
         // User from Passport-JWT
         const curUser = req.user as User;
         // Check if user is authorized to delete the user
-        await checkAuthorization(curUser, userId, undefined, 'delete');
+        await checkAuthorization(curUser, userId, undefined, undefined, 'delete');
         // Prisma operation
         const deletedUser = await prismaClient.user.delete({ where: { id: userId }, select: { id: true } });
 
