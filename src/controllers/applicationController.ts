@@ -94,12 +94,28 @@ const validateVisibility = async (
     const protocolViewers = await prismaClient.protocol.findUnique({
         where: {
             id: protocolId,
-            visibility: visibility,
-            answersVisibility: answersVisibility,
-            answersViewersUser: { every: { id: { in: answersViewersUsers } } },
-            answersViewersClassroom: { every: { id: { in: answersViewersClassrooms } } },
-            viewersUser: { every: { id: { in: viewersUsers } } },
-            viewersClassroom: { every: { id: { in: viewersClassrooms } } },
+            AND: [
+                {
+                    OR: [
+                        { visibility: 'PUBLIC' },
+                        {
+                            visibility: visibility,
+                            viewersUser: { every: { id: { in: viewersUsers } } },
+                            viewersClassroom: { every: { id: { in: viewersClassrooms } } },
+                        },
+                    ],
+                },
+                {
+                    OR: [
+                        { answersVisibility: 'PUBLIC' },
+                        {
+                            answersVisibility: answersVisibility,
+                            answersViewersUser: { every: { id: { in: answersViewersUsers } } },
+                            answersViewersClassroom: { every: { id: { in: answersViewersClassrooms } } },
+                        },
+                    ],
+                },
+            ],
         },
     });
 
