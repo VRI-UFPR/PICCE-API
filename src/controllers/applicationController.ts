@@ -260,10 +260,10 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
             .shape({
                 visibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)),
                 answersVisibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)),
-                viewersUser: yup.array().of(yup.number()).required(),
-                viewersClassroom: yup.array().of(yup.number()).required(),
-                answersViewersUser: yup.array().of(yup.number()).required(),
-                answersViewersClassroom: yup.array().of(yup.number()).required(),
+                viewersUser: yup.array().of(yup.number()).default([]),
+                viewersClassroom: yup.array().of(yup.number()).default([]),
+                answersViewersUser: yup.array().of(yup.number()).default([]),
+                answersViewersClassroom: yup.array().of(yup.number()).default([]),
             })
             .noUnknown();
         // Yup parsing/validation
