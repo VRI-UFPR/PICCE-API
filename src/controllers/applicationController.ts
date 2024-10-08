@@ -167,6 +167,7 @@ const fieldsWProtocol = {
                             type: true,
                             placement: true,
                             isRepeatable: true,
+                            tableColumns: { select: { id: true, text: true, placement: true } },
                             items: {
                                 orderBy: { placement: 'asc' as any },
                                 select: {
