@@ -94,12 +94,28 @@ const validateVisibility = async (
     const protocolViewers = await prismaClient.protocol.findUnique({
         where: {
             id: protocolId,
-            visibility: visibility,
-            answersVisibility: answersVisibility,
-            answersViewersUser: { every: { id: { in: answersViewersUsers } } },
-            answersViewersClassroom: { every: { id: { in: answersViewersClassrooms } } },
-            viewersUser: { every: { id: { in: viewersUsers } } },
-            viewersClassroom: { every: { id: { in: viewersClassrooms } } },
+            AND: [
+                {
+                    OR: [
+                        { visibility: 'PUBLIC' },
+                        {
+                            visibility: visibility,
+                            viewersUser: { every: { id: { in: viewersUsers } } },
+                            viewersClassroom: { every: { id: { in: viewersClassrooms } } },
+                        },
+                    ],
+                },
+                {
+                    OR: [
+                        { answersVisibility: 'PUBLIC' },
+                        {
+                            answersVisibility: answersVisibility,
+                            answersViewersUser: { every: { id: { in: answersViewersUsers } } },
+                            answersViewersClassroom: { every: { id: { in: answersViewersClassrooms } } },
+                        },
+                    ],
+                },
+            ],
         },
     });
 
@@ -151,6 +167,7 @@ const fieldsWProtocol = {
                             type: true,
                             placement: true,
                             isRepeatable: true,
+                            tableColumns: { select: { id: true, text: true, placement: true } },
                             items: {
                                 orderBy: { placement: 'asc' as any },
                                 select: {
@@ -244,10 +261,10 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
             .shape({
                 visibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)),
                 answersVisibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)),
-                viewersUser: yup.array().of(yup.number()).required(),
-                viewersClassroom: yup.array().of(yup.number()).required(),
-                answersViewersUser: yup.array().of(yup.number()).required(),
-                answersViewersClassroom: yup.array().of(yup.number()).required(),
+                viewersUser: yup.array().of(yup.number()).default([]),
+                viewersClassroom: yup.array().of(yup.number()).default([]),
+                answersViewersUser: yup.array().of(yup.number()).default([]),
+                answersViewersClassroom: yup.array().of(yup.number()).default([]),
             })
             .noUnknown();
         // Yup parsing/validation
