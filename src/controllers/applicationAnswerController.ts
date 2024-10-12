@@ -1,3 +1,13 @@
+/*
+Copyright (C) 2024 Laboratorio Visao Robotica e Imagem
+Departamento de Informatica - Universidade Federal do Parana - VRI/UFPR
+This file is part of PICCE-API. PICCE-API is free software: you can redistribute it and/or modify it under the terms of the GNU
+General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+PICCE-API is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details. You should have received a copy
+of the GNU General Public License along with PICCE-API.  If not, see <https://www.gnu.org/licenses/>
+*/
+
 import { Response, Request } from 'express';
 import { ApplicationAnswer, User, UserRole, VisibilityMode } from '@prisma/client';
 import * as yup from 'yup';
@@ -192,7 +202,7 @@ const fields = {
     itemAnswerGroups: {
         select: {
             id: true,
-            itemAnswers: { select: { id: true, text: true, itemId: true, files: { select: { id: true, path: true } } } },
+            itemAnswers: { select: { id: true, text: true, itemId: true, files: { select: { id: true, path: true, description: true } } } },
             optionAnswers: { select: { id: true, text: true, itemId: true, optionId: true } },
             tableAnswers: { select: { id: true, text: true, itemId: true, columnId: true } },
         },
@@ -301,6 +311,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                             file.fieldname.startsWith(`itemAnswerGroups[${itemAnswerGroupIndex}][itemAnswers][${itemAnswerIndex}][files]`)
                         )
                         .map((file) => {
+                            files.splice(files.indexOf(file), 1);
                             return { path: file.path };
                         });
                     await prisma.itemAnswer.create({
@@ -314,6 +325,11 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                     });
                 }
             }
+            // Check if there are any files left
+            if (files.length > 0) {
+                throw new Error('Files not associated with any item answer detected.');
+            }
+
             // Return the created application answer with nested content included
             return await prisma.applicationAnswer.findUnique({
                 where: { id: createdApplicationAnswer.id },
@@ -442,10 +458,11 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                     await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
                     // Create new files (udpating files is not supported)
                     const itemAnswerFiles = files
-                        .filter(
-                            (file) => file.fieldname === `itemAnswerGroups[${itemAnswerGroupIndex}][itemAnswers][${itemAnswerIndex}][files]`
+                        .filter((file) =>
+                            file.fieldname.startsWith(`itemAnswerGroups[${itemAnswerGroupIndex}][itemAnswers][${itemAnswerIndex}][files]`)
                         )
                         .map((file) => {
+                            files.splice(files.indexOf(file), 1);
                             return { path: file.path, itemAnswerId: upsertedItemAnswer.id };
                         });
                     await prisma.file.createMany({ data: itemAnswerFiles });
@@ -505,6 +522,11 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                           });
                 }
             }
+            // Check if there are any files left
+            if (files.length > 0) {
+                throw new Error('Files not associated with any item answer detected.');
+            }
+
             // Return the updated application answer with nested content included
             return await prisma.applicationAnswer.findUnique({ where: { id: applicationAnswerId }, select: fields });
         });
