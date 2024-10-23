@@ -460,6 +460,7 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
             for (const itemGroup of page.itemGroups) {
                 for (const item of itemGroup.items) {
                     item.itemAnswers = {};
+                    // For each item in the application, get all itemAnswers associated with some applicationAnswer in the application
                     const itemAnswers = await prismaClient.itemAnswer.findMany({
                         where: {
                             group: {
@@ -486,20 +487,56 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
                             },
                         },
                     });
-
+                    // For each itemAnswer, group them by applicationAnswerId and answerGroupId
                     for (const answer of itemAnswers) {
+                        // Initialize the groupAnswers of that applicationAnswer if it doesn't exist
                         if (!item.itemAnswers[answer.group.applicationAnswerId]) {
                             item.itemAnswers[answer.group.applicationAnswerId] = {};
                         }
-
+                        // Initialize the itemAnswers of that groupAnswer if it doesn't exist
                         if (!item.itemAnswers[answer.group.applicationAnswerId][answer.group.id]) {
                             item.itemAnswers[answer.group.applicationAnswerId][answer.group.id] = [];
                         }
-
+                        // Push the itemAnswer to the itemAnswers of that ApplicationAnswer/GroupAnswer
                         item.itemAnswers[answer.group.applicationAnswerId][answer.group.id].push({
                             text: answer.text,
                             files: answer.files,
                         });
+                    }
+                    // For each item in the application, get all tableAnswers associated with some applicationAnswer in the application
+                    item.tableAnswers = {};
+                    const tableAnswers = await prismaClient.tableAnswer.findMany({
+                        where: {
+                            group: {
+                                applicationAnswerId: {
+                                    in: applicationWithAnswers.answers.map((answer: any) => answer.id),
+                                },
+                            },
+                            itemId: item.id,
+                        },
+                        select: {
+                            text: true,
+                            group: {
+                                select: {
+                                    id: true,
+                                    applicationAnswerId: true,
+                                },
+                            },
+                            columnId: true,
+                        },
+                    });
+                    // For each tableAnswer, group them by applicationAnswerId and answerGroupId
+                    for (const answer of tableAnswers) {
+                        // Initialize the groupAnswers of that applicationAnswer if it doesn't exist
+                        if (!item.tableAnswers[answer.group.applicationAnswerId]) {
+                            item.tableAnswers[answer.group.applicationAnswerId] = {};
+                        }
+                        // Initialize the columnAnswer of that groupAnswer if it doesn't exist
+                        if (!item.tableAnswers[answer.group.applicationAnswerId][answer.group.id]) {
+                            item.tableAnswers[answer.group.applicationAnswerId][answer.group.id] = {};
+                        }
+                        // Define the columnAnswer of that applicationAnswer/GroupAnswer/ColumnAnswer
+                        item.tableAnswers[answer.group.applicationAnswerId][answer.group.id][answer.columnId] = answer.text;
                     }
 
                     for (const option of item.itemOptions) {
