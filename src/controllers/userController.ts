@@ -14,6 +14,7 @@ import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
+import { hashSync } from 'bcrypt';
 
 // Only admins or the user itself can perform --UD operations on users
 const checkAuthorization = async (
@@ -127,6 +128,8 @@ export const createUser = async (req: Request, res: Response) => {
         await checkAuthorization(curUser, undefined, user.role as UserRole, user.institutionId, 'create');
         // Multer single file
         const file = req.file as Express.Multer.File;
+        // Password encryption
+        user.hash = hashSync(user.hash, 10);
         // Prisma operation
         const createdUser = await prismaClient.user.create({
             data: {
@@ -174,6 +177,8 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         await checkAuthorization(curUser, userId, user.role as UserRole, undefined, 'update');
         // Multer single file
         const file = req.file as Express.Multer.File;
+        // Password encryption
+        if (user.hash) user.hash = hashSync(user.hash, 10);
         // Prisma transaction
         const updatedUser = await prismaClient.$transaction(async (prisma) => {
             const filesToDelete = await prisma.file.findMany({
