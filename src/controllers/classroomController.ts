@@ -32,50 +32,42 @@ const publicFields = {
 
 // Only admins or the coordinator of the institution can perform C-UD operations on classrooms
 const checkAuthorization = async (user: User, classroomId: number | undefined, institutionId: number | undefined, action: string) => {
+    if (user.role === UserRole.ADMIN) return;
+
     switch (action) {
         case 'create':
             // Only ADMINs or members of an institution can perform create operations on its classrooms
-            if (user.role !== UserRole.ADMIN && (user.role === UserRole.USER || (institutionId && user.institutionId !== institutionId))) {
+            if (user.role === UserRole.USER || (institutionId && user.institutionId !== institutionId))
                 throw new Error('This user is not authorized to perform this action');
-            }
             break;
         case 'update':
         case 'delete':
             // Only ADMINs, COORDINATORs and PUBLISHERs of an institution can perform update/delete operations on its classrooms
-            if (user.role !== UserRole.ADMIN) {
-                const classroom = await prismaClient.classroom.findUnique({
-                    where: user.institutionId ? { id: classroomId, institutionId: user.institutionId } : { id: classroomId },
-                });
-                if (
-                    user.role === UserRole.USER ||
-                    user.role === UserRole.APPLIER ||
-                    (institutionId && institutionId !== user.institutionId) ||
-                    !classroom
-                ) {
-                    throw new Error('This user is not authorized to perform this action');
-                }
-            }
+            const deleteClassroom = await prismaClient.classroom.findUnique({
+                where: user.institutionId ? { id: classroomId, institutionId: user.institutionId } : { id: classroomId },
+            });
+            if (
+                user.role === UserRole.USER ||
+                user.role === UserRole.APPLIER ||
+                (institutionId && institutionId !== user.institutionId) ||
+                !deleteClassroom
+            )
+                throw new Error('This user is not authorized to perform this action');
+
             break;
         case 'getAll':
             // Only ADMINs can perform get all classrooms operation
-            if (user.role !== UserRole.ADMIN) {
-                throw new Error('This user is not authorized to perform this action');
-            }
+            throw new Error('This user is not authorized to perform this action');
             break;
         case 'get': // Only ADMINs or members (except USERs) of an institution can perform get operations on its classrooms
-            if (user.role !== UserRole.ADMIN) {
-                const classroom = await prismaClient.classroom.findUnique({
-                    where: user.institutionId ? { id: classroomId, institutionId: user.institutionId } : { id: classroomId },
-                });
-                if (user.role === UserRole.USER || !user.institutionId || !classroom) {
-                    throw new Error('This user is not authorized to perform this action');
-                }
-            }
+            const getClassroom = await prismaClient.classroom.findUnique({
+                where: user.institutionId ? { id: classroomId, institutionId: user.institutionId } : { id: classroomId },
+            });
+            if (user.role === UserRole.USER || !user.institutionId || !getClassroom)
+                throw new Error('This user is not authorized to perform this action');
             break;
         case 'search':
-            if (user.role === UserRole.USER) {
-                throw new Error('This user is not authorized to perform this action');
-            }
+            if (user.role === UserRole.USER) throw new Error('This user is not authorized to perform this action');
             break;
         case 'getMy':
             // All users can perform get my classrooms operation (the result will be filtered based on the user)

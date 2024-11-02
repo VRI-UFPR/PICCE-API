@@ -15,6 +15,8 @@ import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 
 const checkAuthorization = async (user: User, addressId: number | undefined, action: string) => {
+    if (user.role === UserRole.ADMIN) return;
+
     switch (action) {
         case 'create':
         case 'update':
@@ -22,9 +24,7 @@ const checkAuthorization = async (user: User, addressId: number | undefined, act
         case 'get':
         case 'delete':
             // Only ADMINs can perform create/update/getAll/get/delete operations on addresses
-            if (user.role !== UserRole.ADMIN) {
-                throw new Error('This user is not authorized to perform this action');
-            }
+            throw new Error('This user is not authorized to perform this action');
             break;
     }
 };

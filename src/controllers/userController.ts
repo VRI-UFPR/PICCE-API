@@ -23,6 +23,8 @@ const checkAuthorization = async (
     institutionId: number | undefined,
     action: string
 ) => {
+    if (curUser.role === UserRole.ADMIN) return;
+
     switch (action) {
         case 'create':
             // Only USERs and APPLIERs can't perform create operations on users, other roles need to respect the hierarchy
@@ -39,7 +41,7 @@ const checkAuthorization = async (
         case 'update':
             if (
                 // Only admins or the user itself can perform update operations on it, respecting the hierarchy
-                (curUser.role !== UserRole.ADMIN && Number(curUser.id) !== userId) ||
+                Number(curUser.id) !== userId ||
                 (curUser.role === UserRole.COORDINATOR && role === UserRole.ADMIN) ||
                 (curUser.role === UserRole.PUBLISHER &&
                     role !== UserRole.USER &&
@@ -53,31 +55,20 @@ const checkAuthorization = async (
             break;
         case 'getAll':
             // Only ADMINs can perform get all users operation
-            if (curUser.role !== UserRole.ADMIN) {
-                throw new Error('This user is not authorized to perform this action');
-            }
+            throw new Error('This user is not authorized to perform this action');
             break;
         case 'get':
             // Only admins, members (except USERs) of its institution or the user itself can perform get operations on it
-            if (curUser.role !== UserRole.ADMIN) {
-                const user: User | null = await prismaClient.user.findUnique({
-                    where: { id: userId, institutionId: curUser.institutionId },
-                });
-                if (!user || !user.institutionId || (curUser.role === UserRole.USER && curUser.id !== userId)) {
-                    throw new Error('This user is not authorized to perform this action');
-                }
-            }
+            const user: User | null = await prismaClient.user.findUnique({ where: { id: userId, institutionId: curUser.institutionId } });
+            if (!user || !user.institutionId || (curUser.role === UserRole.USER && curUser.id !== userId))
+                throw new Error('This user is not authorized to perform this action');
             break;
         case 'search':
-            if (curUser.role === UserRole.USER) {
-                throw new Error('This user is not authorized to perform this action');
-            }
+            if (curUser.role === UserRole.USER) throw new Error('This user is not authorized to perform this action');
             break;
         case 'delete':
             // Only ADMINs or the user itself can perform update/delete operations on it
-            if (curUser.role !== UserRole.ADMIN && curUser.id !== userId) {
-                throw new Error('This user is not authorized to perform this action');
-            }
+            if (curUser.id !== userId) throw new Error('This user is not authorized to perform this action');
             break;
     }
 };

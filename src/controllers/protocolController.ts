@@ -16,6 +16,8 @@ import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
 
 const checkAuthorization = async (user: User, protocolId: number | undefined, action: string) => {
+    if (user.role === UserRole.ADMIN) return;
+
     switch (action) {
         case 'create':
             // Only publishers, coordinators and admins can perform create operations on protocols
@@ -25,38 +27,34 @@ const checkAuthorization = async (user: User, protocolId: number | undefined, ac
         case 'update':
         case 'delete':
             // Only admins, the creator or the managers of the protocol can perform update/delete operations on it
-            if (user.role !== UserRole.ADMIN) {
-                const protocol = await prismaClient.protocol.findUnique({
-                    where: { id: protocolId, OR: [{ managers: { some: { id: user.id } } }, { creatorId: user.id }] },
-                });
-                if (!protocol) throw new Error('This user is not authorized to perform this action.');
-            }
+            const deleteProtocol = await prismaClient.protocol.findUnique({
+                where: { id: protocolId, OR: [{ managers: { some: { id: user.id } } }, { creatorId: user.id }] },
+            });
+            if (!deleteProtocol) throw new Error('This user is not authorized to perform this action.');
             break;
         case 'getAll':
             // Only admins can perform getAll operations on protocols
-            if (user.role !== UserRole.ADMIN) throw new Error('This user is not authorized to perform this action.');
+            throw new Error('This user is not authorized to perform this action.');
             break;
         case 'getVisible':
             // All users can perform getVisible operations on protocols (the result will be filtered based on the user)
             break;
         case 'get':
             // Only admins, the creator, the managers, the appliers or the viewers of the protocol can perform get operations on it
-            if (user.role !== UserRole.ADMIN) {
-                const protocol = await prismaClient.protocol.findUnique({
-                    where: {
-                        id: protocolId,
-                        OR: [
-                            { managers: { some: { id: user.id } } },
-                            { appliers: { some: { id: user.id } } },
-                            { viewersUser: { some: { id: user.id } } },
-                            { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
-                            { creatorId: user.id },
-                            { visibility: VisibilityMode.PUBLIC },
-                        ],
-                    },
-                });
-                if (!protocol) throw new Error('This user is not authorized to perform this action.');
-            }
+            const getProtocol = await prismaClient.protocol.findUnique({
+                where: {
+                    id: protocolId,
+                    OR: [
+                        { managers: { some: { id: user.id } } },
+                        { appliers: { some: { id: user.id } } },
+                        { viewersUser: { some: { id: user.id } } },
+                        { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                        { creatorId: user.id },
+                        { visibility: VisibilityMode.PUBLIC },
+                    ],
+                },
+            });
+            if (!getProtocol) throw new Error('This user is not authorized to perform this action.');
             break;
     }
 };
