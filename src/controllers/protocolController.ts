@@ -224,14 +224,12 @@ const validateItemValidations = async (itemType: ItemType, validations: any[]) =
 };
 
 const validateManagers = async (managers: (number | undefined)[], institutionId: number | null) => {
-    for (const owner of managers) {
+    for (const manager of managers) {
         const user = await prismaClient.user.findUnique({
             where: {
-                id: owner,
+                id: manager,
                 institutionId: institutionId,
-                role: {
-                    in: [UserRole.PUBLISHER, UserRole.COORDINATOR, UserRole.ADMIN],
-                },
+                role: { in: [UserRole.PUBLISHER, UserRole.COORDINATOR, UserRole.ADMIN] },
             },
         });
         if (!user || !institutionId) throw new Error('Managers must be publishers, coordinators or admins of the same institution.');
@@ -467,7 +465,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                     description: protocol.description,
                     enabled: protocol.enabled,
                     creatorId: protocol.creatorId,
-                    managers: { connect: protocol.managers.map((owner) => ({ id: owner })) },
+                    managers: { connect: protocol.managers.map((manager) => ({ id: manager })) },
                     visibility: protocol.visibility as VisibilityMode,
                     applicability: protocol.applicability as VisibilityMode,
                     answersVisibility: protocol.answersVisibility as VisibilityMode,
@@ -743,7 +741,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                     title: protocol.title,
                     description: protocol.description,
                     enabled: protocol.enabled,
-                    managers: { set: [], connect: protocol.managers.map((owner) => ({ id: owner })) },
+                    managers: { set: [], connect: protocol.managers.map((manager) => ({ id: manager })) },
                     visibility: protocol.visibility as VisibilityMode,
                     applicability: protocol.applicability as VisibilityMode,
                     answersVisibility: protocol.answersVisibility as VisibilityMode,
@@ -1085,6 +1083,7 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
                               { creatorId: user.id },
                               { visibility: VisibilityMode.PUBLIC },
                           ],
+                          enabled: true,
                       },
                       select: fields,
                   });
@@ -1125,11 +1124,11 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
                 id: protocolId,
                 OR: [
                     { managers: { some: { id: user.id } } },
-                    { appliers: { some: { id: user.id } } },
-                    { viewersUser: { some: { id: user.id } } },
-                    { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                    { appliers: { some: { id: user.id } }, enabled: true },
+                    { viewersUser: { some: { id: user.id } }, enabled: true },
+                    { viewersClassroom: { some: { users: { some: { id: user.id } } } }, enabled: true },
                     { creatorId: user.id },
-                    { visibility: VisibilityMode.PUBLIC },
+                    { visibility: VisibilityMode.PUBLIC, enabled: true },
                 ],
             },
             select: fieldsWViewers,
@@ -1139,7 +1138,7 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
             user.role !== UserRole.USER &&
             (user.role === UserRole.ADMIN ||
                 protocol.creator.id === user.id ||
-                protocol.managers.some((owner) => owner.id === user.id) ||
+                protocol.managers.some((manager) => manager.id === user.id) ||
                 protocol.appliers.some((applier) => applier.id === user.id) ||
                 protocol.applicability === VisibilityMode.PUBLIC)
                 ? protocol
