@@ -23,13 +23,14 @@ const checkAuthorization = async (
     institutionId: number | undefined,
     action: string
 ) => {
-    if (curUser.role === UserRole.ADMIN) return;
+    if (curUser.role === UserRole.ADMIN && role !== UserRole.ADMIN) return;
 
     switch (action) {
         case 'create':
             // Only USERs and APPLIERs can't perform create operations on users, other roles need to respect the hierarchy
             if (
-                (curUser.role === UserRole.COORDINATOR && (role === UserRole.ADMIN || role === UserRole.COORDINATOR)) ||
+                role === UserRole.ADMIN ||
+                (curUser.role === UserRole.COORDINATOR && role === UserRole.COORDINATOR) ||
                 (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER) ||
                 curUser.role === UserRole.APPLIER ||
                 curUser.role === UserRole.USER ||
@@ -42,7 +43,7 @@ const checkAuthorization = async (
             if (
                 // Only admins or the user itself can perform update operations on it, respecting the hierarchy
                 Number(curUser.id) !== userId ||
-                (curUser.role === UserRole.COORDINATOR && role === UserRole.ADMIN) ||
+                role === UserRole.ADMIN ||
                 (curUser.role === UserRole.PUBLISHER &&
                     role !== UserRole.USER &&
                     role !== UserRole.APPLIER &&
