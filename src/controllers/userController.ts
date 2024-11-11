@@ -83,6 +83,13 @@ const checkAuthorization = async (
     }
 };
 
+const validateClassrooms = async (institutionId: number | undefined, classrooms: number[]) => {
+    const invalidClassrooms = await prismaClient.classroom.findMany({
+        where: { id: { in: classrooms }, institutionId: { not: institutionId } },
+    });
+    if (invalidClassrooms.length > 0) throw new Error('Users cannot be placed in classrooms of institutions to which they do not belong.');
+};
+
 // Fields to be selected from the database to the response
 const fields = {
     id: true,
@@ -126,6 +133,8 @@ export const createUser = async (req: Request, res: Response) => {
         const curUser = req.user as User;
         // Check if user is authorized to create a user
         await checkAuthorization(curUser, undefined, user.role as UserRole, user.institutionId, 'create');
+        // Validate classrooms
+        await validateClassrooms(user.institutionId, user.classrooms as number[]);
         // Multer single file
         const file = req.file as Express.Multer.File;
         // Password encryption
@@ -175,6 +184,8 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         const curUser = req.user as User;
         // Check if user is authorized to update the user
         await checkAuthorization(curUser, userId, user.role as UserRole, undefined, 'update');
+        // Validate classrooms
+        await validateClassrooms(user.institutionId, user.classrooms as number[]);
         // Multer single file
         const file = req.file as Express.Multer.File;
         // Password encryption
@@ -194,7 +205,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
                     username: user.username,
                     hash: user.hash,
                     role: user.role,
-                    institution: { disconnect: true, connect: user.institutionId ? { id: user.institutionId } : undefined },
+                    institution: user.institutionId ? { connect: { id: user.institutionId } } : { disconnect: true },
                     classrooms: { set: [], connect: user.classrooms?.map((id) => ({ id: id })) },
                     profileImage: {
                         create: !user.profileImageId && file ? { path: file.path } : undefined,

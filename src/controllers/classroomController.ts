@@ -83,6 +83,13 @@ const checkAuthorization = async (user: User, classroomId: number | undefined, i
     }
 };
 
+const validateUsers = async (institutionId: number | undefined, users: number[]) => {
+    if (institutionId) {
+        const invalidUsers = await prismaClient.user.findMany({ where: { id: { in: users }, institutionId: { not: institutionId } } });
+        if (invalidUsers.length > 0) throw new Error('An institution classroom can only contain users from the institution.');
+    }
+};
+
 export const createClassroom = async (req: Request, res: Response) => {
     try {
         // Yup schemas
@@ -100,6 +107,8 @@ export const createClassroom = async (req: Request, res: Response) => {
         const user = req.user as User;
         // Check if user is authorized to create a classroom
         await checkAuthorization(user, undefined, classroom.institutionId, 'create');
+        // Check if users are from the same institution
+        await validateUsers(classroom.institutionId, classroom.users as number[]);
         // Prisma operation
         const createdClassroom: Classroom = await prismaClient.classroom.create({
             data: {
@@ -134,12 +143,14 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
         const user = req.user as User;
         // Check if user is authorized to update this classroom
         await checkAuthorization(user, classroomId, classroom.institutionId, 'update');
+        // Check if users are from the same institution
+        await validateUsers(classroom.institutionId, classroom.users as number[]);
         // Prisma operation
         const updatedClassroom = await prismaClient.classroom.update({
             where: { id: classroomId },
             data: {
                 name: classroom.name,
-                institution: { disconnect: true, connect: classroom.institutionId ? { id: classroom.institutionId } : undefined },
+                institution: classroom.institutionId ? { connect: { id: classroom.institutionId } } : { disconnect: true },
                 users: { set: [], connect: classroom.users?.map((id) => ({ id: id })) },
             },
             select: fields,
