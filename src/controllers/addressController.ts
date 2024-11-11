@@ -13,18 +13,23 @@ import { Address, User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
+import { count } from 'console';
 
 const checkAuthorization = async (user: User, addressId: number | undefined, action: string) => {
     switch (action) {
         case 'create':
         case 'update':
-        case 'getAll':
-        case 'get':
         case 'delete':
-            // Only ADMINs can perform create/update/getAll/get/delete operations on addresses
+            // Only ADMINs can perform create/update/delete operations on addresses
             if (user.role !== UserRole.ADMIN) {
                 throw new Error('This user is not authorized to perform this action');
             }
+            break;
+        case 'getAll':
+        case 'get':
+        case 'getByState':
+        case 'getId':
+            // Everyone can perform get/getAll/getByState operations on addresses
             break;
     }
 };
@@ -95,6 +100,56 @@ export const getAllAddresses = async (req: Request, res: Response): Promise<void
         const addresses: Address[] = await prismaClient.address.findMany();
 
         res.status(200).json({ message: 'All addresses found.', data: addresses });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const getAddressesByState = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // Yup schemas
+        const getAddressesByStateSchema = yup
+            .object()
+            .shape({ state: yup.string().min(1).required(), country: yup.string().min(1).required() });
+        // Yup parsing/validation
+        const searchParams = await getAddressesByStateSchema.validate(req.body, { stripUnknown: false });
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is authorized to get addresses by state
+        await checkAuthorization(user, undefined, 'getByState');
+        // Prisma operation
+        const addresses = await prismaClient.address.findMany({
+            where: { state: searchParams.state, country: searchParams.country },
+            select: { id: true, city: true },
+        });
+
+        res.status(200).json({ message: 'Addresses found.', data: addresses });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const getAddressId = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // Yup schemas
+        const getCityIdSchema = yup.object().shape({
+            city: yup.string().min(1).required(),
+            state: yup.string().min(1).required(),
+            country: yup.string().min(1).required(),
+        });
+        // Yup parsing/validation
+        const searchParams = await getCityIdSchema.validate(req.body, { stripUnknown: false });
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is authorized to get a city ID
+        await checkAuthorization(user, undefined, 'getId');
+        // Prisma operation
+        const { id: cityId } = await prismaClient.address.findUniqueOrThrow({
+            where: { city_state_country: { city: searchParams.city, state: searchParams.state, country: searchParams.country } },
+            select: { id: true },
+        });
+
+        res.status(200).json({ message: 'City ID found.', data: cityId });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
