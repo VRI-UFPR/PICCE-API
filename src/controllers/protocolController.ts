@@ -13,7 +13,7 @@ import { ItemType, ItemGroupType, PageType, ItemValidationType, User, UserRole, 
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
-import { unlinkSync } from 'fs';
+import { unlinkSync, existsSync } from 'fs';
 
 const checkAuthorization = async (user: User, protocolId: number | undefined, action: string) => {
     switch (action) {
@@ -325,10 +325,10 @@ const fields = {
 const fieldsWViewers = {
     ...fields,
     managers: { select: { id: true, username: true } },
-    viewersUser: { select: { id: true, username: true } },
-    viewersClassroom: { select: { id: true } },
-    answersViewersUser: { select: { id: true, username: true } },
-    answersViewersClassroom: { select: { id: true } },
+    viewersUser: { select: { id: true, username: true, classrooms: { select: { id: true, name: true } } } },
+    viewersClassroom: { select: { id: true, name: true, users: { select: { id: true, username: true } } } },
+    answersViewersUser: { select: { id: true, username: true, classrooms: { select: { id: true, name: true } } } },
+    answersViewersClassroom: { select: { id: true, name: true, users: { select: { id: true, username: true } } } },
     appliers: { select: { id: true, username: true } },
 };
 
@@ -595,7 +595,7 @@ export const createProtocol = async (req: Request, res: Response) => {
         res.status(201).json({ message: 'Protocol created.', data: createdProtocol });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
-        for (const file of files) unlinkSync(file.path);
+        for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
         res.status(400).json(errorFormatter(error));
     }
 };
@@ -876,7 +876,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                             where: { id: { notIn: item.files.map((file) => file.id as number) }, itemId: upsertedItem.id },
                             select: { id: true, path: true },
                         });
-                        for (const file of filesToDelete) unlinkSync(file.path);
+                        for (const file of filesToDelete) if (existsSync(file.path)) unlinkSync(file.path);
                         await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
                         const itemFiles = item.files.map((file, fileIndex) => {
                             const storedFile = files.find(
@@ -923,7 +923,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                 },
                                 select: { id: true, path: true },
                             });
-                            for (const file of filesToDelete) unlinkSync(file.path);
+                            for (const file of filesToDelete) if (existsSync(file.path)) unlinkSync(file.path);
                             await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
                             const itemOptionFiles = itemOption.files.map((file, fileIndex) => {
                                 const storedFile = files.find(
@@ -1045,7 +1045,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
         res.status(200).json({ message: 'Protocol updated.', data: upsertedProtocol });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
-        for (const file of files) unlinkSync(file.path);
+        for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
         res.status(400).json(errorFormatter(error));
     }
 };

@@ -36,6 +36,7 @@ enum ItemGroupType {
 }
 
 enum ItemType {
+  TABLEROW
   TEXTBOX
   CHECKBOX
   RADIO
@@ -223,8 +224,8 @@ model Classroom {
   visibleProtocolAnswers Protocol[] @relation(name: "ProtocolAnswersViewersClassroom") // protocols that the classroom can see the answers
   visibleApplicationAnswers Application[] @relation(name: "ApplicationAnswersViewersClassroom") // applications that the classroom can see the answers
 
-  institutionId Int
-  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  institutionId Int?
+  institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
 
   @@unique([name, institutionId])
 }

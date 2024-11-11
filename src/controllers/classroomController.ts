@@ -24,12 +24,18 @@ const fields = {
     updatedAt: true,
 };
 
+const publicFields = {
+    id: true,
+    name: true,
+    users: { select: { id: true, name: true, username: true, role: true } },
+};
+
 // Only admins or the coordinator of the institution can perform C-UD operations on classrooms
 const checkAuthorization = async (user: User, classroomId: number | undefined, institutionId: number | undefined, action: string) => {
     switch (action) {
         case 'create':
             // Only ADMINs or members of an institution can perform create operations on its classrooms
-            if (user.role !== UserRole.ADMIN && (user.role === UserRole.USER || user.institutionId !== institutionId)) {
+            if (user.role !== UserRole.ADMIN && (user.role === UserRole.USER || (institutionId && user.institutionId !== institutionId))) {
                 throw new Error('This user is not authorized to perform this action');
             }
             break;
@@ -40,7 +46,12 @@ const checkAuthorization = async (user: User, classroomId: number | undefined, i
                 const classroom = await prismaClient.classroom.findUnique({
                     where: user.institutionId ? { id: classroomId, institutionId: user.institutionId } : { id: classroomId },
                 });
-                if (user.role === UserRole.USER || user.role === UserRole.APPLIER || !user.institutionId || !classroom) {
+                if (
+                    user.role === UserRole.USER ||
+                    user.role === UserRole.APPLIER ||
+                    (institutionId && institutionId !== user.institutionId) ||
+                    !classroom
+                ) {
                     throw new Error('This user is not authorized to perform this action');
                 }
             }
@@ -61,6 +72,11 @@ const checkAuthorization = async (user: User, classroomId: number | undefined, i
                 }
             }
             break;
+        case 'search':
+            if (user.role === UserRole.USER) {
+                throw new Error('This user is not authorized to perform this action');
+            }
+            break;
         case 'getMy':
             // All users can perform get my classrooms operation (the result will be filtered based on the user)
             break;
@@ -73,9 +89,8 @@ export const createClassroom = async (req: Request, res: Response) => {
         const createClassroomSchema = yup
             .object()
             .shape({
-                id: yup.number().min(1),
-                name: yup.string().min(1).max(255).required(),
-                institutionId: yup.number().required(),
+                name: yup.string().min(3).max(255).required(),
+                institutionId: yup.number(),
                 users: yup.array().of(yup.number()).min(2).required(),
             })
             .noUnknown();
@@ -88,9 +103,8 @@ export const createClassroom = async (req: Request, res: Response) => {
         // Prisma operation
         const createdClassroom: Classroom = await prismaClient.classroom.create({
             data: {
-                id: classroom.id,
                 name: classroom.name,
-                institutionId: classroom.institutionId,
+                institution: { connect: classroom.institutionId ? { id: classroom.institutionId } : undefined },
                 users: { connect: classroom.users.map((id) => ({ id: id })) },
             },
         });
@@ -108,18 +122,26 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
         // Yup schemas
         const updateClassroomSchema = yup
             .object()
-            .shape({ name: yup.string().min(1).max(255), users: yup.array().of(yup.number()).min(2) })
+            .shape({
+                name: yup.string().min(3).max(255),
+                institutionId: yup.number(),
+                users: yup.array().of(yup.number()).min(2),
+            })
             .noUnknown();
         // Yup parsing/validation
         const classroom = await updateClassroomSchema.validate(req.body);
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is authorized to update this classroom
-        await checkAuthorization(user, classroomId, undefined, 'update');
+        await checkAuthorization(user, classroomId, classroom.institutionId, 'update');
         // Prisma operation
         const updatedClassroom = await prismaClient.classroom.update({
             where: { id: classroomId },
-            data: { name: classroom.name, users: { set: [], connect: classroom.users?.map((id) => ({ id: id })) } },
+            data: {
+                name: classroom.name,
+                institution: { disconnect: true, connect: classroom.institutionId ? { id: classroom.institutionId } : undefined },
+                users: { set: [], connect: classroom.users?.map((id) => ({ id: id })) },
+            },
             select: fields,
         });
 
@@ -174,6 +196,33 @@ export const getMyClassrooms = async (req: Request, res: Response): Promise<void
         });
 
         res.status(200).json({ message: 'My classrooms found.', data: classrooms });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const searchClassroomByName = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // User from passport-jwt
+        const curUser = req.user as User;
+        // Check if user is authorized to search users
+        await checkAuthorization(curUser, undefined, undefined, 'search');
+        // Yup schemas
+        const searchUserSchema = yup
+            .object()
+            .shape({
+                term: yup.string().min(3).max(20).required(),
+            })
+            .noUnknown();
+        // Yup parsing/validation
+        const { term } = await searchUserSchema.validate(req.body);
+        // Prisma operation
+        const classrooms = await prismaClient.classroom.findMany({
+            where: { name: { startsWith: term } },
+            select: publicFields,
+        });
+
+        res.status(200).json({ message: 'Searched classrooms found.', data: classrooms });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }

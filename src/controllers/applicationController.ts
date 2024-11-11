@@ -104,12 +104,28 @@ const validateVisibility = async (
     const protocolViewers = await prismaClient.protocol.findUnique({
         where: {
             id: protocolId,
-            visibility: visibility,
-            answersVisibility: answersVisibility,
-            answersViewersUser: { every: { id: { in: answersViewersUsers } } },
-            answersViewersClassroom: { every: { id: { in: answersViewersClassrooms } } },
-            viewersUser: { every: { id: { in: viewersUsers } } },
-            viewersClassroom: { every: { id: { in: viewersClassrooms } } },
+            AND: [
+                {
+                    OR: [
+                        { visibility: 'PUBLIC' },
+                        {
+                            visibility: visibility,
+                            viewersUser: { every: { id: { in: viewersUsers } } },
+                            viewersClassroom: { every: { id: { in: viewersClassrooms } } },
+                        },
+                    ],
+                },
+                {
+                    OR: [
+                        { answersVisibility: 'PUBLIC' },
+                        {
+                            answersVisibility: answersVisibility,
+                            answersViewersUser: { every: { id: { in: answersViewersUsers } } },
+                            answersViewersClassroom: { every: { id: { in: answersViewersClassrooms } } },
+                        },
+                    ],
+                },
+            ],
         },
     });
 
@@ -130,10 +146,14 @@ const fields = {
 
 const fieldsWViewers = {
     ...fields,
-    viewersUser: { select: { id: true, username: true } },
-    viewersClassroom: { select: { id: true, institution: { select: { name: true } } } },
-    answersViewersUser: { select: { id: true, username: true } },
-    answersViewersClassroom: { select: { id: true, institution: { select: { name: true } } } },
+    viewersUser: { select: { id: true, username: true, classrooms: { select: { id: true, name: true } } } },
+    viewersClassroom: {
+        select: { id: true, name: true, institution: { select: { name: true } }, users: { select: { id: true, username: true } } },
+    },
+    answersViewersUser: { select: { id: true, username: true, classrooms: { select: { id: true, name: true } } } },
+    answersViewersClassroom: {
+        select: { id: true, name: true, institution: { select: { name: true } }, users: { select: { id: true, username: true } } },
+    },
 };
 
 const fieldsWProtocol = {
@@ -157,6 +177,7 @@ const fieldsWProtocol = {
                             type: true,
                             placement: true,
                             isRepeatable: true,
+                            tableColumns: { select: { id: true, text: true, placement: true } },
                             items: {
                                 orderBy: { placement: 'asc' as any },
                                 select: {
@@ -175,6 +196,7 @@ const fieldsWProtocol = {
                                         },
                                     },
                                     files: { select: { id: true, path: true, description: true } },
+                                    itemValidations: { select: { type: true, argument: true, customMessage: true } },
                                 },
                             },
                             dependencies: { select: { type: true, argument: true, itemId: true, customMessage: true } },
@@ -254,10 +276,10 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
             .shape({
                 visibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)),
                 answersVisibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)),
-                viewersUser: yup.array().of(yup.number()).required(),
-                viewersClassroom: yup.array().of(yup.number()).required(),
-                answersViewersUser: yup.array().of(yup.number()).required(),
-                answersViewersClassroom: yup.array().of(yup.number()).required(),
+                viewersUser: yup.array().of(yup.number()).default([]),
+                viewersClassroom: yup.array().of(yup.number()).default([]),
+                answersViewersUser: yup.array().of(yup.number()).default([]),
+                answersViewersClassroom: yup.array().of(yup.number()).default([]),
             })
             .noUnknown();
         // Yup parsing/validation

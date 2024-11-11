@@ -13,7 +13,7 @@ import { ApplicationAnswer, User, UserRole, VisibilityMode } from '@prisma/clien
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
-import { unlinkSync } from 'fs';
+import { unlinkSync, existsSync } from 'fs';
 
 const checkAuthorization = async (
     user: User,
@@ -340,7 +340,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         res.status(201).json({ message: 'Application answer created.', data: createdApplicationAnswer });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
-        for (const file of files) unlinkSync(file.path);
+        for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
         res.status(400).json(errorFormatter(error));
     }
 };
@@ -454,7 +454,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                         },
                         select: { id: true, path: true },
                     });
-                    for (const file of filesToDelete) unlinkSync(file.path);
+                    for (const file of filesToDelete) if (existsSync(file.path)) unlinkSync(file.path);
                     await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
                     // Create new files (udpating files is not supported)
                     const itemAnswerFiles = files
@@ -534,7 +534,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
         res.status(200).json({ message: 'Application answer updated.', data: upsertedApplicationAnswer });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
-        for (const file of files) unlinkSync(file.path);
+        for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
         res.status(400).json(errorFormatter(error));
     }
 };
