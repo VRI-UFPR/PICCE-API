@@ -255,9 +255,7 @@ export const searchUserByUsername = async (req: Request, res: Response): Promise
         // Yup schemas
         const searchUserSchema = yup
             .object()
-            .shape({
-                term: yup.string().min(3).max(20).required(),
-            })
+            .shape({ term: yup.string().min(3).max(20).required() })
             .noUnknown();
         // Yup parsing/validation
         const { term } = await searchUserSchema.validate(req.body);

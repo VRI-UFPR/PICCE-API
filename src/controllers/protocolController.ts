@@ -342,13 +342,13 @@ export const createProtocol = async (req: Request, res: Response) => {
 
         const tableColumnSchema = yup
             .object()
-            .shape({ text: yup.string().min(3).max(255).required(), placement: yup.number().min(1).required() })
+            .shape({ text: yup.string().min(1).max(255).required(), placement: yup.number().min(1).required() })
             .noUnknown();
 
         const itemOptionsSchema = yup
             .object()
             .shape({
-                text: yup.string().min(3).max(255).required(),
+                text: yup.string().min(1).max(255).required(),
                 placement: yup.number().min(1).required(),
                 files: yup.array().of(fileSchema).default([]),
             })
@@ -414,7 +414,7 @@ export const createProtocol = async (req: Request, res: Response) => {
             .object()
             .shape({
                 id: yup.number().min(1),
-                title: yup.string().min(3).max(3000).required(),
+                title: yup.string().min(3).max(255).required(),
                 description: yup.string().max(3000),
                 enabled: yup.boolean().required(),
                 pages: yup.array().of(pagesSchema).min(1).required(),
@@ -612,14 +612,14 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
 
         const updateTableColumnSchema = yup
             .object()
-            .shape({ id: yup.number().min(1), text: yup.string().min(3).max(255), placement: yup.number().min(1).required() })
+            .shape({ id: yup.number().min(1), text: yup.string().min(1).max(255), placement: yup.number().min(1).required() })
             .noUnknown();
 
         const updateItemOptionsSchema = yup
             .object()
             .shape({
                 id: yup.number().min(1),
-                text: yup.string().min(3).max(255),
+                text: yup.string().min(1).max(255),
                 placement: yup.number().min(1).required(),
                 files: yup.array().of(updateFileSchema).default([]),
             })
@@ -690,7 +690,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             .object()
             .shape({
                 id: yup.number().min(1),
-                title: yup.string().min(3).max(3000),
+                title: yup.string().min(3).max(255),
                 description: yup.string().max(3000),
                 enabled: yup.boolean(),
                 pages: yup.array().of(updatePagesSchema).min(1).required(),

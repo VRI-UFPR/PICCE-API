@@ -89,7 +89,7 @@ export const createClassroom = async (req: Request, res: Response) => {
         const createClassroomSchema = yup
             .object()
             .shape({
-                name: yup.string().min(3).max(255).required(),
+                name: yup.string().min(3).max(20).required(),
                 institutionId: yup.number(),
                 users: yup.array().of(yup.number()).min(2).required(),
             })
@@ -123,7 +123,7 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
         const updateClassroomSchema = yup
             .object()
             .shape({
-                name: yup.string().min(3).max(255),
+                name: yup.string().min(3).max(20),
                 institutionId: yup.number(),
                 users: yup.array().of(yup.number()).min(2),
             })
@@ -210,9 +210,7 @@ export const searchClassroomByName = async (req: Request, res: Response): Promis
         // Yup schemas
         const searchUserSchema = yup
             .object()
-            .shape({
-                term: yup.string().min(3).max(20).required(),
-            })
+            .shape({ term: yup.string().min(3).max(20).required() })
             .noUnknown();
         // Yup parsing/validation
         const { term } = await searchUserSchema.validate(req.body);
