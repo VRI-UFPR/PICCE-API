@@ -15,36 +15,29 @@ import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 
 const checkAuthorization = async (user: User, applicationId: number | undefined, protocolId: number | undefined, action: string) => {
+    if (user.role === UserRole.ADMIN) return;
+
     switch (action) {
         case 'create':
             // All users except USER can perform create operations on applications, but only if the protocol is public or the user is an applier
-            if (user.role !== UserRole.ADMIN) {
-                const protocol = await prismaClient.protocol.findUnique({
-                    where: {
-                        id: protocolId,
-                        OR: [{ applicability: VisibilityMode.PUBLIC }, { appliers: { some: { id: user.id } } }],
-                        enabled: true,
-                    },
-                });
-
-                if (!protocol || user.role === UserRole.USER) {
-                    throw new Error('This user is not authorized to perform this action');
-                }
-            }
+            const protocol = await prismaClient.protocol.findUnique({
+                where: {
+                    id: protocolId,
+                    OR: [{ applicability: VisibilityMode.PUBLIC }, { appliers: { some: { id: user.id } } }],
+                    enabled: true,
+                },
+            });
+            if (!protocol || user.role === UserRole.USER) throw new Error('This user is not authorized to perform this action');
             break;
         case 'update':
             // Only ADMINs or the applier can perform update operations on applications
-            if (user.role !== UserRole.ADMIN) {
-                const application = await prismaClient.application.findUnique({
-                    where: {
-                        id: applicationId,
-                        applierId: user.id,
-                    },
-                });
-                if (!application) {
-                    throw new Error('This user is not authorized to perform this action');
-                }
-            }
+            const updateApplication = await prismaClient.application.findUnique({
+                where: {
+                    id: applicationId,
+                    applierId: user.id,
+                },
+            });
+            if (!updateApplication) throw new Error('This user is not authorized to perform this action');
             break;
         case 'getMy':
         case 'getVisible':
@@ -52,42 +45,29 @@ const checkAuthorization = async (user: User, applicationId: number | undefined,
             break;
         case 'getAll':
             // Only ADMINs can perform getAll operations on applications
-            if (user.role !== UserRole.ADMIN) {
-                throw new Error('This user is not authorized to perform this action');
-            }
+            throw new Error('This user is not authorized to perform this action');
             break;
         case 'get':
             // Only ADMINs or the viewers of the application can perform get operations on applications
-            if (user.role !== UserRole.ADMIN) {
-                const application = await prismaClient.application.findUnique({
-                    where: {
-                        id: applicationId,
-                        OR: [
-                            { visibility: 'PUBLIC' },
-                            { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
-                            { viewersUser: { some: { id: user.id } } },
-                            { applierId: user.id },
-                        ],
-                    },
-                });
-                if (!application) {
-                    throw new Error('This user is not authorized to perform this action');
-                }
-            }
+            const getApplication = await prismaClient.application.findUnique({
+                where: {
+                    id: applicationId,
+                    OR: [
+                        { visibility: 'PUBLIC' },
+                        { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                        { viewersUser: { some: { id: user.id } } },
+                        { applierId: user.id },
+                    ],
+                },
+            });
+            if (!getApplication) throw new Error('This user is not authorized to perform this action');
             break;
         case 'delete':
             // Only ADMINs or the applier can perform delete operations on applications
-            if (user.role !== UserRole.ADMIN) {
-                const application = await prismaClient.application.findUnique({
-                    where: {
-                        id: applicationId,
-                        applierId: user.id,
-                    },
-                });
-                if (!application) {
-                    throw new Error('This user is not authorized to perform this action');
-                }
-            }
+            const deleteApplication = await prismaClient.application.findUnique({
+                where: { id: applicationId, applierId: user.id },
+            });
+            if (!deleteApplication) throw new Error('This user is not authorized to perform this action');
             break;
     }
 };

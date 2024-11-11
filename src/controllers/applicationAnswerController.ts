@@ -21,44 +21,38 @@ const checkAuthorization = async (
     applicationId: number | undefined,
     action: string
 ) => {
+    if (user.role === UserRole.ADMIN) return;
+
     switch (action) {
         case 'create':
             // Only ADMINs, the applier or viewers of the application can perform create operations on application answers
-            if (user.role !== UserRole.ADMIN) {
-                const application = await prismaClient.application.findUnique({
-                    where: {
-                        id: applicationId,
-                        OR: [
-                            { visibility: VisibilityMode.PUBLIC },
-                            { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
-                            { viewersUser: { some: { id: user.id } } },
-                            { applierId: user.id },
-                        ],
-                    },
-                });
-                if (!application) {
-                    throw new Error('This user is not authorized to perform this action.');
-                }
-            }
+            const application = await prismaClient.application.findUnique({
+                where: {
+                    id: applicationId,
+                    OR: [
+                        { visibility: VisibilityMode.PUBLIC },
+                        { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                        { viewersUser: { some: { id: user.id } } },
+                        { applierId: user.id },
+                    ],
+                },
+            });
+            if (!application) throw new Error('This user is not authorized to perform this action.');
+
             break;
         case 'update':
         case 'get':
         case 'delete':
             // Only ADMINs or the creator of the application answer can perform update/get/delete operations on application answers
-            if (user.role !== UserRole.ADMIN) {
-                const applicationAnswer = await prismaClient.applicationAnswer.findUnique({
-                    where: { id: applicationAnswerId, userId: user.id },
-                });
-                if (!applicationAnswer) {
-                    throw new Error('This user is not authorized to perform this action.');
-                }
-            }
+            const applicationAnswer = await prismaClient.applicationAnswer.findUnique({
+                where: { id: applicationAnswerId, userId: user.id },
+            });
+            if (!applicationAnswer) throw new Error('This user is not authorized to perform this action.');
+
             break;
         case 'getAll':
             // Only ADMINs can perform get all application answers operation
-            if (user.role !== UserRole.ADMIN) {
-                throw new Error('This user is not authorized to perform this action.');
-            }
+            throw new Error('This user is not authorized to perform this action.');
             break;
         case 'getMy':
             // All users can perform getMy operations on application answers (the results will be filtered based on the user)

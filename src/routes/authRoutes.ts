@@ -11,7 +11,7 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 import express from 'express';
 import uploader from '../services/multerUploader';
 import passport from '../services/passportAuth';
-import { signIn, signUp, renewSignIn, checkSignIn, passwordlessSignIn, acceptTerms } from '../controllers/authController';
+import { signIn, renewSignIn, checkSignIn, passwordlessSignIn, acceptTerms } from '../controllers/authController';
 
 /**
  * @swagger
@@ -142,40 +142,40 @@ const router = express.Router();
  */
 router.post('/signIn', uploader.none(), signIn);
 
-/**
- * @swagger
- * /api/auth/signUp:
- *   post:
- *     summary: Sign up to the application
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             $ref: '#/components/schemas/SignUp'
- *     responses:
- *       201:
- *         description: The user was successfully signed up
- *         content:
- *           application/json:
- *             message: User signed up.
- *             data:
- *               $ref: '#/components/schemas/GetAuth'
- *       400:
- *         description: Request data validation failed
- *         content:
- *           application/json:
- *             error:
- *               message: Bad Request.
- *       500:
- *         description: A server-side error occurred while signing up the user
- *         content:
- *           application/json:
- *             error:
- *               message: Internal Server Error.
- */
-router.post('/signUp', uploader.none(), signUp);
+// /**
+//  * @swagger
+//  * /api/auth/signUp:
+//  *   post:
+//  *     summary: Sign up to the application
+//  *     tags: [Auth]
+//  *     requestBody:
+//  *       required: true
+//  *       content:
+//  *         multipart/form-data:
+//  *           schema:
+//  *             $ref: '#/components/schemas/SignUp'
+//  *     responses:
+//  *       201:
+//  *         description: The user was successfully signed up
+//  *         content:
+//  *           application/json:
+//  *             message: User signed up.
+//  *             data:
+//  *               $ref: '#/components/schemas/GetAuth'
+//  *       400:
+//  *         description: Request data validation failed
+//  *         content:
+//  *           application/json:
+//  *             error:
+//  *               message: Bad Request.
+//  *       500:
+//  *         description: A server-side error occurred while signing up the user
+//  *         content:
+//  *           application/json:
+//  *             error:
+//  *               message: Internal Server Error.
+//  */
+// router.post('/signUp', uploader.none(), signUp);
 
 /**
  * @swagger
