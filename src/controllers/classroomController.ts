@@ -75,13 +75,20 @@ const checkAuthorization = async (user: User, classroomId: number | undefined, i
     }
 };
 
+const validateUsers = async (institutionId: number | undefined, users: number[]) => {
+    if (institutionId) {
+        const invalidUsers = await prismaClient.user.findMany({ where: { id: { in: users }, institutionId: { not: institutionId } } });
+        if (invalidUsers.length > 0) throw new Error('An institution classroom can only contain users from the institution.');
+    }
+};
+
 export const createClassroom = async (req: Request, res: Response) => {
     try {
         // Yup schemas
         const createClassroomSchema = yup
             .object()
             .shape({
-                name: yup.string().min(3).max(255).required(),
+                name: yup.string().min(3).max(20).required(),
                 institutionId: yup.number(),
                 users: yup.array().of(yup.number()).min(2).required(),
             })
@@ -92,6 +99,8 @@ export const createClassroom = async (req: Request, res: Response) => {
         const user = req.user as User;
         // Check if user is authorized to create a classroom
         await checkAuthorization(user, undefined, classroom.institutionId, 'create');
+        // Check if users are from the same institution
+        await validateUsers(classroom.institutionId, classroom.users as number[]);
         // Prisma operation
         const createdClassroom: Classroom = await prismaClient.classroom.create({
             data: {
@@ -115,7 +124,7 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
         const updateClassroomSchema = yup
             .object()
             .shape({
-                name: yup.string().min(3).max(255),
+                name: yup.string().min(3).max(20),
                 institutionId: yup.number(),
                 users: yup.array().of(yup.number()).min(2),
             })
@@ -126,12 +135,14 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
         const user = req.user as User;
         // Check if user is authorized to update this classroom
         await checkAuthorization(user, classroomId, classroom.institutionId, 'update');
+        // Check if users are from the same institution
+        await validateUsers(classroom.institutionId, classroom.users as number[]);
         // Prisma operation
         const updatedClassroom = await prismaClient.classroom.update({
             where: { id: classroomId },
             data: {
                 name: classroom.name,
-                institution: { disconnect: true, connect: classroom.institutionId ? { id: classroom.institutionId } : undefined },
+                institution: classroom.institutionId ? { connect: { id: classroom.institutionId } } : { disconnect: true },
                 users: { set: [], connect: classroom.users?.map((id) => ({ id: id })) },
             },
             select: fields,
@@ -202,9 +213,7 @@ export const searchClassroomByName = async (req: Request, res: Response): Promis
         // Yup schemas
         const searchUserSchema = yup
             .object()
-            .shape({
-                term: yup.string().min(3).max(20).required(),
-            })
+            .shape({ term: yup.string().min(3).max(20).required() })
             .noUnknown();
         // Yup parsing/validation
         const { term } = await searchUserSchema.validate(req.body);

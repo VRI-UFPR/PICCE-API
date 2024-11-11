@@ -15,7 +15,7 @@ import prismaClient from '../services/prismaClient';
 import jwt from 'jsonwebtoken';
 import errorFormatter from '../services/errorFormatter';
 import ms from 'ms';
-import { profile } from 'console';
+import { compareSync, hashSync } from 'bcrypt';
 
 // export const signUp = async (req: Request, res: Response) => {
 //     try {
@@ -34,6 +34,8 @@ import { profile } from 'console';
 //             .noUnknown();
 //         // Yup parsing/validation
 //         const signingUser = await signUpSchema.validate(req.body, { stripUnknown: false });
+//         // Password encryption
+//         signingUser.hash = hashSync(signingUser.hash, 10);
 //         // Prisma operation
 //         const createdUser = await prismaClient.user.create({
 //             data: {
@@ -51,7 +53,6 @@ import { profile } from 'console';
 //         const token = jwt.sign({ id: createdUser.id, username: createdUser.username }, process.env.JWT_SECRET as string, {
 //             expiresIn: process.env.JWT_EXPIRATION,
 //         });
-
 //         res.status(201).json({
 //             message: 'User signed up.',
 //             data: {
@@ -85,7 +86,7 @@ export const signIn = async (req: Request, res: Response) => {
             include: { profileImage: true },
         });
         // Password check
-        if (user.hash !== signingUser.hash) {
+        if (!compareSync(signingUser.hash, user.hash)) {
             throw new Error('Invalid credentials.');
         }
         // JWT token creation

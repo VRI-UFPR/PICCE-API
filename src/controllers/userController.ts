@@ -14,6 +14,7 @@ import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
+import { hashSync } from 'bcrypt';
 
 // Only admins or the user itself can perform --UD operations on users
 const checkAuthorization = async (
@@ -74,6 +75,13 @@ const checkAuthorization = async (
     }
 };
 
+const validateClassrooms = async (institutionId: number | undefined, classrooms: number[]) => {
+    const invalidClassrooms = await prismaClient.classroom.findMany({
+        where: { id: { in: classrooms }, institutionId: { not: institutionId } },
+    });
+    if (invalidClassrooms.length > 0) throw new Error('Users cannot be placed in classrooms of institutions to which they do not belong.');
+};
+
 // Fields to be selected from the database to the response
 const fields = {
     id: true,
@@ -117,8 +125,12 @@ export const createUser = async (req: Request, res: Response) => {
         const curUser = req.user as User;
         // Check if user is authorized to create a user
         await checkAuthorization(curUser, undefined, user.role as UserRole, user.institutionId, 'create');
+        // Validate classrooms
+        await validateClassrooms(user.institutionId, user.classrooms as number[]);
         // Multer single file
         const file = req.file as Express.Multer.File;
+        // Password encryption
+        user.hash = hashSync(user.hash, 10);
         // Prisma operation
         const createdUser = await prismaClient.user.create({
             data: {
@@ -164,8 +176,12 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         const curUser = req.user as User;
         // Check if user is authorized to update the user
         await checkAuthorization(curUser, userId, user.role as UserRole, undefined, 'update');
+        // Validate classrooms
+        await validateClassrooms(user.institutionId, user.classrooms as number[]);
         // Multer single file
         const file = req.file as Express.Multer.File;
+        // Password encryption
+        if (user.hash) user.hash = hashSync(user.hash, 10);
         // Prisma transaction
         const updatedUser = await prismaClient.$transaction(async (prisma) => {
             const filesToDelete = await prisma.file.findMany({
@@ -181,7 +197,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
                     username: user.username,
                     hash: user.hash,
                     role: user.role,
-                    institution: { disconnect: true, connect: user.institutionId ? { id: user.institutionId } : undefined },
+                    institution: user.institutionId ? { connect: { id: user.institutionId } } : { disconnect: true },
                     classrooms: { set: [], connect: user.classrooms?.map((id) => ({ id: id })) },
                     profileImage: {
                         create: !user.profileImageId && file ? { path: file.path } : undefined,
@@ -242,9 +258,7 @@ export const searchUserByUsername = async (req: Request, res: Response): Promise
         // Yup schemas
         const searchUserSchema = yup
             .object()
-            .shape({
-                term: yup.string().min(3).max(20).required(),
-            })
+            .shape({ term: yup.string().min(3).max(20).required() })
             .noUnknown();
         // Yup parsing/validation
         const { term } = await searchUserSchema.validate(req.body);

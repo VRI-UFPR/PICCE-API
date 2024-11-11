@@ -10,7 +10,15 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 
 import express from 'express';
 import uploader from '../services/multerUploader';
-import { createAddress, updateAddress, getAllAddresses, getAddress, deleteAddress } from '../controllers/addressController';
+import {
+    createAddress,
+    updateAddress,
+    getAllAddresses,
+    getAddressesByState,
+    getAddressId,
+    getAddress,
+    deleteAddress,
+} from '../controllers/addressController';
 import passport from '../services/passportAuth';
 
 const router = express.Router();
@@ -18,6 +26,11 @@ const router = express.Router();
 /**
  * @swagger
  * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
  *   schemas:
  *     CreateAddress:
  *      type: object
@@ -61,6 +74,31 @@ const router = express.Router();
  *          type: string
  *          description: The country of the address
  *          example: "USA"
+ *     SearchParams:
+ *      type: object
+ *      required:
+ *        - state
+ *        - country
+ *      properties:
+ *        state:
+ *          type: string
+ *          description: The state of the address
+ *          example: "New York"
+ *        country:
+ *          type: string
+ *          description: The country of the address
+ *          example: "USA"
+ *     AddressesFromState:
+ *      type: object
+ *      properties:
+ *        id:
+ *          type: integer
+ *          description: The auto-generated id of the address
+ *          example: 1
+ *        city:
+ *          type: string
+ *          description: The city of the address
+ *          example: "New York"
  */
 
 /**
@@ -164,6 +202,83 @@ router.put('/updateAddress/:addressId', passport.authenticate('jwt', { session: 
  *               message: Internal server error.
  */
 router.get('/getAllAddresses', passport.authenticate('jwt', { session: false }), uploader.none(), getAllAddresses);
+
+/**
+ * @swagger
+ * /api/address/getAddressesByState:
+ *   get:
+ *     summary: Get addresses by state
+ *     tags: [Address]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/SearchParams'
+ *     responses:
+ *       200:
+ *         description: The list of addresses by state
+ *         content:
+ *           application/json:
+ *             message: Addresses found.
+ *             data:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/AddressesFromState'
+ *       400:
+ *         description: Request data validation failed
+ *         content:
+ *           application/json:
+ *             error:
+ *               message: Bad request.
+ *       500:
+ *         description: Some server error happened
+ *         content:
+ *           application/json:
+ *             error:
+ *               message: Internal server error.
+ */
+router.post('/getAddressesByState', passport.authenticate('jwt', { session: false }), uploader.none(), getAddressesByState);
+
+/**
+ * @swagger
+ * /api/address/getAddressId:
+ *   get:
+ *     summary: Get address id
+ *     tags: [Address]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateAddress'
+ *     responses:
+ *       200:
+ *         description: The address id
+ *         content:
+ *           application/json:
+ *             message: Address id found.
+ *             data:
+ *               type: integer
+ *               example: 1
+ *       400:
+ *         description: Request data validation failed
+ *         content:
+ *           application/json:
+ *             error:
+ *               message: Bad request.
+ *       500:
+ *         description: Some server error happened
+ *         content:
+ *           application/json:
+ *             error:
+ *               message: Internal server error.
+ */
+router.post('/getAddressId', passport.authenticate('jwt', { session: false }), uploader.none(), getAddressId);
 
 /**
  * @swagger

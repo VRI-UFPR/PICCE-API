@@ -243,7 +243,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 id: yup.number(),
                 date: yup.date().required(),
                 applicationId: yup.number().required(),
-                addressId: yup.number().required(),
+                addressId: yup.number(),
                 itemAnswerGroups: yup.array().of(createItemAnswerGroupSchema).min(1).required(),
             })
             .noUnknown();
