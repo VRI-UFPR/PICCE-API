@@ -36,7 +36,8 @@ const checkAuthorization = async (
                 curUser.role === UserRole.APPLIER ||
                 curUser.role === UserRole.USER ||
                 curUser.role === UserRole.GUEST ||
-                (institutionId && curUser.institutionId !== institutionId)
+                (institutionId && curUser.institutionId !== institutionId) ||
+                role === UserRole.GUEST
             ) {
                 throw new Error('This user is not authorized to perform this action');
             }
@@ -52,7 +53,8 @@ const checkAuthorization = async (
                     role !== UserRole.PUBLISHER) ||
                 (curUser.role === UserRole.APPLIER && role !== UserRole.USER && role !== UserRole.APPLIER) ||
                 (curUser.role === UserRole.USER && role !== UserRole.USER) ||
-                curUser.role === UserRole.GUEST
+                curUser.role === UserRole.GUEST ||
+                role === UserRole.GUEST
             ) {
                 throw new Error('This user is not authorized to perform this action');
             }

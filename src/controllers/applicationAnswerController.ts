@@ -50,6 +50,20 @@ const checkAuthorization = async (
             if (!applicationAnswer) throw new Error('This user is not authorized to perform this action.');
 
             break;
+        case 'approve':
+            // Only the applier of the application or a member of its institution (expect APPLIERs, USERs and GUESTs) can perform approve operations on application answers
+            const answersApplication = await prismaClient.applicationAnswer.findUnique({
+                where: { id: applicationAnswerId },
+                select: { application: { select: { applier: { select: { id: true, institutionId: true } } } } },
+            });
+            if (
+                (answersApplication?.application.applier.id !== user.id &&
+                    answersApplication?.application.applier.institutionId !== user.institutionId) ||
+                user.role === UserRole.GUEST ||
+                user.role === UserRole.USER ||
+                user.role === UserRole.APPLIER
+            )
+                throw new Error('This user is not authorized to perform this action.');
         case 'getAll':
             // Only ADMINs can perform get all application answers operation
             throw new Error('This user is not authorized to perform this action.');
@@ -583,6 +597,27 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
         });
 
         res.status(200).json({ message: 'Application answer found.', data: applicationAnswer });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const approveApplicationAnswer = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // ID from params
+        const applicationAnswerId: number = parseInt(req.params.applicationAnswerId);
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is allowed to approve this application answer
+        await checkAuthorization(user, applicationAnswerId, undefined, 'approve');
+        // Prisma operation
+        const approvedApplicationAnswer = await prismaClient.applicationAnswer.update({
+            where: { id: applicationAnswerId },
+            data: { approved: true },
+            select: fields,
+        });
+
+        res.status(200).json({ message: 'Application answer approved.', data: approvedApplicationAnswer });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }

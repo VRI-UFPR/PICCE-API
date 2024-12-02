@@ -120,7 +120,7 @@ const fields = {
     protocol: { select: { id: true, title: true, description: true } },
     visibility: true,
     answersVisibility: true,
-    applier: { select: { id: true, username: true } },
+    applier: { select: { id: true, username: true, institutionId: true } },
     createdAt: true,
     updatedAt: true,
 };
@@ -440,6 +440,17 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
             },
             select: fieldsWAnswers,
         });
+
+        // If the user is not the applier or a member of the institution that the applier is from, the answers will be filtered to not include unnaproved answers
+        if (
+            (user.role !== UserRole.ADMIN &&
+                user.id !== applicationWithAnswers.applier.id &&
+                user.institutionId !== applicationWithAnswers.applier.institutionId) ||
+            user.role === UserRole.USER ||
+            user.role === UserRole.GUEST ||
+            user.role === UserRole.APPLIER
+        )
+            applicationWithAnswers.answers = applicationWithAnswers.answers.filter((answer: any) => answer.approved);
 
         for (const page of applicationWithAnswers.protocol.pages) {
             for (const itemGroup of page.itemGroups) {
