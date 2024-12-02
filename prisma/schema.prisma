@@ -59,6 +59,7 @@ enum InstitutionType {
 }
 
 enum UserRole {
+  GUEST
   USER
   APPLIER
   PUBLISHER
@@ -68,6 +69,7 @@ enum UserRole {
 
 enum VisibilityMode {
   PUBLIC
+  AUTHENTICATED
   RESTRICT
 }
 
@@ -98,7 +100,8 @@ model ApplicationAnswer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  date DateTime
+  date     DateTime
+  approved Boolean
 
   itemAnswerGroups ItemAnswerGroup[]
 
@@ -205,7 +208,8 @@ model User {
   appliableProtocols        Protocol[]          @relation(name: "Appliers") // protocols that the user can apply
   visibleProtocolAnswers    Protocol[]          @relation(name: "ProtocolAnswersViewersUsers") // protocols that the user can see the answers
   visibleApplicationAnswers Application[]       @relation(name: "ApplicationAnswersViewersUsers") // applications that the user can see the answers
-  classrooms                Classroom[]
+  classrooms                Classroom[]         @relation(name: "ClassroomUsers") // classrooms that the user is in
+  createdClassrooms         Classroom[]         @relation(name: "ClassroomCreator") // classrooms that the user has created
 
   institutionId Int?
   institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
@@ -218,7 +222,7 @@ model Classroom {
 
   name String
 
-  users                     User[]
+  users                     User[]        @relation(name: "ClassroomUsers") // users that are in the classroom
   visibleApplications       Application[] @relation(name: "ApplicationViewersClassroom") // applications that the classroom can see
   visibleProtocols          Protocol[]    @relation(name: "ProtocolViewersClassroom") // protocols that the classroom can see
   visibleProtocolAnswers    Protocol[]    @relation(name: "ProtocolAnswersViewersClassroom") // protocols that the classroom can see the answers
@@ -226,6 +230,8 @@ model Classroom {
 
   institutionId Int?
   institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  creatorId     Int
+  creator       User         @relation(name: "ClassroomCreator", fields: [creatorId], references: [id], onDelete: Cascade)
 
   @@unique([name, institutionId])
 }
@@ -237,6 +243,7 @@ model Application {
 
   visibility        VisibilityMode
   answersVisibility VisibilityMode
+  keepLocation      Boolean
 
   answers                 ApplicationAnswer[]
   viewersClassroom        Classroom[]         @relation(name: "ApplicationViewersClassroom") // classrooms that can see the application

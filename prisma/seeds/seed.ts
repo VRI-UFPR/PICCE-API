@@ -11,7 +11,6 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 import {
     Address,
     Application,
-    Classroom,
     Institution,
     InstitutionType,
     Item,
@@ -23,6 +22,9 @@ import {
     UserRole,
     VisibilityMode,
     File,
+    PageType,
+    ItemType,
+    ItemGroupType,
 } from '@prisma/client';
 import prismaClient from '../../src/services/prismaClient';
 import { hashSync } from 'bcrypt';
@@ -5605,16 +5607,8 @@ async function main() {
         {
             id: 1,
             name: 'Universidade Federal do Paraná',
-            addressId: 1,
-            type: 'TERTIARY' as InstitutionType,
-        },
-    ];
-
-    const classrooms: Omit<Classroom, 'createdAt' | 'updatedAt'>[] = [
-        {
-            id: 1,
-            name: 'Sala 1',
-            institutionId: 1,
+            addressId: 4007,
+            type: InstitutionType.TERTIARY,
         },
     ];
 
@@ -5623,8 +5617,8 @@ async function main() {
             id: 1,
             name: 'Visitante',
             username: 'Visitante',
-            hash: hashSync(hashSync('1my+V8PIFHsD', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.GUEST,
             institutionId: 1,
             classrooms: [],
             acceptedTerms: true,
@@ -5633,8 +5627,8 @@ async function main() {
             id: 2,
             name: 'Admin',
             username: 'admin',
-            hash: hashSync(hashSync('1my+V8PIFHsD', process.env.FRONTEND_SALT as string), 10),
-            role: 'ADMIN' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_ADMIN_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.ADMIN,
             institutionId: 1,
             classrooms: [],
             acceptedTerms: true,
@@ -5643,320 +5637,160 @@ async function main() {
             id: 3,
             name: 'Publicador PICCE 01',
             username: 'publicadorpicce01',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 4,
             name: 'Publicador PICCE 02',
             username: 'publicadorpicce02',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 5,
             name: 'Publicador PICCE 03',
             username: 'publicadorpicce03',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 6,
             name: 'Publicador PICCE 04',
             username: 'publicadorpicce04',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 7,
             name: 'Publicador PICCE 05',
             username: 'publicadorpicce05',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 8,
             name: 'Publicador PICCE 06',
             username: 'publicadorpicce06',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 9,
             name: 'Publicador PICCE 07',
             username: 'publicadorpicce07',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 10,
             name: 'Publicador PICCE 08',
             username: 'publicadorpicce08',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 11,
             name: 'Publicador PICCE 09',
             username: 'publicadorpicce09',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 12,
             name: 'Publicador PICCE 10',
             username: 'publicadorpicce10',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 13,
             name: 'Publicador PICCE 11',
             username: 'publicadorpicce11',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 14,
             name: 'Publicador PICCE 12',
             username: 'publicadorpicce12',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 15,
             name: 'Publicador PICCE 13',
             username: 'publicadorpicce13',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 16,
             name: 'Publicador PICCE 14',
             username: 'publicadorpicce14',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 17,
             name: 'Publicador PICCE 15',
             username: 'publicadorpicce15',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
         {
             id: 18,
             name: 'Publicador PICCE 16',
             username: 'publicadorpicce16',
-            hash: hashSync(hashSync('UpF6S;fV;<sy', process.env.FRONTEND_SALT as string), 10),
-            role: 'PUBLISHER' as UserRole,
+            hash: hashSync(hashSync(String(process.env.SEED_USERS_PASSWORD), process.env.FRONTEND_SALT as string), 10),
+            role: UserRole.PUBLISHER,
             institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 19,
-            name: 'User PICCE 1',
-            username: 'userpicce1',
-            hash: hashSync(hashSync('user@picce1', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 20,
-            name: 'User PICCE 2',
-            username: 'userpicce2',
-            hash: hashSync(hashSync('user@picce2', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 21,
-            name: 'User PICCE 3',
-            username: 'userpicce3',
-            hash: hashSync(hashSync('user@picce3', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 22,
-            name: 'User PICCE 4',
-            username: 'userpicce4',
-            hash: hashSync(hashSync('user@picce4', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 23,
-            name: 'User PICCE 5',
-            username: 'userpicce5',
-            hash: hashSync(hashSync('user@picce5', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 24,
-            name: 'User PICCE 6',
-            username: 'userpicce6',
-            hash: hashSync(hashSync('user@picce6', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 25,
-            name: 'User PICCE 7',
-            username: 'userpicce7',
-            hash: hashSync(hashSync('user@picce7', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 26,
-            name: 'User PICCE 8',
-            username: 'userpicce8',
-            hash: hashSync(hashSync('user@picce8', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 27,
-            name: 'User PICCE 9',
-            username: 'userpicce9',
-            hash: hashSync(hashSync('user@picce9', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 28,
-            name: 'User PICCE 10',
-            username: 'userpicce10',
-            hash: hashSync(hashSync('user@picce10', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 29,
-            name: 'User PICCE 11',
-            username: 'userpicce11',
-            hash: hashSync(hashSync('user@picce11', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 30,
-            name: 'User PICCE 12',
-            username: 'userpicce12',
-            hash: hashSync(hashSync('user@picce12', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 31,
-            name: 'User PICCE 13',
-            username: 'userpicce13',
-            hash: hashSync(hashSync('user@picce13', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 32,
-            name: 'User PICCE 14',
-            username: 'userpicce14',
-            hash: hashSync(hashSync('user@picce14', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 33,
-            name: 'User PICCE 15',
-            username: 'userpicce15',
-            hash: hashSync(hashSync('user@picce15', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
-            acceptedTerms: false,
-        },
-        {
-            id: 34,
-            name: 'User PICCE 16',
-            username: 'userpicce16',
-            hash: hashSync(hashSync('user@picce16', process.env.FRONTEND_SALT as string), 10),
-            role: 'USER' as UserRole,
-            institutionId: 1,
-            classrooms: [1],
+            classrooms: [],
             acceptedTerms: false,
         },
     ];
@@ -5969,9 +5803,9 @@ async function main() {
                 'O marketing é definido como uma atividade que procura satisfazer necessidades e interesses dos consumidores através da comercialização de produtos ou serviços (OLIVEIRA, 2007). Através de processos de troca, o marketing envolve diretamente nesta ação, uma empresa, um produto e o próprio consumidor (OLIVEIRA, 2007). Portanto, o marketing também faz parte da nossa rotina, isto é, de processos que nos rodeiam.\n\nMas afinal, qual seria a relação entre as tecnologias, internet, rádio, TV e o marketing? Como podemos associá-los? Sobretudo, pensando no uso da internet que possibilita a execução de aplicativos que oferecem subsídios para o desenvolvimento, acesso e divulgação de pequenas e grandes marcas. Você já parou para pensar nessas questões? E no quanto estamos e/ou podemos estar expostos a esses processos que por fim, nos direcionam ao consumo?\n\nDICA: Neste momento da leitura você pode realizar um debate com seu professor e seus colegas sobre essas questões mencionadas, isso poderá te ajudar a compreender melhor a relação entre esses dois conceitos.\n\n[Cheque o guia de campo para detalhes completos.](https://drive.google.com/file/d/1q3SO-ntPXUQw3FX4Oi16Vvvj5y1ibKi8/view?usp=drive_link)\n\n### Instruções para realização da atividade\n\nA partir de agora você será convidado a realizar a seguinte atividade que lhe representará frente às possíveis exposições que as propagandas podem proporcionar em sua rotina. Para a realização da atividade proposta você precisará:\n\n - Caneta ou lápis e borracha;\n - Confira se o material recebido está completo;\n - As questões devem ser respondidas individualmente e de acordo com seus conhecimentos prévios;\n - Leia com atenção as questões atribuídas, sendo criterioso com as respostas;\n\nO questionário consiste em 15 perguntas atribuídas em 3 partes:\n\n - Inicialmente, na parte 1 tem-se por objetivo realizar um mapeamento do seu perfil, como a idade, qual o gênero que se identifica, dados sobre a sua escola, o ano em que estuda. Após isso, será perguntado qual o meio de comunicação e informação que mais utiliza em seu dia a dia (internet, televisão, rádio) e ainda, se possui redes sociais;\n - Na parte 2 é abordado os produtos que você poderá ou não identificar ao redor da escola em que você estuda.\n - Na parte 3 do questionário, você fará uma análise do perfil das propagandas identificadas ao redor da escola. A partir de agora você será convidado a realizar a seguinte atividade que lhe representará frente às possíveis exposições que as tecnologias e o marketing podem proporcionar em sua rotina.',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 3,
         },
         {
@@ -5981,9 +5815,9 @@ async function main() {
                 'Este material é um guia de campo que o acompanhará na aplicação da pesquisa nas escolas do estado do Paraná, buscando descrever o passo a passo de como realizar a coleta dos dados.\n\nEste trabalho faz parte do Programa Interinstitucional de Ciência Cidadã na Escola – PICCE e aborda o tema “A disponibilidade de alimentos nas cantinas e refeitórios de escolas e sua relação com a alimentação saudável”, o qual conta com os professores para orientarem e com os estudantes para atuarem como pesquisadores.\n\nDessa forma, é possível coletar informações acerca da disponibilidade e variedade dos alimentos apresentados nos ambientes que costumam frequentar enquanto estão nas escolas, por meio do preenchimento do formulário desenvolvido pela equipe. Além disso, a análise, discussão e reflexão do tema pode ser facilitada com o uso do Ebook pelo professor e com o jogo Super Trunfo Alimentos. Bons estudos!\n\n### Como enviar os dados\n\nPara você enviar os dados deste protocolo, leia atentamente o [Guia de Campo](https://picce.ufpr.br/wp-content/uploads/2023/07/PICCE_Guia-de-campo-15_Disponibilidade_alimentos.pdf) e siga todas as instruções. Organize todos os materiais necessários para o processo de coleta de dados antes de iniciar a atividade. Em caso de dúvidas ao longo da coleta dos dados, consulte o Guia de Campo.\n\n### Instruções para a coleta dos dados\n\nPara iniciar a aplicação deste protocolo de Ciência Cidadã na Escola é importante que você tenha em mãos todos os materiais necessários para o desenvolvimento das atividades propostas. Seu professor já realizou a leitura do *E-book* com informações e poderá utilizar as aulas propostas para estimular as conversas com os alunos sobre a temática da Alimentação Saudável na adolescência e o método científico. Seu professor irá realizar:\n\n 1. Distribuição dos formulários aos alunos (ou orientação quanto ao uso do aplicativo de celular) e encaminhamento para a coleta de dados;\n\n2. Após coletados os dados, os alunos devem devolver ao professor os formulários, e os encaminhará para a equipe de pesquisa;\n\n3. A equipe de pesquisa irá tratar desses dados estatisticamente e visualmente (gráficos) e fará a devolução ao professor ou à professora;\n\n4. Por fim, seu(ua) professor(a) irá apresentar a análise realizada para a turma e vocês poderão fazer uma discussão sobre os resultados na sala de aula.\n\n### Caracterização do ambiente da coleta de dados\n- Escola: A escola é um espaço em que ações educativas sobre alimentação saudável na adolescência podem ser desenvolvidas. A rede escolar tem o dever de ofertar uma alimentação de qualidade e que possa suprir as necessidades nutricionais dos estudantes *(FNDE, 2017)*. Nesta etapa do protocolo você deverá registrar através do formulário as informações coletadas na escola em que se encontra, identificando seu tamanho, número de estudantes atendidos, se possui pontos alternativos de venda de alimentos. Principalmente, nos refeitórios e onde aconteça a venda e/ou distribuição de alimentos (cantina ou vendedores ambulantes no espaço externo). Todos esses ambientes devem ser observados e os dados, coletados. Lembre-se você deve anotar quais são os alimentos disponíveis (*in natura*, minimamente processados e ultraprocessados).',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 4,
         },
         {
@@ -5993,9 +5827,9 @@ async function main() {
                 'Quais e onde as diferentes ordens de insetos podem ser encontradas?\n\nO protocolo “Observando e Identificando Insetos” tem como objetivo fornecer uma ferramenta de auxílio ao trabalho de professores em atividades práticas, bem como para a utilização direta por estudantes ou qualquer outra pessoa que tenha interesse pelo tema.\n\nSeguindo as informações disponibilizadas, o utilizador poderá rapidamente e de maneira científica, identificar qual a ordem taxonômica do inseto visualizado.\n\nTambém permitirá fazer associações com o problema de pesquisa, sobre quais e onde as diferentes ordens de insetos podem ser encontradas e quais possuem maior interação com o ser humano.\n\n[Veja o guia completo aqui.](https://drive.google.com/file/d/1TV2H68KK__mYR9EQHaDT010l9XDTyTqu/view?usp=sharing)',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 5,
         },
         {
@@ -6005,9 +5839,9 @@ async function main() {
                 'O protocolo de amostragem em campo referente ao Monitoramento da megafauna no ambiente costeiro (MEGACOST), traz informações que permitem conhecer as espécies e a diversidade da megafauna que ocorre na zona costeira do litoral do Paraná.\n\nAfinal, quais são as principais espécies que ocorrem nesta zona costeira? Quais são os ambientes em que as espécies podem ser avistadas? Existe diferenças no número de indivíduos e quais são as espécies que ocorrem em diferentes épocas do ano? Há ocorrência de espécies ameaçadas de extinção?\n\n[Veja o guia de campo completo aqui.](https://drive.google.com/file/d/1JZrbXT09kICfHv850dSHUD8_YIgM6yqh/view)',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 6,
         },
         {
@@ -6017,9 +5851,9 @@ async function main() {
                 'Este guia de campo objetiva formar Araucária Hunters! Para que você possa entender e ter acesso a este título é necessário seguir alguns passos e também conhecer alguns conceitos principais.\n\nEla é conhecida cientificamente pelo nome de Araucaria angustifolia, e é uma das árvores símbolos do estado do Paraná, devido sua grande importância para o progresso econômico do estado.\n\nAlém disso, a Araucária pode ser conhecida também por outros nomes, como Pinheiro-do-Paraná e Pinheiro-Brasileiro, sendo classificada como uma gimnosperma, isto é, as primeiras plantas a definitivamente conquistar o ambiente terrestre. A semente da Araucária, conhecida como pinhão, é um produto de inverno muito esperado para consumo pela população, ela apresenta uma grande reserva de carboidratos, sendo um bom fornecedor de energia.\n\nO protocolo Araucária Hunters, visa responder o problema da pesquisa “Qual a distribuição e o estado de conservação das Araucárias no estado do Paraná?”. Esse mapeamento se faz importante devido ao fato dela ter sido explorada, por meio do extrativismo indiscriminado, levando-a para a lista oficial das espécies da flora brasileira ameaçada de extinção, situada na categoria criticamente em perigo em nível global, segundo a Lista Vermelha de Espécies Ameaçadas da IUCN (International Union For Conservation of Nature).\n\nPara poder realizar a análise sobre a distribuição, concentração e crescimento de Araucárias é necessária à coleta de dados. Para que essa coleta seja realmente ativa, ser um ajudante apenas não basta, será vital uma atuação como pesquisadores que estejam dispostas/os a colaborar nessa missão; por isso, propomos que os ajudantes sejam caçadores de Araucárias ou Hunters, termo em inglês para caçadores.\n\nSe você está no processo de aceitar ser ou se já aceitou essa ideia de virar um Hunter, talvez possa estar se perguntando o porquê disso realmente ser importante.\n\nIsso representa a última instância de alerta antes de ser considerada extinta da natureza, em outras palavras, significa que a espécie pode desaparecer do planeta.\n\nA Araucária não é reconhecida à toa como um dos símbolos do estado do Paraná, isto, porque ela teve grande influência econômica com a exportação da madeira no século passado e também por ter sido cortada para o plantio de monoculturas nas últimas décadas.\n\nPor isso, seu mapeamento é importante, para ser possível identificar e analisar maneiras e manejos de plantio que possam ser realizados visando o desenvolvimento desta espécie.\n\nAlém disso, ao se dispor a se tornar um/a Hunter você também estará contribuindo para que esta pesquisa alcance seus objetivos:\n\n - Mapear as Araucárias no estado do Paraná e caracterizar métricas para a análise de conservação dessas gimnospermas.\n - Analisar como a coleta de dados pode ser interpretada em relação ao estado de conservação das Araucárias, no Paraná.\n\nPara o mapeamento ser concluído, portanto, serão necessárias algumas observações sobre as Araucárias da região em que você mora. Ao realizar essa coleta, você oficialmente será um Araucária Hunter e entrará para o time dos defensores da biodiversidade! E, se quiser se tornar ainda mais ativo nesta caçada, poderá contribuir com ideias e soluções de problemas que contribuam para que nossos objetivos sejam alcançados.\n\n[Veja o guia de campo completo aqui.](https://drive.google.com/file/d/1DwT92XJlmcuKaioUhsXxhcMg8hwvneYw/view?usp=sharing)',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 7,
         },
         {
@@ -6029,9 +5863,9 @@ async function main() {
                 'Prezado colega professor e/ou professora, estudantes da Educação Básica (Ensino Fundamental ou Ensino Médio), esse Guia de Campo é parte do Protocolo de **Monitoramento dos Ambientes de Águas Continentais**. O objetivo é apresentar um conjunto de informações para orientar as atividades pedagógicas durante o desenvolvimento de nossa proposta de ciência cidadã.\n\nCom este embasamento e após o estudo do Capítulo **Monitoramento dos Ambientes de Águas Continentais**, apresentamos a seguir nosso Guia de Campo com os contextos teóricos e os encaminhamentos para o desenvolvimento do protocolo sistematizado em dois contextos: em primeiro lugar o estudo das características gerais do ambiente e em segundo lugar o estudo das comunidades de bioindicadores (macrófitas e macroinvertebrados).\n\nEsse protocolo está principalmente articulado com dois dos Objetivos do Desenvolvimento Sustentável (ODS – Brasil, 2017): **objetivo 6. Água potável e Saneamento** - Implantar estratégias de gestão da água que sejam ambientalmente sustentáveis e economicamente benéficas na região hidrográfica onde atua e o **objetivo 14. Vida na água** - Pesquisa, desenvolve e implementa produtos, serviços e modelos de negócios que eliminam impactos nos ecossistemas oceânicos e colaboram para sua restauração.\n\nAlém disso, buscamos interagir com os objetivos propostos na **Base Nacional Comum Curricular - BNCC** (Brasil, 2018), em especial no âmbito do Ensino Fundamental na área das Ciências EF07CI07 (Caracterizar os principais ecossistemas brasileiros quanto à paisagem, à quantidade de água, ao tipo de solo, à disponibilidade de luz solar, à temperatura etc., correlacionando essas características à flora e fauna específicas), EF09CI13 (Propor iniciativas individuais e coletivas para a solução de problemas ambientais da cidade ou da comunidade, com base na análise de ações de consumo consciente e de sustentabilidade bem-sucedidas) e ainda no contexto do Ensino Médio na área das Ciências da Natureza e suas Tecnologias EMCNT206 (Discutir a importância da preservação e conservação da biodiversidade, considerando parâmetros qualitativos e quantitativos, e avaliar os efeitos da ação humana e das políticas ambientais para a garantia da sustentabilidade do planeta) utilizando protocolos da ciência cidadã.\n\nAo final do desenvolvimento das atividades, você obterá dados que vão lhe permitir avaliar a qualidade ambiental, num processo de biomonitoramento. De posse destes referenciais e ferramentas de aprendizagem você poderá refletir e discutir futuras pesquisas e novos encaminhamentos diante de sua realidade.\n\n[Clique aqui para acessar o guia de campo completo.](https://drive.google.com/file/d/11QVzGWKjry8LeR-txSqfgG7VSPZGnZSS/view)',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 8,
         },
         {
@@ -6041,9 +5875,9 @@ async function main() {
                 'A água é um recurso natural estratégico para a sobrevivência no planeta, uma vez que sustenta a vida, ciclos biogeológicos, produção de alimentos e demais atividades essenciais para a manutenção da sociedade. A dependência do recurso não impede que as sociedades humanas poluam e degradem tanto as águas superficiais como as subterrâneas.\n\nPara ser considerada própria para uso e consumo, a água tem que estar dentro dos parâmetros de qualidade pré-estabelecidos pelas agências de controle (IQA, ou instituições estaduais de controle).\n\nPartindo disso, o protocolo Parâmetros físico-químicos como indicadores de poluição, possui como problema de pesquisa o monitoramento da água e sua relação com a poluição de recursos hídricos. Seu objetivo é envolver a comunidade escolar na coleta de dados sobre a qualidade da água no território em que a escola está inserida, monitoramento parâmetros importantes para a gestão dos recursos hídricos. Além disso, essa abordagem pode fornecer uma oportunidade para os estudantes aprenderem sobre ciência e questões ambientais de forma prática e envolvente, desenvolvendo habilidades de pensamento crítico e resolução de problemas.\n\nO presente protocolo também pode auxiliar no engajamento da comunidade e na conscientização sobre a importância da qualidade da água e a necessidade de proteger e preservar nossos recursos hídricos.\n\n[Clique aqui para acessar o guia de campo completo.](https://drive.google.com/file/d/10s_pyyXJvHhtAt67jRBUrmKW8rLTPQZP/view)',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 9,
         },
         {
@@ -6053,9 +5887,9 @@ async function main() {
                 '### Introdução\n\nO solo é um recurso natural de grande valor econômico, social e ambiental. Podemos usá-lo com vegetação nativa, vegetação inserida pelo ser humano ou áreas construídas. Sua qualidade está relacionada a capacidade de se manter produção de animais e vegetais, além de manter ou melhorar a qualidade da água e do ar. E, ainda, o solo é o meio sobre o qual habitamos.\n\nComo o solo está presente no dia-a-dia, pode-se avaliar aspectos que conferem a qualidade do solo e, consequentemente, perceber aspectos que fazem perder a qualidade do solo. Mas comoencontrar essas informações no ambiente escolar?\n\nPor exemplo, quando muitas pessoas pisoteiam o solo, causa compactação e diminuição da qualidade do solo. Quando não tem cobertura no solo (grama e árvores, por exemplo) pode ocorrer erosão, outro ponto que também prejudica a qualidade do solo.\n\n### Instruções para realizar a atividade\n\nO protocolo de caracterização da qualidade dos solos pode ser realizado no ambiente das escolas e colégios, mas também em outros locais, por meio das metodologias descritas neste guia e registradas por meio de fotografias e anotações na ficha de coleta de dados.\n\nPara realização das atividades, serão necessários os seguintes materiais:\n\n - Cano de PVC com 100 mm de diâmetro e aproximadamente 30 cm de comprimento\n - Colher de sopa\n - Copos plásticos descartáveis de 200 mL\n - Este guia de campo (preferencialmente impresso)\n - Fitas de medição de pH ou bicarbonato de sódio e vinagre\n - Garrafa PET de 500 mL cheia de água\n - Lápis e/ou caneta\n - Lona, plástico ou papelão\n - Lupa\n - Martelo\n - Pá cortadeira (reta) ou enxada\n - Palitos de sorvete\n - Pedaço de madeira com mais ou menos 20 cm de comprimento\n - Pinça (se disponível)\n - Prancheta\n - Régua de 30 cm\n - Telefone celular',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 10,
         },
         {
@@ -6065,9 +5899,9 @@ async function main() {
                 'O ser humano, desde a antiguidade, utiliza-se de plantas como remédio para muitas doenças, e os conhecimentos produzidos sobre a ação dos vegetais vem sendo transmitido desde as antigas civilizações até os dias atuais. As plantas medicinais, antes restritas às zonas rurais e a locais que não tinham acesso à assistência médica, têm sido cada vez mais utilizadas também no meio urbano, como alternativa ou complemento no tratamento de doenças. Assim, todo este conhecimento foi inicialmente passado oralmente ao longo de gerações que, juntamente com mitos e rituais, formaram parte importante das culturas locais.\n\nQuais características definem uma planta? As principais características das plantas são:\n\n - Formadas por células eucariontes: núcleo delimitado por envoltório nuclear;\n - Seres autotróficos: produzem o seu próprio alimento pela fotossíntese;\n - Fotossintetizantes: realizam processo de conversão de energia luminosa em compostos orgânicos.\n\nPara tanto, os cientistas cidadãos que realizam pesquisas, relatam observações, realizam medições e compartilham seus saberes a respeito da temática, ao mesmo tempo que podem contribuir para a coleta de dados, auxiliam a responder as perguntas abaixo.\n\nTemos como questões de pesquisa:\n\n - Qual a diversidade de espécies de plantas medicinais no local de estudo?\n - Qual a formação e características fitogeográficas (distribuição geográfica dos vegetais) nas diferentes regiões do Estado do Paraná?\n - Qual a distribuição de espécies medicinais da lista RENISUS (Relação Nacional de Plantas Medicinais de Interesse ao Sistema Único de Saúde) em jardins, hortas e espaços não formais no Estado do Paraná?\n - Que tipos de plantas ocorrem na área de coleta?\n\n[Veja o guia de campo completo aqui.](https://picce.ufpr.br/wp-content/uploads/2023/07/PICCE_Guia-de-campo-07_Plantas_aromaticas.pdf)\n\n### Formulário de campo\n\n### Parte 1: Caracterização do ambiente da coleta de dados',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 11,
         },
         {
@@ -6077,9 +5911,9 @@ async function main() {
                 '[Este protocolo deve ser respondido via Google Forms. Clique aqui para acessar o formulário.](https://forms.gle/vjuZ1cgs6agRndHM6)',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 12,
         },
         {
@@ -6089,9 +5923,9 @@ async function main() {
                 'Este material foi produzido adequando-se aos objetivos propostos na Base Comum Curricular (BNCC) utilizando protocolos da ciência cidadã. A ciência cidadã é um movimento de integração entre a sociedade e cientista, através do conjunto de ações realizadas por cidadãos não cientistas, que auxiliam as pesquisas em todo o mundo.\n\nEste protocolo foi pensado para se adaptar à necessidade de a escola contribuir para atingir os Objetivos de Desenvolvimento Sustentável, proposto pela Organização das Nações Unidas. Neste caso, o objetivo que está aderente à este trabalho é o ODS 12: Consumo e produção responsáveis: Garantir padrões de consumo e de produção sustentáveis, em que afirma: “até 2030, garantir que as pessoas, em todos os lugares, tenham informação relevante e conscientização para o desenvolvimento sustentável e estilos de vida em harmonia com a natureza.” Com isso, o objetivo desse projeto será analisar, quantitativamente, o consumo de energia elétrica da escola para, a partir disso, buscarmos alternativas para um consumo mais consciente e eficiente.\n\nO protocolo está dividido em duas partes:\n\n - Parte 1 - coleta de informações a respeito dos equipamentos eletrônicos do ambiente; \n - Parte 2 - consumo de energia dos equipamentos eletrônicos.\n\nVamos começar nossa jornada cheios de energia?\n\n[Veja o guia de campo completo aqui.](https://drive.google.com/file/d/1HcQKk6znUhSikM39gtpZbtqowIeDzNvP/view?usp=sharing)',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 13,
         },
         {
@@ -6101,9 +5935,9 @@ async function main() {
                 'Todas as pessoas se encontram na posição de pedestre em algum momento de suas vidas. Segundo dados da Polícia Rodoviária Federal do Brasil os três maiores causadores de mortes no trânsito, em 2019, foram 17,2% por responsabilidade do pedestre, 21% por falta de atenção dos condutores, e 16,8% por conta da desobediência às normas de trânsito.\n\nEm especial, as crianças e os adolescentes se encontram em posição mais vulnerável. O trânsito é o principal causador de mortes em pessoas entre 10 e 29 anos (OMS, 2018). A vulnerabilidade das crianças e adolescentes é por diversos motivos: pela falta de atenção (muitas vezes dedicada ao celular), pela coordenação motora e a percepção ainda em desenvolvimento e pela falta de costume, além da falta de instrução a respeito do trânsito. Como muitas destas características são relativas e fazem parte desta fase de desenvolvimento, uma das formas de garantir uma prevenção efetiva desses acidentes é através da educação.\n\nO presente projeto faz parte da estratégia de ciência cidadã, que consiste na parceria entre cidadãos e cientistas no desenvolvimento e coleta de dados para pesquisas. Por isso, o seu entendimento do material e sua colaboração no preenchimento do formulário são extremamente importantes. Além disso, a sua contribuição ajuda a promover uma circulação mais segura por este ambiente.\n\nO projeto tem como principal objetivo descobrir como está o entorno das escolas quanto à segurança no trânsito. Esse é um passo fundamental para tornar esse ambiente de trânsito seguro para crianças e adolescentes. Participando deste projeto você estará colaborando para que o Brasil consiga atingir dois dos Objetivos do Desenvolvimento Sustentável (ODS) promulgados pela Organização das Nações Unidas (ONU) (Nações Unidas, 2015). Esses objetivos são o de diminuir as mortes no trânsito (ODS 3: Saúde e Bem-estar) e tornar as cidades mais inclusivas (ODS 11: Cidades e Comunidades Sustentáveis).\n\nO projeto é dividido em duas etapas: entorno da escola e cinto de segurança. Cada etapa tem o seu objetivo. Na etapa 1 (Entorno da escola), o objetivo é caracterizar o entorno da escola quanto à segurança no trânsito para crianças e adolescentes pedestres e na etapa 2 (cinto de segurança) é quantificar o uso do cinto de segurança entre a comunidade que circula nesse ambiente.\n\nOs problemas de pesquisa são as perguntas que os pesquisadores querem responder. Inicialmente vamos apresentar a pergunta principal de pesquisa (problema) de cada etapa. Depois dela serão apresentadas as perguntas específicas de pesquisa (subproblemas) que ajudarão você a responder a pergunta principal.\n\n[Clique aqui para acessar o guia de campo completo.](https://drive.google.com/file/d/1tzcT-bzzUQEhsl4ZlXa9nvMC0omZi_Zj/view?usp=sharing)',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 14,
         },
         {
@@ -6113,9 +5947,9 @@ async function main() {
                 'Atualmente, os resíduos descartados pela população, deixaram de ser apenas um problema dos centros urbanos, se tornando um dos grandes poluentes do ecossistema marinho. Estes resíduos podem ser despejados diretamente nos ambientes litorâneos ou percorrer longas distâncias até chegar aos oceanos, sendo denominado de lixo no mar.\n\nA maioria dos materiais encontrados nos oceanos são plásticos e seus derivados. Entre os principais fatores que contribuem para o agravamento dessa problemática é a utilização indiscriminada deste material, seu elevado tempo de decomposição e a inexistência ou ineficiência dos programas de gerenciamento de resíduos sólidos.\n\nEste protocolo tem como objetivo identificar a presença e das quantidades de lixo nas praias e nos rios do litoral do Paraná, tendo como parâmetro a presença de resíduos sólidos (microplásticos e macrolixos). Para elaboração deste material, utilizomos como seu principal referencial, os guias de campo do Programa de ciência cidadã, nomeado de Científicos de la Basura, que é integrado por pesquisadores da Universidad Católica del Norte (UCN, Coquimbo), escolas e professores de todo o Chile. Os guias foram adaptados para o contexto e a realidade do litoral do Paraná e outras regiões pela equipe do laboratório de Conservação e Manejo, do Campus Paranaguá do Istituto Federal do Paraná (IFPR).\n\nO material está dividido em três partes, sendo a primeira o protocolo referente ao microplástico na praia, a segunda parte referente ao macro lixo na praia e a terceira descreve a metodologia de coleta de lixo em rios. Cada protocolo pode ser realizado de maneira independente, conforme descrito a diante.\n\nAo finalizar as coletas e preencher os formulários de registros, você contribuirá para o Programa Interinstitucional de Ciência Cidadã na Escola e para estudos futuros que ajudem a solucionar o problema do lixo no mar e nos rios.\n\n[Clique aqui para acessar o guia de campo completo.](https://drive.google.com/file/d/1UMTX_GL83Qj3Mv26M1qx3O8lNh6lJaXt/view)',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 15,
         },
         {
@@ -6125,9 +5959,9 @@ async function main() {
                 '- Vamos iniciar nosso material de estudo falando sobre Biodiversidade. Você sabe o que é? Onde podemos encontrá-la?\n\nBiodiversidade é a diversidade de vida em todos os ecossiste- mas existentes. Pode ser na sua casa ou no topo de uma montanha. Além da diversidade de seres vivos, inclui também todas as relações ecológicas entre estes. A Biodiversidade é muito importante para nossa sobrevivência e, por isso, devemos preservá-la. Você sabe como podemos preservá-la?\n\nVocê já deve ter ouvido sobre algumas atitudes importantes para preservação, como não desmatar, reciclar, entre outros assuntos tão necessários para preservação do meio ambiente. Hoje eu gostaria de te contar sobre uma maneira muito importante de preservar a nossa biodiversidade.\n\nVocê já ouviu falar de polinização? Se não, deixa eu te contar um pouquinho sobre o que é: a polinização é o caminho que o pólen percorre de uma flor para outra, para que ocorra a reprodução da planta. Para isso acontecer, na maioria das vezes, são necessários os polinizadores. É fácil de identificar o pólen: são grãozinhos minús- culos, geralmente amarelinhos, que ficam na antera da flor, ou seja, em uma de suas estruturas reprodutivas.\n\n- Opa! Está começando a ficar difícil essa história.\n\nOs polinizadores são animais, em sua grande maioria insetos, que transportam grãos de pólen da parte masculina da flor para a parte feminina de outra flor da mesma espécie, realizando as- sim a polinização. Esse acontecimento permite que as plantas se reproduzam, formando sementes e frutos, ajudando a preservar a biodiversidade.\n\n- Uma curiosidade: Os polinizadores também podem ser a água e o vento, não só os animais!\n\nMas um polinizador não visita a flor com a intenção de polinizá- -la. Ele está em busca de alimentos para ele e/ou para sua prole, principalmente pólen e néctar. Além dos polinizadores, existem também outros visitantes florais. Como vamos saber se um inseto está polinizando, ou apenas visitando uma flor? Se o animal está em contato com o pólen, passando pelas partes reprodutivas de uma flor, a antera e o estigma, ele provavelmente é um polinizador. Muitas vezes, o polinizador possui estruturas no seu corpo que favorecem o transporte dos grãos de pólen, como os pequenos pelos de uma abelha, por exemplo.\n\n- Você já presenciou algum inseto em uma flor? O que será que ele estava fazendo?\n\nUm inseto pode visitar uma flor sem tocar suas estruturas reprodutivas. Ele pode, por exemplo, descansar sobre a pétala ou sobre uma folha próxima a flor. É preciso um pouco de atenção para ver se um animal pode ser um polinizador ou se é simplesmente um visitante floral. Diferenciá-los pode ser um trabalho difícil, mas contamos com a sua ajuda através do registro das visitas florais.\n\nO protocolo **biodiversidade - polinizadores** foi criado em atenção ao problema da redução de polinizadores e de sua diversidade. Nosso objetivos são conhecer melhor os polinizadores das regiões do Paraná, proporcionar aprendizado e promover a conservação desses animais tão importantes. Ao completar o protocolo e enviá-lo corretamente, você estará contribuindo para o estudo da biodiversidade no Paraná, além de estar fazendo parte da ciência cidadã!\n\n[Acesse o guia de campo completo aqui.](https://drive.google.com/file/d/1LOqx0HUGPIUI0jcV3axcodVJyxAVIfKF/view?usp=drive_link)',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 16,
         },
         {
@@ -6137,9 +5971,9 @@ async function main() {
                 '### Instruções\n\nPara você enviar os dados deste protocolo, leia atentamente o [Guia de Campo](https://picce.ufpr.br/wp-content/uploads/2023/07/PICCE_Guia-de-campo-01_Cobertura_solo.pdf) e siga todas as instruções. Organize todos os materiais necessários para o processo de coleta de dados antes de iniciar a atividade. Em caso de dúvidas ao longo da coleta dos dados, consulte o Guia de Campo.',
             enabled: true,
             replicable: false,
-            applicability: 'PUBLIC' as VisibilityMode,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            applicability: VisibilityMode.PUBLIC,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
             creatorId: 17,
         },
     ];
@@ -6148,91 +5982,91 @@ async function main() {
         {
             id: 1,
             protocolId: 1,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
         {
             id: 2,
             protocolId: 2,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
         {
             id: 3,
             protocolId: 3,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
         {
             id: 4,
             protocolId: 4,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
         {
             id: 5,
             protocolId: 5,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
         {
             id: 6,
             protocolId: 6,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
         {
             id: 7,
             protocolId: 7,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
         {
             id: 8,
             protocolId: 8,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
         {
             id: 9,
             protocolId: 9,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
         {
             id: 10,
             protocolId: 10,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
         {
             id: 11,
             protocolId: 11,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
         {
             id: 12,
             protocolId: 12,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
         {
             id: 13,
             protocolId: 13,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
         {
             id: 14,
             protocolId: 14,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
         {
             id: 15,
             protocolId: 15,
-            type: 'ITEMS',
+            type: PageType.ITEMS,
             placement: 1,
         },
     ];
@@ -6241,105 +6075,105 @@ async function main() {
         {
             id: 1,
             pageId: 1,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 2,
             pageId: 2,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 3,
             pageId: 3,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 4,
             pageId: 4,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 5,
             pageId: 5,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 6,
             pageId: 6,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 7,
             pageId: 7,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 8,
             pageId: 8,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 9,
             pageId: 9,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 10,
             pageId: 10,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 11,
             pageId: 11,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 12,
             pageId: 12,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 13,
             pageId: 13,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 14,
             pageId: 14,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
         {
             id: 15,
             pageId: 15,
-            type: 'ONE_DIMENSIONAL',
+            type: ItemGroupType.ONE_DIMENSIONAL,
             placement: 1,
             isRepeatable: false,
         },
@@ -6353,7 +6187,7 @@ async function main() {
             description: '',
             placement: 1,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 2,
@@ -6362,7 +6196,7 @@ async function main() {
             description: '',
             placement: 2,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 3,
@@ -6371,7 +6205,7 @@ async function main() {
             description: '',
             placement: 3,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 4,
@@ -6380,7 +6214,7 @@ async function main() {
             description: '',
             placement: 4,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 5,
@@ -6389,7 +6223,7 @@ async function main() {
             description: '',
             placement: 5,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 6,
@@ -6398,7 +6232,7 @@ async function main() {
             description: '',
             placement: 6,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 7,
@@ -6407,7 +6241,7 @@ async function main() {
             description: '',
             placement: 7,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 8,
@@ -6416,7 +6250,7 @@ async function main() {
             description: '',
             placement: 8,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 9,
@@ -6425,7 +6259,7 @@ async function main() {
             description: '',
             placement: 9,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 10,
@@ -6434,7 +6268,7 @@ async function main() {
             description: '',
             placement: 10,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 11,
@@ -6443,7 +6277,7 @@ async function main() {
             description: '',
             placement: 11,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 12,
@@ -6452,7 +6286,7 @@ async function main() {
             description: '',
             placement: 12,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 13,
@@ -6461,7 +6295,7 @@ async function main() {
             description: '',
             placement: 13,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 14,
@@ -6470,7 +6304,7 @@ async function main() {
             description: '',
             placement: 14,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 15,
@@ -6479,7 +6313,7 @@ async function main() {
             description: '',
             placement: 15,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 16,
@@ -6488,7 +6322,7 @@ async function main() {
             description: '',
             placement: 16,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 17,
@@ -6497,7 +6331,7 @@ async function main() {
             description: '',
             placement: 17,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 18,
@@ -6506,7 +6340,7 @@ async function main() {
             description: '',
             placement: 18,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 19,
@@ -6515,7 +6349,7 @@ async function main() {
             description: '',
             placement: 19,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 20,
@@ -6524,7 +6358,7 @@ async function main() {
             description: '',
             placement: 20,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 21,
@@ -6533,7 +6367,7 @@ async function main() {
             description: '',
             placement: 21,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 22,
@@ -6542,7 +6376,7 @@ async function main() {
             description: '',
             placement: 22,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 23,
@@ -6551,7 +6385,7 @@ async function main() {
             description: '',
             placement: 23,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 24,
@@ -6560,7 +6394,7 @@ async function main() {
             description: '',
             placement: 24,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 25,
@@ -6569,7 +6403,7 @@ async function main() {
             description: '',
             placement: 25,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 26,
@@ -6578,7 +6412,7 @@ async function main() {
             description: '',
             placement: 26,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 27,
@@ -6587,7 +6421,7 @@ async function main() {
             description: '',
             placement: 27,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 28,
@@ -6596,7 +6430,7 @@ async function main() {
             description: '',
             placement: 28,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 29,
@@ -6605,7 +6439,7 @@ async function main() {
             description: '',
             placement: 29,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 30,
@@ -6614,7 +6448,7 @@ async function main() {
             description: '',
             placement: 30,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 31,
@@ -6623,7 +6457,7 @@ async function main() {
             description: '',
             placement: 31,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 32,
@@ -6632,7 +6466,7 @@ async function main() {
             description: '',
             placement: 32,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 33,
@@ -6641,7 +6475,7 @@ async function main() {
             description: '',
             placement: 33,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 34,
@@ -6650,7 +6484,7 @@ async function main() {
             description: '',
             placement: 34,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 35,
@@ -6659,7 +6493,7 @@ async function main() {
             description: '',
             placement: 35,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 36,
@@ -6668,7 +6502,7 @@ async function main() {
             description: '',
             placement: 36,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 37,
@@ -6677,7 +6511,7 @@ async function main() {
             description: '',
             placement: 37,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 38,
@@ -6686,7 +6520,7 @@ async function main() {
             description: '',
             placement: 38,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 39,
@@ -6695,7 +6529,7 @@ async function main() {
             description: '',
             placement: 39,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 40,
@@ -6704,7 +6538,7 @@ async function main() {
             description: '',
             placement: 40,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 41,
@@ -6713,7 +6547,7 @@ async function main() {
             description: '',
             placement: 41,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 42,
@@ -6722,7 +6556,7 @@ async function main() {
             description: '',
             placement: 42,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 43,
@@ -6731,7 +6565,7 @@ async function main() {
             description: '',
             placement: 43,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 44,
@@ -6740,7 +6574,7 @@ async function main() {
             description: '',
             placement: 44,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 45,
@@ -6749,7 +6583,7 @@ async function main() {
             description: '',
             placement: 45,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 46,
@@ -6758,7 +6592,7 @@ async function main() {
             description: '',
             placement: 46,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 47,
@@ -6767,7 +6601,7 @@ async function main() {
             description: '',
             placement: 47,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 48,
@@ -6776,7 +6610,7 @@ async function main() {
             description: '',
             placement: 48,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 49,
@@ -6785,7 +6619,7 @@ async function main() {
             description: '',
             placement: 49,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 50,
@@ -6794,7 +6628,7 @@ async function main() {
             description: '',
             placement: 50,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 51,
@@ -6803,7 +6637,7 @@ async function main() {
             description: '',
             placement: 51,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 52,
@@ -6812,7 +6646,7 @@ async function main() {
             description: '',
             placement: 52,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 53,
@@ -6821,7 +6655,7 @@ async function main() {
             description: '',
             placement: 53,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 54,
@@ -6830,7 +6664,7 @@ async function main() {
             description: '',
             placement: 54,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 55,
@@ -6839,7 +6673,7 @@ async function main() {
             description: '',
             placement: 55,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 56,
@@ -6848,7 +6682,7 @@ async function main() {
             description: '',
             placement: 56,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 57,
@@ -6857,7 +6691,7 @@ async function main() {
             description: '',
             placement: 57,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 58,
@@ -6866,7 +6700,7 @@ async function main() {
             description: '',
             placement: 58,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 59,
@@ -6875,7 +6709,7 @@ async function main() {
             description: '',
             placement: 59,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 60,
@@ -6884,7 +6718,7 @@ async function main() {
             description: '',
             placement: 60,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 61,
@@ -6893,7 +6727,7 @@ async function main() {
             description: '',
             placement: 61,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 62,
@@ -6902,7 +6736,7 @@ async function main() {
             description: '',
             placement: 62,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 63,
@@ -6911,7 +6745,7 @@ async function main() {
             description: '',
             placement: 63,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 64,
@@ -6920,7 +6754,7 @@ async function main() {
             description: '',
             placement: 64,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 65,
@@ -6929,7 +6763,7 @@ async function main() {
             description: '',
             placement: 65,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 66,
@@ -6938,7 +6772,7 @@ async function main() {
             description: '',
             placement: 66,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 67,
@@ -6947,7 +6781,7 @@ async function main() {
             description: '',
             placement: 67,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 68,
@@ -6956,7 +6790,7 @@ async function main() {
             description: '',
             placement: 68,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 69,
@@ -6965,7 +6799,7 @@ async function main() {
             description: '',
             placement: 69,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 70,
@@ -6974,7 +6808,7 @@ async function main() {
             description: '',
             placement: 70,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 71,
@@ -6983,7 +6817,7 @@ async function main() {
             description: '',
             placement: 71,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 72,
@@ -6992,7 +6826,7 @@ async function main() {
             description: '',
             placement: 72,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 73,
@@ -7001,7 +6835,7 @@ async function main() {
             description: '',
             placement: 73,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 74,
@@ -7010,7 +6844,7 @@ async function main() {
             description: '',
             placement: 74,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 75,
@@ -7019,7 +6853,7 @@ async function main() {
             description: '',
             placement: 75,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 76,
@@ -7028,7 +6862,7 @@ async function main() {
             description: '',
             placement: 76,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 77,
@@ -7037,7 +6871,7 @@ async function main() {
             description: '',
             placement: 77,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 78,
@@ -7046,7 +6880,7 @@ async function main() {
             description: '',
             placement: 78,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 79,
@@ -7055,7 +6889,7 @@ async function main() {
             description: '',
             placement: 79,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 80,
@@ -7064,7 +6898,7 @@ async function main() {
             description: '',
             placement: 80,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 81,
@@ -7073,7 +6907,7 @@ async function main() {
             description: '',
             placement: 81,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 82,
@@ -7082,7 +6916,7 @@ async function main() {
             description: '',
             placement: 82,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 83,
@@ -7091,7 +6925,7 @@ async function main() {
             description: '',
             placement: 83,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 84,
@@ -7100,7 +6934,7 @@ async function main() {
             description: '',
             placement: 84,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 85,
@@ -7109,7 +6943,7 @@ async function main() {
             description: '',
             placement: 85,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 86,
@@ -7118,7 +6952,7 @@ async function main() {
             description: '',
             placement: 86,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 87,
@@ -7127,7 +6961,7 @@ async function main() {
             description: '',
             placement: 87,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 88,
@@ -7136,7 +6970,7 @@ async function main() {
             description: '',
             placement: 1,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 89,
@@ -7145,7 +6979,7 @@ async function main() {
             description: '',
             placement: 2,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 90,
@@ -7154,7 +6988,7 @@ async function main() {
             description: '',
             placement: 3,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 91,
@@ -7163,7 +6997,7 @@ async function main() {
             description: '',
             placement: 4,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 92,
@@ -7172,7 +7006,7 @@ async function main() {
             description: '',
             placement: 5,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 93,
@@ -7181,7 +7015,7 @@ async function main() {
             description: '',
             placement: 6,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 94,
@@ -7190,7 +7024,7 @@ async function main() {
             description: '',
             placement: 7,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 95,
@@ -7199,7 +7033,7 @@ async function main() {
             description: '',
             placement: 8,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 96,
@@ -7208,7 +7042,7 @@ async function main() {
             description: '',
             placement: 9,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 97,
@@ -7217,7 +7051,7 @@ async function main() {
             description: '',
             placement: 10,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 98,
@@ -7226,7 +7060,7 @@ async function main() {
             description: '',
             placement: 11,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 99,
@@ -7235,7 +7069,7 @@ async function main() {
             description: '',
             placement: 12,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 100,
@@ -7244,7 +7078,7 @@ async function main() {
             description: '',
             placement: 13,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 101,
@@ -7253,7 +7087,7 @@ async function main() {
             description: '',
             placement: 14,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 102,
@@ -7262,7 +7096,7 @@ async function main() {
             description: '',
             placement: 15,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 103,
@@ -7271,7 +7105,7 @@ async function main() {
             description: '',
             placement: 16,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 104,
@@ -7280,7 +7114,7 @@ async function main() {
             description: '',
             placement: 17,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 105,
@@ -7289,7 +7123,7 @@ async function main() {
             description: '',
             placement: 18,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 106,
@@ -7298,7 +7132,7 @@ async function main() {
             description: '',
             placement: 19,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 107,
@@ -7307,7 +7141,7 @@ async function main() {
             description: '',
             placement: 20,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 108,
@@ -7316,7 +7150,7 @@ async function main() {
             description: '',
             placement: 21,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 109,
@@ -7325,7 +7159,7 @@ async function main() {
             description: '',
             placement: 22,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 110,
@@ -7334,7 +7168,7 @@ async function main() {
             description: '',
             placement: 23,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 111,
@@ -7343,7 +7177,7 @@ async function main() {
             description: '',
             placement: 24,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 112,
@@ -7352,7 +7186,7 @@ async function main() {
             description: '',
             placement: 25,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 113,
@@ -7361,7 +7195,7 @@ async function main() {
             description: '',
             placement: 26,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 114,
@@ -7370,7 +7204,7 @@ async function main() {
             description: '',
             placement: 27,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 115,
@@ -7379,7 +7213,7 @@ async function main() {
             description: '',
             placement: 28,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 116,
@@ -7388,7 +7222,7 @@ async function main() {
             description: '',
             placement: 29,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 117,
@@ -7397,7 +7231,7 @@ async function main() {
             description: '',
             placement: 30,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 118,
@@ -7406,7 +7240,7 @@ async function main() {
             description: '',
             placement: 31,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 119,
@@ -7415,7 +7249,7 @@ async function main() {
             description: '',
             placement: 32,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 120,
@@ -7424,7 +7258,7 @@ async function main() {
             description: '',
             placement: 1,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 121,
@@ -7433,7 +7267,7 @@ async function main() {
             description: '',
             placement: 2,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 122,
@@ -7442,7 +7276,7 @@ async function main() {
             description: '',
             placement: 3,
             enabled: true,
-            type: 'DATEBOX',
+            type: ItemType.DATEBOX,
         },
         {
             id: 123,
@@ -7451,7 +7285,7 @@ async function main() {
             description: '',
             placement: 4,
             enabled: true,
-            type: 'TIMEBOX',
+            type: ItemType.TIMEBOX,
         },
         {
             id: 124,
@@ -7460,7 +7294,7 @@ async function main() {
             description: '',
             placement: 5,
             enabled: true,
-            type: 'LOCATIONBOX',
+            type: ItemType.LOCATIONBOX,
         },
         {
             id: 125,
@@ -7469,7 +7303,7 @@ async function main() {
             description: '',
             placement: 6,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 126,
@@ -7478,7 +7312,7 @@ async function main() {
             description: '',
             placement: 7,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 127,
@@ -7487,7 +7321,7 @@ async function main() {
             description: '',
             placement: 8,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 128,
@@ -7496,7 +7330,7 @@ async function main() {
             description: '',
             placement: 9,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 129,
@@ -7505,7 +7339,7 @@ async function main() {
             description: '',
             placement: 10,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 130,
@@ -7514,7 +7348,7 @@ async function main() {
             description: '',
             placement: 11,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 131,
@@ -7523,7 +7357,7 @@ async function main() {
             description: '',
             placement: 12,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 132,
@@ -7532,7 +7366,7 @@ async function main() {
             description: '',
             placement: 13,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 133,
@@ -7541,7 +7375,7 @@ async function main() {
             description: '',
             placement: 14,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 134,
@@ -7550,7 +7384,7 @@ async function main() {
             description: '',
             placement: 15,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 135,
@@ -7559,7 +7393,7 @@ async function main() {
             description: '',
             placement: 16,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 136,
@@ -7568,7 +7402,7 @@ async function main() {
             description: '',
             placement: 17,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 137,
@@ -7577,7 +7411,7 @@ async function main() {
             description: '',
             placement: 18,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 138,
@@ -7586,7 +7420,7 @@ async function main() {
             description: '',
             placement: 19,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 139,
@@ -7595,7 +7429,7 @@ async function main() {
             description: '',
             placement: 20,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 140,
@@ -7604,7 +7438,7 @@ async function main() {
             description: '',
             placement: 21,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 141,
@@ -7613,7 +7447,7 @@ async function main() {
             description: '',
             placement: 22,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 142,
@@ -7622,7 +7456,7 @@ async function main() {
             description: '',
             placement: 23,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 143,
@@ -7631,7 +7465,7 @@ async function main() {
             description: '',
             placement: 24,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 144,
@@ -7640,7 +7474,7 @@ async function main() {
             description: '',
             placement: 25,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 145,
@@ -7649,7 +7483,7 @@ async function main() {
             description: '',
             placement: 26,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 146,
@@ -7658,7 +7492,7 @@ async function main() {
             description: '',
             placement: 27,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 147,
@@ -7667,7 +7501,7 @@ async function main() {
             description: '',
             placement: 28,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 148,
@@ -7676,7 +7510,7 @@ async function main() {
             description: '',
             placement: 29,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 149,
@@ -7685,7 +7519,7 @@ async function main() {
             description: '',
             placement: 30,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 150,
@@ -7694,7 +7528,7 @@ async function main() {
             description: '',
             placement: 31,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 151,
@@ -7703,7 +7537,7 @@ async function main() {
             description: '',
             placement: 32,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 152,
@@ -7712,7 +7546,7 @@ async function main() {
             description: '',
             placement: 33,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 153,
@@ -7721,7 +7555,7 @@ async function main() {
             description: '',
             placement: 34,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 154,
@@ -7730,7 +7564,7 @@ async function main() {
             description: '',
             placement: 35,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 155,
@@ -7739,7 +7573,7 @@ async function main() {
             description: '',
             placement: 36,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 156,
@@ -7748,7 +7582,7 @@ async function main() {
             description: '',
             placement: 37,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 157,
@@ -7757,7 +7591,7 @@ async function main() {
             description: '',
             placement: 38,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 158,
@@ -7766,7 +7600,7 @@ async function main() {
             description: '',
             placement: 39,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 159,
@@ -7775,7 +7609,7 @@ async function main() {
             description: '',
             placement: 1,
             enabled: true,
-            type: 'DATEBOX',
+            type: ItemType.DATEBOX,
         },
         {
             id: 160,
@@ -7784,7 +7618,7 @@ async function main() {
             description: '',
             placement: 2,
             enabled: true,
-            type: 'TIMEBOX',
+            type: ItemType.TIMEBOX,
         },
         {
             id: 161,
@@ -7793,7 +7627,7 @@ async function main() {
             description: '',
             placement: 3,
             enabled: true,
-            type: 'LOCATIONBOX',
+            type: ItemType.LOCATIONBOX,
         },
         {
             id: 162,
@@ -7802,7 +7636,7 @@ async function main() {
             description: '',
             placement: 4,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 163,
@@ -7811,7 +7645,7 @@ async function main() {
             description: '',
             placement: 5,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 164,
@@ -7820,7 +7654,7 @@ async function main() {
             description: '',
             placement: 6,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 165,
@@ -7829,7 +7663,7 @@ async function main() {
             description: '',
             placement: 7,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 166,
@@ -7838,7 +7672,7 @@ async function main() {
             description: '',
             placement: 8,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 167,
@@ -7847,7 +7681,7 @@ async function main() {
             description: '',
             placement: 9,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 168,
@@ -7856,7 +7690,7 @@ async function main() {
             description: '',
             placement: 10,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 169,
@@ -7865,7 +7699,7 @@ async function main() {
             description: '',
             placement: 11,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 170,
@@ -7874,7 +7708,7 @@ async function main() {
             description: '',
             placement: 12,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 171,
@@ -7883,7 +7717,7 @@ async function main() {
             description: '',
             placement: 13,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 172,
@@ -7892,7 +7726,7 @@ async function main() {
             description: '',
             placement: 14,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 173,
@@ -7901,7 +7735,7 @@ async function main() {
             description: '',
             placement: 15,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 174,
@@ -7910,7 +7744,7 @@ async function main() {
             description: '',
             placement: 16,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 175,
@@ -7919,7 +7753,7 @@ async function main() {
             description: '',
             placement: 17,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 176,
@@ -7928,7 +7762,7 @@ async function main() {
             description: '',
             placement: 18,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 177,
@@ -7937,7 +7771,7 @@ async function main() {
             description: '',
             placement: 19,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 178,
@@ -7946,7 +7780,7 @@ async function main() {
             description: '',
             placement: 20,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 179,
@@ -7955,7 +7789,7 @@ async function main() {
             description: '',
             placement: 21,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 180,
@@ -7964,7 +7798,7 @@ async function main() {
             description: '',
             placement: 22,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 181,
@@ -7973,7 +7807,7 @@ async function main() {
             description: '',
             placement: 23,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 182,
@@ -7982,7 +7816,7 @@ async function main() {
             description: '',
             placement: 24,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 183,
@@ -7991,7 +7825,7 @@ async function main() {
             description: '',
             placement: 25,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 184,
@@ -8000,7 +7834,7 @@ async function main() {
             description: '',
             placement: 26,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 185,
@@ -8009,7 +7843,7 @@ async function main() {
             description: '',
             placement: 27,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 186,
@@ -8018,7 +7852,7 @@ async function main() {
             description: '',
             placement: 28,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 187,
@@ -8027,7 +7861,7 @@ async function main() {
             description: '',
             placement: 29,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 188,
@@ -8036,7 +7870,7 @@ async function main() {
             description: '',
             placement: 30,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 189,
@@ -8045,7 +7879,7 @@ async function main() {
             description: '',
             placement: 31,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 190,
@@ -8054,7 +7888,7 @@ async function main() {
             description: '',
             placement: 32,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 191,
@@ -8063,7 +7897,7 @@ async function main() {
             description: '',
             placement: 33,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 192,
@@ -8072,7 +7906,7 @@ async function main() {
             description: '',
             placement: 34,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 193,
@@ -8081,7 +7915,7 @@ async function main() {
             description: '',
             placement: 35,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 194,
@@ -8090,7 +7924,7 @@ async function main() {
             description: '',
             placement: 36,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 195,
@@ -8099,7 +7933,7 @@ async function main() {
             description: '',
             placement: 37,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 196,
@@ -8108,7 +7942,7 @@ async function main() {
             description: '',
             placement: 38,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 197,
@@ -8117,7 +7951,7 @@ async function main() {
             description: '',
             placement: 39,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 198,
@@ -8126,7 +7960,7 @@ async function main() {
             description: '',
             placement: 40,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 199,
@@ -8135,7 +7969,7 @@ async function main() {
             description: '',
             placement: 41,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 200,
@@ -8144,7 +7978,7 @@ async function main() {
             description: '',
             placement: 42,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 201,
@@ -8153,7 +7987,7 @@ async function main() {
             description: '',
             placement: 43,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 202,
@@ -8162,7 +7996,7 @@ async function main() {
             description: '',
             placement: 44,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 203,
@@ -8171,7 +8005,7 @@ async function main() {
             description: '',
             placement: 45,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 204,
@@ -8180,7 +8014,7 @@ async function main() {
             description: '',
             placement: 46,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 205,
@@ -8189,7 +8023,7 @@ async function main() {
             description: '',
             placement: 47,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 206,
@@ -8198,7 +8032,7 @@ async function main() {
             description: '',
             placement: 48,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 207,
@@ -8207,7 +8041,7 @@ async function main() {
             description: '',
             placement: 49,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 208,
@@ -8216,7 +8050,7 @@ async function main() {
             description: '',
             placement: 50,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 209,
@@ -8225,7 +8059,7 @@ async function main() {
             description: '',
             placement: 51,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 210,
@@ -8234,7 +8068,7 @@ async function main() {
             description: '',
             placement: 52,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 211,
@@ -8243,7 +8077,7 @@ async function main() {
             description: '',
             placement: 53,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 212,
@@ -8252,7 +8086,7 @@ async function main() {
             description: '',
             placement: 54,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 213,
@@ -8261,7 +8095,7 @@ async function main() {
             description: '',
             placement: 55,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 214,
@@ -8270,7 +8104,7 @@ async function main() {
             description: '',
             placement: 56,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 215,
@@ -8279,7 +8113,7 @@ async function main() {
             description: '',
             placement: 57,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 216,
@@ -8288,7 +8122,7 @@ async function main() {
             description: '',
             placement: 58,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 217,
@@ -8297,7 +8131,7 @@ async function main() {
             description: '',
             placement: 59,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 218,
@@ -8306,7 +8140,7 @@ async function main() {
             description: '',
             placement: 60,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 219,
@@ -8315,7 +8149,7 @@ async function main() {
             description: '',
             placement: 61,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 220,
@@ -8324,7 +8158,7 @@ async function main() {
             description: '',
             placement: 62,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 221,
@@ -8333,7 +8167,7 @@ async function main() {
             description: '',
             placement: 63,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 222,
@@ -8342,7 +8176,7 @@ async function main() {
             description: '',
             placement: 64,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 223,
@@ -8351,7 +8185,7 @@ async function main() {
             description: '',
             placement: 65,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 224,
@@ -8360,7 +8194,7 @@ async function main() {
             description: '',
             placement: 66,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 225,
@@ -8369,7 +8203,7 @@ async function main() {
             description: '',
             placement: 67,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 226,
@@ -8378,7 +8212,7 @@ async function main() {
             description: '',
             placement: 68,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 227,
@@ -8387,7 +8221,7 @@ async function main() {
             description: '',
             placement: 69,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 228,
@@ -8396,7 +8230,7 @@ async function main() {
             description: '',
             placement: 70,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 229,
@@ -8405,7 +8239,7 @@ async function main() {
             description: '',
             placement: 71,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 230,
@@ -8414,7 +8248,7 @@ async function main() {
             description: '',
             placement: 72,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 231,
@@ -8423,7 +8257,7 @@ async function main() {
             description: '',
             placement: 73,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 232,
@@ -8432,7 +8266,7 @@ async function main() {
             description: '',
             placement: 74,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 233,
@@ -8441,7 +8275,7 @@ async function main() {
             description: '',
             placement: 75,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 234,
@@ -8450,7 +8284,7 @@ async function main() {
             description: '',
             placement: 76,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 235,
@@ -8459,7 +8293,7 @@ async function main() {
             description: '',
             placement: 77,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 236,
@@ -8468,7 +8302,7 @@ async function main() {
             description: '',
             placement: 78,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 237,
@@ -8477,7 +8311,7 @@ async function main() {
             description: '',
             placement: 79,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 238,
@@ -8486,7 +8320,7 @@ async function main() {
             description: '',
             placement: 80,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 239,
@@ -8495,7 +8329,7 @@ async function main() {
             description: '',
             placement: 81,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 240,
@@ -8504,7 +8338,7 @@ async function main() {
             description: '',
             placement: 82,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 241,
@@ -8513,7 +8347,7 @@ async function main() {
             description: '',
             placement: 83,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 242,
@@ -8522,7 +8356,7 @@ async function main() {
             description: '',
             placement: 84,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 243,
@@ -8531,7 +8365,7 @@ async function main() {
             description: '',
             placement: 85,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 244,
@@ -8540,7 +8374,7 @@ async function main() {
             description: '',
             placement: 86,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 245,
@@ -8549,7 +8383,7 @@ async function main() {
             description: '',
             placement: 1,
             enabled: true,
-            type: 'DATEBOX',
+            type: ItemType.DATEBOX,
         },
         {
             id: 246,
@@ -8558,7 +8392,7 @@ async function main() {
             description: '',
             placement: 2,
             enabled: true,
-            type: 'LOCATIONBOX',
+            type: ItemType.LOCATIONBOX,
         },
         {
             id: 247,
@@ -8567,7 +8401,7 @@ async function main() {
             description: '',
             placement: 3,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 248,
@@ -8576,7 +8410,7 @@ async function main() {
             description: '',
             placement: 4,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 249,
@@ -8585,7 +8419,7 @@ async function main() {
             description: '',
             placement: 5,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 250,
@@ -8594,7 +8428,7 @@ async function main() {
             description: '',
             placement: 6,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 251,
@@ -8603,7 +8437,7 @@ async function main() {
             description: '',
             placement: 7,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 252,
@@ -8612,7 +8446,7 @@ async function main() {
             description: '',
             placement: 8,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 253,
@@ -8621,7 +8455,7 @@ async function main() {
             description: '',
             placement: 9,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 254,
@@ -8630,7 +8464,7 @@ async function main() {
             description: '',
             placement: 10,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 255,
@@ -8639,7 +8473,7 @@ async function main() {
             description: '',
             placement: 11,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 256,
@@ -8648,7 +8482,7 @@ async function main() {
             description: '',
             placement: 12,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 257,
@@ -8657,7 +8491,7 @@ async function main() {
             description: '',
             placement: 13,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 258,
@@ -8666,7 +8500,7 @@ async function main() {
             description: '',
             placement: 14,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 259,
@@ -8675,7 +8509,7 @@ async function main() {
             description: '',
             placement: 15,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 260,
@@ -8684,7 +8518,7 @@ async function main() {
             description: '',
             placement: 16,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 261,
@@ -8693,7 +8527,7 @@ async function main() {
             description: '',
             placement: 17,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 262,
@@ -8702,7 +8536,7 @@ async function main() {
             description: '',
             placement: 18,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 263,
@@ -8711,7 +8545,7 @@ async function main() {
             description: '',
             placement: 19,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 264,
@@ -8720,7 +8554,7 @@ async function main() {
             description: '',
             placement: 20,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 265,
@@ -8729,7 +8563,7 @@ async function main() {
             description: '',
             placement: 1,
             enabled: true,
-            type: 'DATEBOX',
+            type: ItemType.DATEBOX,
         },
         {
             id: 266,
@@ -8738,7 +8572,7 @@ async function main() {
             description: '',
             placement: 2,
             enabled: true,
-            type: 'TIMEBOX',
+            type: ItemType.TIMEBOX,
         },
         {
             id: 267,
@@ -8747,7 +8581,7 @@ async function main() {
             description: '',
             placement: 3,
             enabled: true,
-            type: 'LOCATIONBOX',
+            type: ItemType.LOCATIONBOX,
         },
         {
             id: 268,
@@ -8756,7 +8590,7 @@ async function main() {
             description: '',
             placement: 4,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 269,
@@ -8765,7 +8599,7 @@ async function main() {
             description: '',
             placement: 5,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 270,
@@ -8774,7 +8608,7 @@ async function main() {
             description: '',
             placement: 6,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 271,
@@ -8783,7 +8617,7 @@ async function main() {
             description: '',
             placement: 7,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 272,
@@ -8792,7 +8626,7 @@ async function main() {
             description: '',
             placement: 8,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 273,
@@ -8801,7 +8635,7 @@ async function main() {
             description: '',
             placement: 9,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 274,
@@ -8810,7 +8644,7 @@ async function main() {
             description: '',
             placement: 10,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 275,
@@ -8819,7 +8653,7 @@ async function main() {
             description: '',
             placement: 11,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 276,
@@ -8828,7 +8662,7 @@ async function main() {
             description: '',
             placement: 12,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 277,
@@ -8837,7 +8671,7 @@ async function main() {
             description: '',
             placement: 13,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 278,
@@ -8846,7 +8680,7 @@ async function main() {
             description: '',
             placement: 14,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 279,
@@ -8855,7 +8689,7 @@ async function main() {
             description: '',
             placement: 15,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 280,
@@ -8864,7 +8698,7 @@ async function main() {
             description: '',
             placement: 16,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 281,
@@ -8873,7 +8707,7 @@ async function main() {
             description: '',
             placement: 17,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 282,
@@ -8882,7 +8716,7 @@ async function main() {
             description: '',
             placement: 18,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 283,
@@ -8891,7 +8725,7 @@ async function main() {
             description: '',
             placement: 19,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 284,
@@ -8900,7 +8734,7 @@ async function main() {
             description: '',
             placement: 20,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 285,
@@ -8909,7 +8743,7 @@ async function main() {
             description: '',
             placement: 21,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 286,
@@ -8918,7 +8752,7 @@ async function main() {
             description: '',
             placement: 22,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 287,
@@ -8927,7 +8761,7 @@ async function main() {
             description: '',
             placement: 23,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 288,
@@ -8936,7 +8770,7 @@ async function main() {
             description: '',
             placement: 24,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 289,
@@ -8945,7 +8779,7 @@ async function main() {
             description: '',
             placement: 25,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 290,
@@ -8954,7 +8788,7 @@ async function main() {
             description: '',
             placement: 26,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 291,
@@ -8963,7 +8797,7 @@ async function main() {
             description: '',
             placement: 27,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 292,
@@ -8972,7 +8806,7 @@ async function main() {
             description: '',
             placement: 28,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 293,
@@ -8981,7 +8815,7 @@ async function main() {
             description: '',
             placement: 29,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 294,
@@ -8990,7 +8824,7 @@ async function main() {
             description: '',
             placement: 30,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 295,
@@ -8999,7 +8833,7 @@ async function main() {
             description: '',
             placement: 31,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 296,
@@ -9008,7 +8842,7 @@ async function main() {
             description: '',
             placement: 32,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 297,
@@ -9017,7 +8851,7 @@ async function main() {
             description: '',
             placement: 33,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 298,
@@ -9026,7 +8860,7 @@ async function main() {
             description: '',
             placement: 34,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 299,
@@ -9035,7 +8869,7 @@ async function main() {
             description: '',
             placement: 1,
             enabled: true,
-            type: 'DATEBOX',
+            type: ItemType.DATEBOX,
         },
         {
             id: 300,
@@ -9044,7 +8878,7 @@ async function main() {
             description: '',
             placement: 2,
             enabled: true,
-            type: 'TIMEBOX',
+            type: ItemType.TIMEBOX,
         },
         {
             id: 301,
@@ -9053,7 +8887,7 @@ async function main() {
             description: '',
             placement: 3,
             enabled: true,
-            type: 'LOCATIONBOX',
+            type: ItemType.LOCATIONBOX,
         },
         {
             id: 302,
@@ -9062,7 +8896,7 @@ async function main() {
             description: '',
             placement: 4,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 303,
@@ -9071,7 +8905,7 @@ async function main() {
             description: '',
             placement: 5,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 304,
@@ -9080,7 +8914,7 @@ async function main() {
             description: '',
             placement: 6,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 305,
@@ -9089,7 +8923,7 @@ async function main() {
             description: '',
             placement: 7,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 306,
@@ -9098,7 +8932,7 @@ async function main() {
             description: '',
             placement: 8,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 307,
@@ -9107,7 +8941,7 @@ async function main() {
             description: '',
             placement: 9,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 308,
@@ -9116,7 +8950,7 @@ async function main() {
             description: '',
             placement: 10,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 309,
@@ -9125,7 +8959,7 @@ async function main() {
             description: '',
             placement: 11,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 310,
@@ -9134,7 +8968,7 @@ async function main() {
             description: '',
             placement: 12,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 311,
@@ -9143,7 +8977,7 @@ async function main() {
             description: '',
             placement: 13,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 312,
@@ -9152,7 +8986,7 @@ async function main() {
             description: '',
             placement: 14,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 313,
@@ -9161,7 +8995,7 @@ async function main() {
             description: '',
             placement: 15,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 314,
@@ -9170,7 +9004,7 @@ async function main() {
             description: '',
             placement: 16,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 315,
@@ -9179,7 +9013,7 @@ async function main() {
             description: '',
             placement: 17,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 316,
@@ -9188,7 +9022,7 @@ async function main() {
             description: '',
             placement: 18,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 317,
@@ -9197,7 +9031,7 @@ async function main() {
             description: '',
             placement: 19,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 318,
@@ -9206,7 +9040,7 @@ async function main() {
             description: '',
             placement: 20,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 319,
@@ -9215,7 +9049,7 @@ async function main() {
             description: '',
             placement: 21,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 320,
@@ -9224,7 +9058,7 @@ async function main() {
             description: '',
             placement: 22,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 321,
@@ -9233,7 +9067,7 @@ async function main() {
             description: '',
             placement: 23,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 322,
@@ -9242,7 +9076,7 @@ async function main() {
             description: '',
             placement: 1,
             enabled: true,
-            type: 'DATEBOX',
+            type: ItemType.DATEBOX,
         },
         {
             id: 323,
@@ -9251,7 +9085,7 @@ async function main() {
             description: '',
             placement: 2,
             enabled: true,
-            type: 'TIMEBOX',
+            type: ItemType.TIMEBOX,
         },
         {
             id: 324,
@@ -9260,7 +9094,7 @@ async function main() {
             description: '',
             placement: 3,
             enabled: true,
-            type: 'LOCATIONBOX',
+            type: ItemType.LOCATIONBOX,
         },
         {
             id: 325,
@@ -9269,7 +9103,7 @@ async function main() {
             description: '',
             placement: 4,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 326,
@@ -9278,7 +9112,7 @@ async function main() {
             description: '',
             placement: 5,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 327,
@@ -9287,7 +9121,7 @@ async function main() {
             description: '',
             placement: 6,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 328,
@@ -9296,7 +9130,7 @@ async function main() {
             description: '',
             placement: 7,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 329,
@@ -9305,7 +9139,7 @@ async function main() {
             description: '',
             placement: 8,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 330,
@@ -9314,7 +9148,7 @@ async function main() {
             description: '',
             placement: 9,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 331,
@@ -9323,7 +9157,7 @@ async function main() {
             description: '',
             placement: 10,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 332,
@@ -9332,7 +9166,7 @@ async function main() {
             description: '',
             placement: 11,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 333,
@@ -9341,7 +9175,7 @@ async function main() {
             description: '',
             placement: 12,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 334,
@@ -9350,7 +9184,7 @@ async function main() {
             description: '',
             placement: 13,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 335,
@@ -9359,7 +9193,7 @@ async function main() {
             description: '',
             placement: 14,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 336,
@@ -9368,7 +9202,7 @@ async function main() {
             description: '',
             placement: 15,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 337,
@@ -9377,7 +9211,7 @@ async function main() {
             description: '',
             placement: 16,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 338,
@@ -9386,7 +9220,7 @@ async function main() {
             description: '',
             placement: 17,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 339,
@@ -9395,7 +9229,7 @@ async function main() {
             description: '',
             placement: 18,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 340,
@@ -9404,7 +9238,7 @@ async function main() {
             description: '',
             placement: 19,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 341,
@@ -9413,7 +9247,7 @@ async function main() {
             description: '',
             placement: 20,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 342,
@@ -9422,7 +9256,7 @@ async function main() {
             description: '',
             placement: 21,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 343,
@@ -9431,7 +9265,7 @@ async function main() {
             description: '',
             placement: 22,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 344,
@@ -9440,7 +9274,7 @@ async function main() {
             description: '',
             placement: 23,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 345,
@@ -9449,7 +9283,7 @@ async function main() {
             description: '',
             placement: 24,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 346,
@@ -9458,7 +9292,7 @@ async function main() {
             description: '',
             placement: 25,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 347,
@@ -9467,7 +9301,7 @@ async function main() {
             description: '',
             placement: 26,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 348,
@@ -9476,7 +9310,7 @@ async function main() {
             description: '',
             placement: 27,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 349,
@@ -9485,7 +9319,7 @@ async function main() {
             description: '',
             placement: 28,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 350,
@@ -9494,7 +9328,7 @@ async function main() {
             description: '',
             placement: 29,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 351,
@@ -9503,7 +9337,7 @@ async function main() {
             description: '',
             placement: 30,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 352,
@@ -9512,7 +9346,7 @@ async function main() {
             description: '',
             placement: 31,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 353,
@@ -9521,7 +9355,7 @@ async function main() {
             description: '',
             placement: 32,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 354,
@@ -9530,7 +9364,7 @@ async function main() {
             description: '',
             placement: 1,
             enabled: true,
-            type: 'DATEBOX',
+            type: ItemType.DATEBOX,
         },
         {
             id: 355,
@@ -9539,7 +9373,7 @@ async function main() {
             description: '',
             placement: 2,
             enabled: true,
-            type: 'TIMEBOX',
+            type: ItemType.TIMEBOX,
         },
         {
             id: 356,
@@ -9548,7 +9382,7 @@ async function main() {
             description: '',
             placement: 3,
             enabled: true,
-            type: 'LOCATIONBOX',
+            type: ItemType.LOCATIONBOX,
         },
         {
             id: 357,
@@ -9557,7 +9391,7 @@ async function main() {
             description: '',
             placement: 4,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 358,
@@ -9566,7 +9400,7 @@ async function main() {
             description: '',
             placement: 5,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 359,
@@ -9575,7 +9409,7 @@ async function main() {
             description: '',
             placement: 6,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 360,
@@ -9584,7 +9418,7 @@ async function main() {
             description: '',
             placement: 7,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 361,
@@ -9593,7 +9427,7 @@ async function main() {
             description: '',
             placement: 8,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 362,
@@ -9602,7 +9436,7 @@ async function main() {
             description: '',
             placement: 9,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 363,
@@ -9611,7 +9445,7 @@ async function main() {
             description: '',
             placement: 10,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 364,
@@ -9620,7 +9454,7 @@ async function main() {
             description: '',
             placement: 11,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 365,
@@ -9629,7 +9463,7 @@ async function main() {
             description: '',
             placement: 12,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 366,
@@ -9638,7 +9472,7 @@ async function main() {
             description: '',
             placement: 13,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 367,
@@ -9647,7 +9481,7 @@ async function main() {
             description: '',
             placement: 14,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 368,
@@ -9656,7 +9490,7 @@ async function main() {
             description: '',
             placement: 15,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 369,
@@ -9665,7 +9499,7 @@ async function main() {
             description: '',
             placement: 16,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 370,
@@ -9674,7 +9508,7 @@ async function main() {
             description: '',
             placement: 17,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 371,
@@ -9683,7 +9517,7 @@ async function main() {
             description: '',
             placement: 18,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 372,
@@ -9692,7 +9526,7 @@ async function main() {
             description: '',
             placement: 19,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 373,
@@ -9701,7 +9535,7 @@ async function main() {
             description: '',
             placement: 20,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 374,
@@ -9710,7 +9544,7 @@ async function main() {
             description: '',
             placement: 21,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 375,
@@ -9719,7 +9553,7 @@ async function main() {
             description: '',
             placement: 22,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 376,
@@ -9728,7 +9562,7 @@ async function main() {
             description: '',
             placement: 23,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 377,
@@ -9737,7 +9571,7 @@ async function main() {
             description: '',
             placement: 24,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 378,
@@ -9746,7 +9580,7 @@ async function main() {
             description: '',
             placement: 25,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 379,
@@ -9755,7 +9589,7 @@ async function main() {
             description: '',
             placement: 26,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 380,
@@ -9764,7 +9598,7 @@ async function main() {
             description: '',
             placement: 27,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 381,
@@ -9773,7 +9607,7 @@ async function main() {
             description: '',
             placement: 28,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 382,
@@ -9782,7 +9616,7 @@ async function main() {
             description: '',
             placement: 29,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 383,
@@ -9791,7 +9625,7 @@ async function main() {
             description: '',
             placement: 30,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 384,
@@ -9800,7 +9634,7 @@ async function main() {
             description: '',
             placement: 31,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 385,
@@ -9809,7 +9643,7 @@ async function main() {
             description: '',
             placement: 32,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 386,
@@ -9818,7 +9652,7 @@ async function main() {
             description: '',
             placement: 33,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 387,
@@ -9827,7 +9661,7 @@ async function main() {
             description: '',
             placement: 1,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 388,
@@ -9836,7 +9670,7 @@ async function main() {
             description: '',
             placement: 2,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 389,
@@ -9845,7 +9679,7 @@ async function main() {
             description: '',
             placement: 3,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 390,
@@ -9854,7 +9688,7 @@ async function main() {
             description: '',
             placement: 4,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 391,
@@ -9863,7 +9697,7 @@ async function main() {
             description: '',
             placement: 5,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 392,
@@ -9872,7 +9706,7 @@ async function main() {
             description: '',
             placement: 6,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 393,
@@ -9881,7 +9715,7 @@ async function main() {
             description: '',
             placement: 7,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 394,
@@ -9890,7 +9724,7 @@ async function main() {
             description: '',
             placement: 8,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 395,
@@ -9899,7 +9733,7 @@ async function main() {
             description: '',
             placement: 9,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 396,
@@ -9908,7 +9742,7 @@ async function main() {
             description: '',
             placement: 10,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 397,
@@ -9917,7 +9751,7 @@ async function main() {
             description: '',
             placement: 11,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 398,
@@ -9926,7 +9760,7 @@ async function main() {
             description: '',
             placement: 12,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 399,
@@ -9935,7 +9769,7 @@ async function main() {
             description: '',
             placement: 13,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 400,
@@ -9944,7 +9778,7 @@ async function main() {
             description: '',
             placement: 14,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 401,
@@ -9953,7 +9787,7 @@ async function main() {
             description: '',
             placement: 15,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 402,
@@ -9962,7 +9796,7 @@ async function main() {
             description: '',
             placement: 16,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 403,
@@ -9971,7 +9805,7 @@ async function main() {
             description: '',
             placement: 17,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 404,
@@ -9980,7 +9814,7 @@ async function main() {
             description: '',
             placement: 18,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 405,
@@ -9989,7 +9823,7 @@ async function main() {
             description: '',
             placement: 19,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 406,
@@ -9998,7 +9832,7 @@ async function main() {
             description: '',
             placement: 20,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 407,
@@ -10007,7 +9841,7 @@ async function main() {
             description: '',
             placement: 21,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 408,
@@ -10016,7 +9850,7 @@ async function main() {
             description: '',
             placement: 22,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 409,
@@ -10025,7 +9859,7 @@ async function main() {
             description: '',
             placement: 23,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 410,
@@ -10034,7 +9868,7 @@ async function main() {
             description: '',
             placement: 24,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 411,
@@ -10043,7 +9877,7 @@ async function main() {
             description: '',
             placement: 25,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 412,
@@ -10052,7 +9886,7 @@ async function main() {
             description: '',
             placement: 26,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 413,
@@ -10061,7 +9895,7 @@ async function main() {
             description: '',
             placement: 27,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 414,
@@ -10070,7 +9904,7 @@ async function main() {
             description: '',
             placement: 28,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 415,
@@ -10079,7 +9913,7 @@ async function main() {
             description: '',
             placement: 29,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 416,
@@ -10088,7 +9922,7 @@ async function main() {
             description: '',
             placement: 30,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 417,
@@ -10097,7 +9931,7 @@ async function main() {
             description: '',
             placement: 31,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 418,
@@ -10106,7 +9940,7 @@ async function main() {
             description: '',
             placement: 32,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 419,
@@ -10115,7 +9949,7 @@ async function main() {
             description: '',
             placement: 33,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 420,
@@ -10124,7 +9958,7 @@ async function main() {
             description: '',
             placement: 34,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 421,
@@ -10133,7 +9967,7 @@ async function main() {
             description: '',
             placement: 35,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 422,
@@ -10142,7 +9976,7 @@ async function main() {
             description: '',
             placement: 36,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 423,
@@ -10151,7 +9985,7 @@ async function main() {
             description: '',
             placement: 37,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 424,
@@ -10160,7 +9994,7 @@ async function main() {
             description: '',
             placement: 38,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 425,
@@ -10169,7 +10003,7 @@ async function main() {
             description: '',
             placement: 39,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 426,
@@ -10178,7 +10012,7 @@ async function main() {
             description: '',
             placement: 40,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 427,
@@ -10187,7 +10021,7 @@ async function main() {
             description: '',
             placement: 41,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 428,
@@ -10196,7 +10030,7 @@ async function main() {
             description: '',
             placement: 42,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 429,
@@ -10205,7 +10039,7 @@ async function main() {
             description: '',
             placement: 43,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 430,
@@ -10214,7 +10048,7 @@ async function main() {
             description: '',
             placement: 44,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 431,
@@ -10223,7 +10057,7 @@ async function main() {
             description: '',
             placement: 45,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 432,
@@ -10232,7 +10066,7 @@ async function main() {
             description: '',
             placement: 46,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 433,
@@ -10241,7 +10075,7 @@ async function main() {
             description: '',
             placement: 47,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 434,
@@ -10250,7 +10084,7 @@ async function main() {
             description: '',
             placement: 48,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 435,
@@ -10259,7 +10093,7 @@ async function main() {
             description: '',
             placement: 49,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 436,
@@ -10268,7 +10102,7 @@ async function main() {
             description: '',
             placement: 50,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 437,
@@ -10277,7 +10111,7 @@ async function main() {
             description: '',
             placement: 51,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 438,
@@ -10286,7 +10120,7 @@ async function main() {
             description: '',
             placement: 52,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 439,
@@ -10295,7 +10129,7 @@ async function main() {
             description: '',
             placement: 53,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 440,
@@ -10304,7 +10138,7 @@ async function main() {
             description: '',
             placement: 54,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 441,
@@ -10313,7 +10147,7 @@ async function main() {
             description: '',
             placement: 55,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 442,
@@ -10322,7 +10156,7 @@ async function main() {
             description: '',
             placement: 56,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 443,
@@ -10331,7 +10165,7 @@ async function main() {
             description: '',
             placement: 57,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 444,
@@ -10340,7 +10174,7 @@ async function main() {
             description: '',
             placement: 58,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 445,
@@ -10349,7 +10183,7 @@ async function main() {
             description: '',
             placement: 59,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 446,
@@ -10358,7 +10192,7 @@ async function main() {
             description: '',
             placement: 60,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 447,
@@ -10367,7 +10201,7 @@ async function main() {
             description: '',
             placement: 61,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 448,
@@ -10376,7 +10210,7 @@ async function main() {
             description: '',
             placement: 62,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 449,
@@ -10385,7 +10219,7 @@ async function main() {
             description: '',
             placement: 63,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 450,
@@ -10394,7 +10228,7 @@ async function main() {
             description: '',
             placement: 64,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 451,
@@ -10403,7 +10237,7 @@ async function main() {
             description: '',
             placement: 65,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 452,
@@ -10412,7 +10246,7 @@ async function main() {
             description: '',
             placement: 1,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 453,
@@ -10421,7 +10255,7 @@ async function main() {
             description: '',
             placement: 2,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 454,
@@ -10430,7 +10264,7 @@ async function main() {
             description: '',
             placement: 3,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 455,
@@ -10439,7 +10273,7 @@ async function main() {
             description: '',
             placement: 4,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 456,
@@ -10448,7 +10282,7 @@ async function main() {
             description: '',
             placement: 5,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 457,
@@ -10457,7 +10291,7 @@ async function main() {
             description: '',
             placement: 6,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 458,
@@ -10466,7 +10300,7 @@ async function main() {
             description: '',
             placement: 7,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 459,
@@ -10475,7 +10309,7 @@ async function main() {
             description: '',
             placement: 8,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 460,
@@ -10484,7 +10318,7 @@ async function main() {
             description: '',
             placement: 9,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 461,
@@ -10493,7 +10327,7 @@ async function main() {
             description: '',
             placement: 10,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 462,
@@ -10502,7 +10336,7 @@ async function main() {
             description: '',
             placement: 11,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 463,
@@ -10511,7 +10345,7 @@ async function main() {
             description: '',
             placement: 12,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 464,
@@ -10520,7 +10354,7 @@ async function main() {
             description: '',
             placement: 13,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 465,
@@ -10529,7 +10363,7 @@ async function main() {
             description: '',
             placement: 14,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 466,
@@ -10538,7 +10372,7 @@ async function main() {
             description: '',
             placement: 15,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 467,
@@ -10547,7 +10381,7 @@ async function main() {
             description: '',
             placement: 16,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 468,
@@ -10556,7 +10390,7 @@ async function main() {
             description: '',
             placement: 17,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 469,
@@ -10565,7 +10399,7 @@ async function main() {
             description: '',
             placement: 18,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 470,
@@ -10574,7 +10408,7 @@ async function main() {
             description: '',
             placement: 19,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 471,
@@ -10583,7 +10417,7 @@ async function main() {
             description: '',
             placement: 20,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 472,
@@ -10592,7 +10426,7 @@ async function main() {
             description: '',
             placement: 21,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 473,
@@ -10601,7 +10435,7 @@ async function main() {
             description: '',
             placement: 22,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 474,
@@ -10610,7 +10444,7 @@ async function main() {
             description: '',
             placement: 23,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 475,
@@ -10619,7 +10453,7 @@ async function main() {
             description: '',
             placement: 24,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 476,
@@ -10628,7 +10462,7 @@ async function main() {
             description: '',
             placement: 25,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 477,
@@ -10637,7 +10471,7 @@ async function main() {
             description: '',
             placement: 26,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 478,
@@ -10646,7 +10480,7 @@ async function main() {
             description: '',
             placement: 27,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 479,
@@ -10655,7 +10489,7 @@ async function main() {
             description: '',
             placement: 28,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 480,
@@ -10664,7 +10498,7 @@ async function main() {
             description: '',
             placement: 29,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 481,
@@ -10673,7 +10507,7 @@ async function main() {
             description: '',
             placement: 30,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 482,
@@ -10682,7 +10516,7 @@ async function main() {
             description: '',
             placement: 31,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 483,
@@ -10691,7 +10525,7 @@ async function main() {
             description: '',
             placement: 32,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 484,
@@ -10700,7 +10534,7 @@ async function main() {
             description: '',
             placement: 33,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 485,
@@ -10709,7 +10543,7 @@ async function main() {
             description: '',
             placement: 34,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 486,
@@ -10718,7 +10552,7 @@ async function main() {
             description: '',
             placement: 35,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 487,
@@ -10727,7 +10561,7 @@ async function main() {
             description: '',
             placement: 36,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 488,
@@ -10736,7 +10570,7 @@ async function main() {
             description: '',
             placement: 37,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 489,
@@ -10745,7 +10579,7 @@ async function main() {
             description: '',
             placement: 38,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 490,
@@ -10754,7 +10588,7 @@ async function main() {
             description: '',
             placement: 39,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 491,
@@ -10763,7 +10597,7 @@ async function main() {
             description: '',
             placement: 40,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 492,
@@ -10772,7 +10606,7 @@ async function main() {
             description: '',
             placement: 41,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 493,
@@ -10781,7 +10615,7 @@ async function main() {
             description: '',
             placement: 42,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 494,
@@ -10790,7 +10624,7 @@ async function main() {
             description: '',
             placement: 43,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 495,
@@ -10799,7 +10633,7 @@ async function main() {
             description: '',
             placement: 44,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 496,
@@ -10808,7 +10642,7 @@ async function main() {
             description: '',
             placement: 45,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 497,
@@ -10817,7 +10651,7 @@ async function main() {
             description: '',
             placement: 46,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 498,
@@ -10826,7 +10660,7 @@ async function main() {
             description: '',
             placement: 47,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 499,
@@ -10835,7 +10669,7 @@ async function main() {
             description: '',
             placement: 48,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 500,
@@ -10844,7 +10678,7 @@ async function main() {
             description: '',
             placement: 49,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 501,
@@ -10853,7 +10687,7 @@ async function main() {
             description: '',
             placement: 1,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 502,
@@ -10862,7 +10696,7 @@ async function main() {
             description: '',
             placement: 2,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 503,
@@ -10871,7 +10705,7 @@ async function main() {
             description: '',
             placement: 3,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 504,
@@ -10880,7 +10714,7 @@ async function main() {
             description: '',
             placement: 4,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 505,
@@ -10889,7 +10723,7 @@ async function main() {
             description: '',
             placement: 5,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 506,
@@ -10898,7 +10732,7 @@ async function main() {
             description: '',
             placement: 6,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 507,
@@ -10907,7 +10741,7 @@ async function main() {
             description: '',
             placement: 7,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 508,
@@ -10916,7 +10750,7 @@ async function main() {
             description: '',
             placement: 8,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 509,
@@ -10925,7 +10759,7 @@ async function main() {
             description: '',
             placement: 9,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 510,
@@ -10934,7 +10768,7 @@ async function main() {
             description: '',
             placement: 10,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 511,
@@ -10943,7 +10777,7 @@ async function main() {
             description: '',
             placement: 11,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 512,
@@ -10952,7 +10786,7 @@ async function main() {
             description: '',
             placement: 12,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 513,
@@ -10961,7 +10795,7 @@ async function main() {
             description: '',
             placement: 13,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 514,
@@ -10970,7 +10804,7 @@ async function main() {
             description: '',
             placement: 14,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 515,
@@ -10979,7 +10813,7 @@ async function main() {
             description: '',
             placement: 15,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 516,
@@ -10988,7 +10822,7 @@ async function main() {
             description: '',
             placement: 16,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 517,
@@ -10997,7 +10831,7 @@ async function main() {
             description: '',
             placement: 17,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 518,
@@ -11006,7 +10840,7 @@ async function main() {
             description: '',
             placement: 18,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 519,
@@ -11015,7 +10849,7 @@ async function main() {
             description: '',
             placement: 19,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 520,
@@ -11024,7 +10858,7 @@ async function main() {
             description: '',
             placement: 20,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 521,
@@ -11033,7 +10867,7 @@ async function main() {
             description: '',
             placement: 21,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 522,
@@ -11042,7 +10876,7 @@ async function main() {
             description: '',
             placement: 22,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 523,
@@ -11051,7 +10885,7 @@ async function main() {
             description: '',
             placement: 23,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 524,
@@ -11060,7 +10894,7 @@ async function main() {
             description: '',
             placement: 24,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 525,
@@ -11069,7 +10903,7 @@ async function main() {
             description: '',
             placement: 25,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 526,
@@ -11078,7 +10912,7 @@ async function main() {
             description: '',
             placement: 26,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 527,
@@ -11087,7 +10921,7 @@ async function main() {
             description: '',
             placement: 27,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 528,
@@ -11096,7 +10930,7 @@ async function main() {
             description: '',
             placement: 28,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 529,
@@ -11105,7 +10939,7 @@ async function main() {
             description: '',
             placement: 29,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 530,
@@ -11114,7 +10948,7 @@ async function main() {
             description: '',
             placement: 30,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 531,
@@ -11123,7 +10957,7 @@ async function main() {
             description: '',
             placement: 31,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 532,
@@ -11132,7 +10966,7 @@ async function main() {
             description: '',
             placement: 32,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 533,
@@ -11141,7 +10975,7 @@ async function main() {
             description: '',
             placement: 33,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 534,
@@ -11150,7 +10984,7 @@ async function main() {
             description: '',
             placement: 34,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 535,
@@ -11159,7 +10993,7 @@ async function main() {
             description: '',
             placement: 35,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 536,
@@ -11168,7 +11002,7 @@ async function main() {
             description: '',
             placement: 36,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 537,
@@ -11177,7 +11011,7 @@ async function main() {
             description: '',
             placement: 37,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 538,
@@ -11186,7 +11020,7 @@ async function main() {
             description: '',
             placement: 38,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 539,
@@ -11195,7 +11029,7 @@ async function main() {
             description: '',
             placement: 39,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 540,
@@ -11204,7 +11038,7 @@ async function main() {
             description: '',
             placement: 40,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 541,
@@ -11213,7 +11047,7 @@ async function main() {
             description: '',
             placement: 41,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 542,
@@ -11222,7 +11056,7 @@ async function main() {
             description: '',
             placement: 42,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 543,
@@ -11231,7 +11065,7 @@ async function main() {
             description: '',
             placement: 43,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 544,
@@ -11240,7 +11074,7 @@ async function main() {
             description: '',
             placement: 44,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 545,
@@ -11249,7 +11083,7 @@ async function main() {
             description: '',
             placement: 45,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 546,
@@ -11258,7 +11092,7 @@ async function main() {
             description: '',
             placement: 46,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 547,
@@ -11267,7 +11101,7 @@ async function main() {
             description: '',
             placement: 47,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 548,
@@ -11276,7 +11110,7 @@ async function main() {
             description: '',
             placement: 48,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 549,
@@ -11285,7 +11119,7 @@ async function main() {
             description: '',
             placement: 49,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 550,
@@ -11294,7 +11128,7 @@ async function main() {
             description: '',
             placement: 50,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 551,
@@ -11303,7 +11137,7 @@ async function main() {
             description: '',
             placement: 51,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 552,
@@ -11312,7 +11146,7 @@ async function main() {
             description: '',
             placement: 52,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 553,
@@ -11321,7 +11155,7 @@ async function main() {
             description: '',
             placement: 53,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 554,
@@ -11330,7 +11164,7 @@ async function main() {
             description: '',
             placement: 54,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 555,
@@ -11339,7 +11173,7 @@ async function main() {
             description: '',
             placement: 55,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 556,
@@ -11348,7 +11182,7 @@ async function main() {
             description: '',
             placement: 56,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 557,
@@ -11357,7 +11191,7 @@ async function main() {
             description: '',
             placement: 57,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 558,
@@ -11366,7 +11200,7 @@ async function main() {
             description: '',
             placement: 58,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 559,
@@ -11375,7 +11209,7 @@ async function main() {
             description: '',
             placement: 59,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 560,
@@ -11384,7 +11218,7 @@ async function main() {
             description: '',
             placement: 60,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 561,
@@ -11393,7 +11227,7 @@ async function main() {
             description: '',
             placement: 61,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 562,
@@ -11402,7 +11236,7 @@ async function main() {
             description: '',
             placement: 62,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 563,
@@ -11411,7 +11245,7 @@ async function main() {
             description: '',
             placement: 63,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 564,
@@ -11420,7 +11254,7 @@ async function main() {
             description: '',
             placement: 64,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 565,
@@ -11429,7 +11263,7 @@ async function main() {
             description: '',
             placement: 65,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 566,
@@ -11438,7 +11272,7 @@ async function main() {
             description: '',
             placement: 66,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 567,
@@ -11447,7 +11281,7 @@ async function main() {
             description: '',
             placement: 67,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 568,
@@ -11456,7 +11290,7 @@ async function main() {
             description: '',
             placement: 68,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 569,
@@ -11465,7 +11299,7 @@ async function main() {
             description: '',
             placement: 69,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 570,
@@ -11474,7 +11308,7 @@ async function main() {
             description: '',
             placement: 70,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 571,
@@ -11483,7 +11317,7 @@ async function main() {
             description: '',
             placement: 71,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 572,
@@ -11492,7 +11326,7 @@ async function main() {
             description: '',
             placement: 72,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 573,
@@ -11501,7 +11335,7 @@ async function main() {
             description: '',
             placement: 73,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 574,
@@ -11510,7 +11344,7 @@ async function main() {
             description: '',
             placement: 74,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 575,
@@ -11519,7 +11353,7 @@ async function main() {
             description: '',
             placement: 1,
             enabled: true,
-            type: 'DATEBOX',
+            type: ItemType.DATEBOX,
         },
         {
             id: 576,
@@ -11528,7 +11362,7 @@ async function main() {
             description: '',
             placement: 2,
             enabled: true,
-            type: 'TIMEBOX',
+            type: ItemType.TIMEBOX,
         },
         {
             id: 577,
@@ -11537,7 +11371,7 @@ async function main() {
             description: '',
             placement: 3,
             enabled: true,
-            type: 'LOCATIONBOX',
+            type: ItemType.LOCATIONBOX,
         },
         {
             id: 578,
@@ -11546,7 +11380,7 @@ async function main() {
             description: '',
             placement: 4,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 579,
@@ -11555,7 +11389,7 @@ async function main() {
             description: '',
             placement: 5,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 580,
@@ -11564,7 +11398,7 @@ async function main() {
             description: '',
             placement: 6,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 581,
@@ -11573,7 +11407,7 @@ async function main() {
             description: '',
             placement: 7,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 582,
@@ -11582,7 +11416,7 @@ async function main() {
             description: '',
             placement: 8,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 583,
@@ -11591,7 +11425,7 @@ async function main() {
             description: '',
             placement: 9,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 584,
@@ -11600,7 +11434,7 @@ async function main() {
             description: '',
             placement: 10,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 585,
@@ -11609,7 +11443,7 @@ async function main() {
             description: '',
             placement: 11,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 586,
@@ -11618,7 +11452,7 @@ async function main() {
             description: '',
             placement: 12,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 587,
@@ -11627,7 +11461,7 @@ async function main() {
             description: '',
             placement: 13,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 588,
@@ -11636,7 +11470,7 @@ async function main() {
             description: '',
             placement: 14,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 589,
@@ -11645,7 +11479,7 @@ async function main() {
             description: '',
             placement: 15,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 590,
@@ -11654,7 +11488,7 @@ async function main() {
             description: '',
             placement: 16,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 591,
@@ -11663,7 +11497,7 @@ async function main() {
             description: '',
             placement: 17,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 592,
@@ -11672,7 +11506,7 @@ async function main() {
             description: '',
             placement: 18,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 593,
@@ -11681,7 +11515,7 @@ async function main() {
             description: '',
             placement: 19,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 594,
@@ -11690,7 +11524,7 @@ async function main() {
             description: '',
             placement: 20,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 595,
@@ -11699,7 +11533,7 @@ async function main() {
             description: '',
             placement: 21,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 596,
@@ -11708,7 +11542,7 @@ async function main() {
             description: '',
             placement: 22,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 597,
@@ -11717,7 +11551,7 @@ async function main() {
             description: '',
             placement: 23,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 598,
@@ -11726,7 +11560,7 @@ async function main() {
             description: '',
             placement: 24,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 599,
@@ -11735,7 +11569,7 @@ async function main() {
             description: '',
             placement: 1,
             enabled: true,
-            type: 'DATEBOX',
+            type: ItemType.DATEBOX,
         },
         {
             id: 600,
@@ -11744,7 +11578,7 @@ async function main() {
             description: '',
             placement: 2,
             enabled: true,
-            type: 'TIMEBOX',
+            type: ItemType.TIMEBOX,
         },
         {
             id: 601,
@@ -11753,7 +11587,7 @@ async function main() {
             description: '',
             placement: 3,
             enabled: true,
-            type: 'LOCATIONBOX',
+            type: ItemType.LOCATIONBOX,
         },
         {
             id: 602,
@@ -11762,7 +11596,7 @@ async function main() {
             description: '',
             placement: 4,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 603,
@@ -11771,7 +11605,7 @@ async function main() {
             description: '',
             placement: 5,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 604,
@@ -11780,7 +11614,7 @@ async function main() {
             description: '',
             placement: 6,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 605,
@@ -11789,7 +11623,7 @@ async function main() {
             description: '',
             placement: 7,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 606,
@@ -11798,7 +11632,7 @@ async function main() {
             description: '',
             placement: 8,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 607,
@@ -11807,7 +11641,7 @@ async function main() {
             description: '',
             placement: 9,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 608,
@@ -11816,7 +11650,7 @@ async function main() {
             description: '',
             placement: 10,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 609,
@@ -11825,7 +11659,7 @@ async function main() {
             description: '',
             placement: 11,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 610,
@@ -11834,7 +11668,7 @@ async function main() {
             description: '',
             placement: 12,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 611,
@@ -11843,7 +11677,7 @@ async function main() {
             description: '',
             placement: 13,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 612,
@@ -11852,7 +11686,7 @@ async function main() {
             description: '',
             placement: 14,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 613,
@@ -11861,7 +11695,7 @@ async function main() {
             description: '',
             placement: 15,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 614,
@@ -11870,7 +11704,7 @@ async function main() {
             description: '',
             placement: 16,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 615,
@@ -11879,7 +11713,7 @@ async function main() {
             description: '',
             placement: 17,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 616,
@@ -11888,7 +11722,7 @@ async function main() {
             description: '',
             placement: 18,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 617,
@@ -11897,7 +11731,7 @@ async function main() {
             description: '',
             placement: 19,
             enabled: true,
-            type: 'UPLOAD',
+            type: ItemType.UPLOAD,
         },
         {
             id: 618,
@@ -11906,7 +11740,7 @@ async function main() {
             description: '',
             placement: 20,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 619,
@@ -11915,7 +11749,7 @@ async function main() {
             description: '',
             placement: 21,
             enabled: true,
-            type: 'CHECKBOX',
+            type: ItemType.CHECKBOX,
         },
         {
             id: 620,
@@ -11924,7 +11758,7 @@ async function main() {
             description: '',
             placement: 22,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 621,
@@ -11933,7 +11767,7 @@ async function main() {
             description: '',
             placement: 23,
             enabled: true,
-            type: 'TEXTBOX',
+            type: ItemType.TEXTBOX,
         },
         {
             id: 622,
@@ -11942,7 +11776,7 @@ async function main() {
             description: '',
             placement: 24,
             enabled: true,
-            type: 'TEXT',
+            type: ItemType.TEXT,
         },
         {
             id: 623,
@@ -11951,7 +11785,7 @@ async function main() {
             description: '',
             placement: 25,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 624,
@@ -11960,7 +11794,7 @@ async function main() {
             description: '',
             placement: 26,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 625,
@@ -11969,7 +11803,7 @@ async function main() {
             description: '',
             placement: 27,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 626,
@@ -11978,7 +11812,7 @@ async function main() {
             description: '',
             placement: 28,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 627,
@@ -11987,7 +11821,7 @@ async function main() {
             description: '',
             placement: 29,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 628,
@@ -11996,7 +11830,7 @@ async function main() {
             description: '',
             placement: 30,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 629,
@@ -12005,7 +11839,7 @@ async function main() {
             description: '',
             placement: 31,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 630,
@@ -12014,7 +11848,7 @@ async function main() {
             description: '',
             placement: 32,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 631,
@@ -12023,7 +11857,7 @@ async function main() {
             description: '',
             placement: 33,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 632,
@@ -12032,7 +11866,7 @@ async function main() {
             description: '',
             placement: 34,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 633,
@@ -12041,7 +11875,7 @@ async function main() {
             description: '',
             placement: 35,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 634,
@@ -12050,7 +11884,7 @@ async function main() {
             description: '',
             placement: 36,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 635,
@@ -12059,7 +11893,7 @@ async function main() {
             description: '',
             placement: 37,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 636,
@@ -12068,7 +11902,7 @@ async function main() {
             description: '',
             placement: 38,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 637,
@@ -12077,7 +11911,7 @@ async function main() {
             description: '',
             placement: 39,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 638,
@@ -12086,7 +11920,7 @@ async function main() {
             description: '',
             placement: 40,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 639,
@@ -12095,7 +11929,7 @@ async function main() {
             description: '',
             placement: 41,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 640,
@@ -12104,7 +11938,7 @@ async function main() {
             description: '',
             placement: 42,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 641,
@@ -12113,7 +11947,7 @@ async function main() {
             description: '',
             placement: 43,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 642,
@@ -12122,7 +11956,7 @@ async function main() {
             description: '',
             placement: 44,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 643,
@@ -12131,7 +11965,7 @@ async function main() {
             description: '',
             placement: 45,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 644,
@@ -12140,7 +11974,7 @@ async function main() {
             description: '',
             placement: 46,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 645,
@@ -12149,7 +11983,7 @@ async function main() {
             description: '',
             placement: 47,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 646,
@@ -12158,7 +11992,7 @@ async function main() {
             description: '',
             placement: 48,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 647,
@@ -12167,7 +12001,7 @@ async function main() {
             description: '',
             placement: 49,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 648,
@@ -12176,7 +12010,7 @@ async function main() {
             description: '',
             placement: 50,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 649,
@@ -12185,7 +12019,7 @@ async function main() {
             description: '',
             placement: 51,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 650,
@@ -12194,7 +12028,7 @@ async function main() {
             description: '',
             placement: 52,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 651,
@@ -12203,7 +12037,7 @@ async function main() {
             description: '',
             placement: 53,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 652,
@@ -12212,7 +12046,7 @@ async function main() {
             description: '',
             placement: 54,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 653,
@@ -12221,7 +12055,7 @@ async function main() {
             description: '',
             placement: 55,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 654,
@@ -12230,7 +12064,7 @@ async function main() {
             description: '',
             placement: 56,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 655,
@@ -12239,7 +12073,7 @@ async function main() {
             description: '',
             placement: 57,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 656,
@@ -12248,7 +12082,7 @@ async function main() {
             description: '',
             placement: 58,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 657,
@@ -12257,7 +12091,7 @@ async function main() {
             description: '',
             placement: 59,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 658,
@@ -12266,7 +12100,7 @@ async function main() {
             description: '',
             placement: 60,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 659,
@@ -12275,7 +12109,7 @@ async function main() {
             description: '',
             placement: 61,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 660,
@@ -12284,7 +12118,7 @@ async function main() {
             description: '',
             placement: 62,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 661,
@@ -12293,7 +12127,7 @@ async function main() {
             description: '',
             placement: 63,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 662,
@@ -12302,7 +12136,7 @@ async function main() {
             description: '',
             placement: 64,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 663,
@@ -12311,7 +12145,7 @@ async function main() {
             description: '',
             placement: 65,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 664,
@@ -12320,7 +12154,7 @@ async function main() {
             description: '',
             placement: 66,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 665,
@@ -12329,7 +12163,7 @@ async function main() {
             description: '',
             placement: 67,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 666,
@@ -12338,7 +12172,7 @@ async function main() {
             description: '',
             placement: 68,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 667,
@@ -12347,7 +12181,7 @@ async function main() {
             description: '',
             placement: 69,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 668,
@@ -12356,7 +12190,7 @@ async function main() {
             description: '',
             placement: 70,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 669,
@@ -12365,7 +12199,7 @@ async function main() {
             description: '',
             placement: 71,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 670,
@@ -12374,7 +12208,7 @@ async function main() {
             description: '',
             placement: 72,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 671,
@@ -12383,7 +12217,7 @@ async function main() {
             description: '',
             placement: 73,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 672,
@@ -12392,7 +12226,7 @@ async function main() {
             description: '',
             placement: 74,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 673,
@@ -12401,7 +12235,7 @@ async function main() {
             description: '',
             placement: 75,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 674,
@@ -12410,7 +12244,7 @@ async function main() {
             description: '',
             placement: 76,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 675,
@@ -12419,7 +12253,7 @@ async function main() {
             description: '',
             placement: 77,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 676,
@@ -12428,7 +12262,7 @@ async function main() {
             description: '',
             placement: 78,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 677,
@@ -12437,7 +12271,7 @@ async function main() {
             description: '',
             placement: 79,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 678,
@@ -12446,7 +12280,7 @@ async function main() {
             description: '',
             placement: 80,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 679,
@@ -12455,7 +12289,7 @@ async function main() {
             description: '',
             placement: 81,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 680,
@@ -12464,7 +12298,7 @@ async function main() {
             description: '',
             placement: 82,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 681,
@@ -12473,7 +12307,7 @@ async function main() {
             description: '',
             placement: 83,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 682,
@@ -12482,7 +12316,7 @@ async function main() {
             description: '',
             placement: 84,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 683,
@@ -12491,7 +12325,7 @@ async function main() {
             description: '',
             placement: 85,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 684,
@@ -12500,7 +12334,7 @@ async function main() {
             description: '',
             placement: 86,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 685,
@@ -12509,7 +12343,7 @@ async function main() {
             description: '',
             placement: 87,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 686,
@@ -12518,7 +12352,7 @@ async function main() {
             description: '',
             placement: 88,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 687,
@@ -12527,7 +12361,7 @@ async function main() {
             description: '',
             placement: 89,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 688,
@@ -12536,7 +12370,7 @@ async function main() {
             description: '',
             placement: 90,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 689,
@@ -12545,7 +12379,7 @@ async function main() {
             description: '',
             placement: 91,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
         {
             id: 690,
@@ -12554,7 +12388,7 @@ async function main() {
             description: '',
             placement: 92,
             enabled: true,
-            type: 'RADIO',
+            type: ItemType.RADIO,
         },
     ];
 
@@ -26271,106 +26105,121 @@ async function main() {
             id: 1,
             protocolId: 1,
             applierId: 3,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
         {
             id: 2,
             protocolId: 2,
             applierId: 4,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
         {
             id: 3,
             protocolId: 3,
             applierId: 5,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
         {
             id: 4,
             protocolId: 4,
             applierId: 6,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
         {
             id: 5,
             protocolId: 5,
             applierId: 7,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
         {
             id: 6,
             protocolId: 6,
             applierId: 8,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
         {
             id: 7,
             protocolId: 7,
             applierId: 9,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
         {
             id: 8,
             protocolId: 8,
             applierId: 10,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
         {
             id: 9,
             protocolId: 9,
             applierId: 11,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
         {
             id: 10,
             protocolId: 10,
             applierId: 12,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
         {
             id: 11,
             protocolId: 11,
             applierId: 13,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
         {
             id: 12,
             protocolId: 12,
             applierId: 14,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
         {
             id: 13,
             protocolId: 13,
             applierId: 15,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
         {
             id: 14,
             protocolId: 14,
             applierId: 16,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
         {
             id: 15,
             protocolId: 15,
             applierId: 17,
-            visibility: 'PUBLIC' as VisibilityMode,
-            answersVisibility: 'PUBLIC' as VisibilityMode,
+            visibility: VisibilityMode.PUBLIC,
+            answersVisibility: VisibilityMode.PUBLIC,
+            keepLocation: true,
         },
     ];
 
@@ -26398,7 +26247,6 @@ async function main() {
     await prismaClient.$executeRawUnsafe(`ALTER SEQUENCE "public"."Page_id_seq" RESTART WITH ${piccePages.length + 1}`);
     await prismaClient.$executeRawUnsafe(`ALTER SEQUENCE "public"."Protocol_id_seq" RESTART WITH ${picceProtocols.length + 1}`);
     await prismaClient.$executeRawUnsafe(`ALTER SEQUENCE "public"."User_id_seq" RESTART WITH ${users.length + 1}`);
-    await prismaClient.$executeRawUnsafe(`ALTER SEQUENCE "public"."Classroom_id_seq" RESTART WITH ${classrooms.length + 1}`);
     await prismaClient.$executeRawUnsafe(`ALTER SEQUENCE "public"."Institution_id_seq" RESTART WITH ${institutions.length + 1}`);
     await prismaClient.$executeRawUnsafe(`ALTER SEQUENCE "public"."Address_id_seq" RESTART WITH ${addresses.length + 1}`);
     await prismaClient.$executeRawUnsafe(`ALTER SEQUENCE "public"."File_id_seq" RESTART WITH ${picceFiles.length + 1}`);
@@ -26415,10 +26263,6 @@ async function main() {
 
     await prismaClient.institution.createMany({
         data: institutions,
-    });
-
-    await prismaClient.classroom.createMany({
-        data: classrooms,
     });
 
     await prismaClient.user.createMany({
