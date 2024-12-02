@@ -19,7 +19,7 @@ const checkAuthorization = async (user: User, applicationId: number | undefined,
 
     switch (action) {
         case 'create':
-            // All users except USER can perform create operations on applications, but only if the protocol is public or the user is an applier
+            // All users except USERS and GUESTS can perform create operations on applications, but only if the protocol is public or the user is an applier
             const protocol = await prismaClient.protocol.findUnique({
                 where: {
                     id: protocolId,
@@ -27,7 +27,8 @@ const checkAuthorization = async (user: User, applicationId: number | undefined,
                     enabled: true,
                 },
             });
-            if (!protocol || user.role === UserRole.USER) throw new Error('This user is not authorized to perform this action');
+            if (!protocol || user.role === UserRole.USER || user.role === UserRole.GUEST)
+                throw new Error('This user is not authorized to perform this action');
             break;
         case 'update':
             // Only ADMINs or the applier can perform update operations on applications
@@ -207,6 +208,7 @@ export const createApplication = async (req: Request, res: Response) => {
                 viewersClassroom: yup.array().of(yup.number()).default([]),
                 answersViewersUser: yup.array().of(yup.number()).default([]),
                 answersViewersClassroom: yup.array().of(yup.number()).default([]),
+                keepLocation: yup.boolean().required(),
             })
             .noUnknown();
         // Yup parsing/validation
@@ -236,6 +238,7 @@ export const createApplication = async (req: Request, res: Response) => {
                 viewersClassroom: { connect: application.viewersClassroom.map((id) => ({ id: id })) },
                 answersViewersUser: { connect: application.answersViewersUser.map((id) => ({ id: id })) },
                 answersViewersClassroom: { connect: application.answersViewersClassroom.map((id) => ({ id: id })) },
+                keepLocation: application.keepLocation,
             },
             select: fieldsWViewers,
         });
@@ -260,6 +263,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
                 viewersClassroom: yup.array().of(yup.number()).default([]),
                 answersViewersUser: yup.array().of(yup.number()).default([]),
                 answersViewersClassroom: yup.array().of(yup.number()).default([]),
+                keepLocation: yup.boolean(),
             })
             .noUnknown();
         // Yup parsing/validation
@@ -288,6 +292,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
                 viewersClassroom: { set: [], connect: application.viewersClassroom.map((id) => ({ id: id })) },
                 answersViewersUser: { set: [], connect: application.answersViewersUser.map((id) => ({ id: id })) },
                 answersViewersClassroom: { set: [], connect: application.answersViewersClassroom.map((id) => ({ id: id })) },
+                keepLocation: application.keepLocation,
             },
             select: fieldsWViewers,
         });

@@ -101,7 +101,7 @@ model ApplicationAnswer {
   updatedAt DateTime @updatedAt
 
   date     DateTime
-  approved Boolean
+  approved Boolean @default(false)
 
   itemAnswerGroups ItemAnswerGroup[]
 

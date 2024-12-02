@@ -193,6 +193,7 @@ const fields = {
     addressId: true,
     createdAt: true,
     updatedAt: true,
+    approved: true,
     itemAnswerGroups: {
         select: {
             id: true,
@@ -266,6 +267,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                     userId: user.id,
                     applicationId: applicationAnswer.applicationId,
                     addressId: applicationAnswer.addressId,
+                    approved: false,
                 },
             });
             for (const [itemAnswerGroupIndex, itemAnswerGroup] of applicationAnswer.itemAnswerGroups.entries()) {

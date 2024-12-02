@@ -28,13 +28,14 @@ const checkAuthorization = async (
 
     switch (action) {
         case 'create':
-            // Only USERs and APPLIERs can't perform create operations on users, other roles need to respect the hierarchy
+            // Only USERs, GUESTs and APPLIERs can't perform create operations on users, other roles need to respect the hierarchy
             if (
                 role === UserRole.ADMIN ||
                 (curUser.role === UserRole.COORDINATOR && role === UserRole.COORDINATOR) ||
                 (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER) ||
                 curUser.role === UserRole.APPLIER ||
                 curUser.role === UserRole.USER ||
+                curUser.role === UserRole.GUEST ||
                 (institutionId && curUser.institutionId !== institutionId)
             ) {
                 throw new Error('This user is not authorized to perform this action');
@@ -50,7 +51,8 @@ const checkAuthorization = async (
                     role !== UserRole.APPLIER &&
                     role !== UserRole.PUBLISHER) ||
                 (curUser.role === UserRole.APPLIER && role !== UserRole.USER && role !== UserRole.APPLIER) ||
-                (curUser.role === UserRole.USER && role !== UserRole.USER)
+                (curUser.role === UserRole.USER && role !== UserRole.USER) ||
+                curUser.role === UserRole.GUEST
             ) {
                 throw new Error('This user is not authorized to perform this action');
             }
@@ -60,13 +62,19 @@ const checkAuthorization = async (
             throw new Error('This user is not authorized to perform this action');
             break;
         case 'get':
-            // Only admins, members (except USERs) of its institution or the user itself can perform get operations on it
+            // Only admins, members (except USERs and GUESTs) of its institution or the user itself can perform get operations on it
             const user: User | null = await prismaClient.user.findUnique({ where: { id: userId, institutionId: curUser.institutionId } });
-            if (!user || !user.institutionId || (curUser.role === UserRole.USER && curUser.id !== userId))
+            if (
+                !user ||
+                !user.institutionId ||
+                (curUser.role === UserRole.USER && curUser.id !== userId) ||
+                curUser.role === UserRole.GUEST
+            )
                 throw new Error('This user is not authorized to perform this action');
             break;
         case 'search':
-            if (curUser.role === UserRole.USER) throw new Error('This user is not authorized to perform this action');
+            if (curUser.role === UserRole.USER || curUser.role === UserRole.GUEST)
+                throw new Error('This user is not authorized to perform this action');
             break;
         case 'delete':
             // Only ADMINs or the user itself can perform update/delete operations on it
@@ -264,7 +272,7 @@ export const searchUserByUsername = async (req: Request, res: Response): Promise
         const { term } = await searchUserSchema.validate(req.body);
         // Prisma operation
         const users = await prismaClient.user.findMany({
-            where: { username: { startsWith: term } },
+            where: { username: { startsWith: term }, role: { not: UserRole.ADMIN } },
             select: publicFields,
         });
 

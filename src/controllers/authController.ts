@@ -114,7 +114,7 @@ export const signIn = async (req: Request, res: Response) => {
 export const passwordlessSignIn = async (req: Request, res: Response) => {
     try {
         // Prisma operation
-        const user = await prismaClient.user.findUniqueOrThrow({ where: { id: 1 }, include: { profileImage: true } });
+        const user = await prismaClient.user.findFirstOrThrow({ where: { role: UserRole.GUEST }, include: { profileImage: true } });
         // JWT token creation
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET as string, {
             expiresIn: process.env.JWT_EXPIRATION,
