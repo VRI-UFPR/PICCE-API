@@ -89,8 +89,7 @@ model Address {
   state   String
   country String
 
-  institutions       Institution[]
-  applicationAnswers ApplicationAnswer[]
+  institutions Institution[]
 
   @@unique([city, state, country])
 }
@@ -101,7 +100,7 @@ model ApplicationAnswer {
   updatedAt DateTime @updatedAt
 
   date     DateTime
-  approved Boolean @default(false)
+  approved Boolean  @default(false)
 
   itemAnswerGroups ItemAnswerGroup[]
 
@@ -109,8 +108,8 @@ model ApplicationAnswer {
   user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   applicationId Int
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  addressId     Int?
-  address       Address?    @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  coordinateId  Int?
+  coordinate    Coordinate? @relation(fields: [coordinateId], references: [id], onDelete: SetNull)
 }
 
 model ItemAnswer {
@@ -431,4 +430,17 @@ model PageDependencyRule {
   item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@unique([pageId, itemId, type])
+}
+
+model Coordinate {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  latitude  Float
+  longitude Float
+
+  answers ApplicationAnswer[]
+
+  @@unique([latitude, longitude])
 }

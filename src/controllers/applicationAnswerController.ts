@@ -204,10 +204,11 @@ const fields = {
     date: true,
     userId: true,
     applicationId: true,
-    addressId: true,
     createdAt: true,
     updatedAt: true,
     approved: true,
+    coordinateId: true,
+    coordinate: { select: { latitude: true, longitude: true } },
     itemAnswerGroups: {
         select: {
             id: true,
@@ -252,13 +253,14 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 optionAnswers: yup.array().of(createOptionAnswerSchema).default([]),
             })
             .noUnknown();
+        const createCoordinateSchema = yup.object().shape({ latitude: yup.number(), longitude: yup.number() }).noUnknown();
         const createApplicationAnswerSchema = yup
             .object()
             .shape({
                 id: yup.number(),
                 date: yup.date().required(),
                 applicationId: yup.number().required(),
-                addressId: yup.number(),
+                coordinate: createCoordinateSchema,
                 itemAnswerGroups: yup.array().of(createItemAnswerGroupSchema).min(1).required(),
             })
             .noUnknown();
@@ -276,11 +278,26 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         const createdApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
             const createdApplicationAnswer: ApplicationAnswer = await prisma.applicationAnswer.create({
                 data: {
-                    id: applicationAnswer.id,
                     date: applicationAnswer.date,
-                    userId: user.id,
-                    applicationId: applicationAnswer.applicationId,
-                    addressId: applicationAnswer.addressId,
+                    user: { connect: { id: user.id } },
+                    application: { connect: { id: applicationAnswer.applicationId } },
+                    coordinate:
+                        applicationAnswer.coordinate.latitude !== undefined && applicationAnswer.coordinate.longitude !== undefined
+                            ? {
+                                  connectOrCreate: {
+                                      where: {
+                                          latitude_longitude: {
+                                              latitude: applicationAnswer.coordinate.latitude,
+                                              longitude: applicationAnswer.coordinate.longitude,
+                                          },
+                                      },
+                                      create: {
+                                          latitude: applicationAnswer.coordinate.latitude,
+                                          longitude: applicationAnswer.coordinate.longitude,
+                                      },
+                                  },
+                              }
+                            : undefined,
                     approved: false,
                 },
             });
@@ -386,11 +403,15 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 optionAnswers: yup.array().of(updateOptionAnswerSchema).default([]),
             })
             .noUnknown();
+        const updateCoordinateSchema = yup
+            .object()
+            .shape({ latitude: yup.number().required(), longitude: yup.number().required() })
+            .noUnknown();
         const updateApplicationAnswerSchema = yup
             .object()
             .shape({
                 date: yup.date(),
-                addressId: yup.number(),
+                coordinate: updateCoordinateSchema,
                 itemAnswerGroups: yup.array().of(updateItemAnswerGroupSchema).min(1).required(),
             })
             .noUnknown();
@@ -409,7 +430,26 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
             // Update application answer
             await prisma.applicationAnswer.update({
                 where: { id: applicationAnswerId },
-                data: { date: applicationAnswer.date, addressId: applicationAnswer.addressId },
+                data: {
+                    date: applicationAnswer.date,
+                    coordinate:
+                        applicationAnswer.coordinate.latitude !== undefined && applicationAnswer.coordinate.longitude !== undefined
+                            ? {
+                                  connectOrCreate: {
+                                      where: {
+                                          latitude_longitude: {
+                                              latitude: applicationAnswer.coordinate.latitude,
+                                              longitude: applicationAnswer.coordinate.longitude,
+                                          },
+                                      },
+                                      create: {
+                                          latitude: applicationAnswer.coordinate.latitude,
+                                          longitude: applicationAnswer.coordinate.longitude,
+                                      },
+                                  },
+                              }
+                            : { disconnect: true },
+                },
             });
             // Remove item answer groups that are not in the updated application answer
             await prisma.itemAnswerGroup.deleteMany({

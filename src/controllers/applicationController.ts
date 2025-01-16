@@ -120,6 +120,7 @@ const fields = {
     protocol: { select: { id: true, title: true, description: true } },
     visibility: true,
     answersVisibility: true,
+    keepLocation: true,
     applier: { select: { id: true, username: true, institutionId: true } },
     createdAt: true,
     updatedAt: true,
@@ -192,7 +193,15 @@ const fieldsWProtocol = {
 
 const fieldsWAnswers = {
     ...fieldsWProtocol,
-    answers: { select: { id: true, date: true, user: { select: { id: true, username: true } } } },
+    answers: {
+        select: {
+            id: true,
+            date: true,
+            user: { select: { id: true, username: true } },
+            coordinate: { select: { latitude: true, longitude: true } },
+            approved: true,
+        },
+    },
 };
 
 export const createApplication = async (req: Request, res: Response) => {
@@ -575,7 +584,10 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
             }
         }
         applicationWithAnswers.answers = Object.fromEntries(
-            applicationWithAnswers.answers.map((answer: any) => [answer.id, { date: answer.date, user: answer.user }])
+            applicationWithAnswers.answers.map((answer: any) => [
+                answer.id,
+                { date: answer.date, user: answer.user, coordinate: answer.coordinate, approved: answer.approved },
+            ])
         );
 
         res.status(200).json({ message: 'Application with answers found.', data: applicationWithAnswers });
