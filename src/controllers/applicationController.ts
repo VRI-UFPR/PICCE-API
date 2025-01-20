@@ -456,8 +456,7 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
                 user.id !== applicationWithAnswers.applier.id &&
                 user.institutionId !== applicationWithAnswers.applier.institutionId) ||
             user.role === UserRole.USER ||
-            user.role === UserRole.GUEST ||
-            user.role === UserRole.APPLIER
+            user.role === UserRole.GUEST
         )
             applicationWithAnswers.answers = applicationWithAnswers.answers.filter((answer: any) => answer.approved);
 

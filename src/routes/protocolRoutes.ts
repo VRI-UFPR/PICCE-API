@@ -19,6 +19,7 @@ import {
     deleteProtocol,
     getMyProtocols,
     getVisibleProtocols,
+    getProtocolWithAnswers,
 } from '../controllers/protocolController';
 /**
  * @swagger
@@ -412,6 +413,49 @@ router.get('/getMyProtocols', passport.authenticate('jwt', { session: false }), 
  *               description: Error message
  */
 router.get('/getVisibleProtocols', passport.authenticate('jwt', { session: false }), uploader.none(), getVisibleProtocols);
+
+/**
+ * @swagger
+ * /api/protocol/getProtocolWithAnswers/{protocolId}:
+ *   get:
+ *     summary: Get an protocol by id with answers
+ *     tags: [Protocol]
+ *     parameters:
+ *       - in: path
+ *         name: protocolId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: The id of the protocol to retrieve
+ *     responses:
+ *       200:
+ *         description: The protocol was successfully retrieved
+ *         content:
+ *           application/json:
+ *             message: protocol found.
+ *             data:
+ *               $ref: '#/components/schemas/Protocol'
+ *       400:
+ *         description: An protocol with the specified id was not found
+ *         content:
+ *           application/json:
+ *             error:
+ *               type: string
+ *               description: Error message
+ *       500:
+ *         description: An error occurred while retrieving the protocol
+ *         content:
+ *           application/json:
+ *             error:
+ *               type: string
+ *               description: Error message
+ */
+router.get(
+    '/getProtocolWithAnswers/:protocolId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    getProtocolWithAnswers
+);
 
 /**
  * @swagger

@@ -56,6 +56,22 @@ const checkAuthorization = async (user: User, protocolId: number | undefined, ac
             });
             if (!getProtocol) throw new Error('This user is not authorized to perform this action.');
             break;
+        case 'getWAnswers':
+            // Only admins, the creator, the managers, the appliers or the viewers of the protocol can perform get operations on it
+            const getProtocolWAnswers = await prismaClient.protocol.findUnique({
+                where: {
+                    id: protocolId,
+                    OR: [
+                        { managers: { some: { id: user.id } } },
+                        { answersViewersUser: { some: { id: user.id } } },
+                        { answersViewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                        { creatorId: user.id },
+                        { answersVisibility: VisibilityMode.PUBLIC },
+                    ],
+                },
+            });
+            if (!getProtocolWAnswers) throw new Error('This user is not authorized to perform this action.');
+            break;
     }
 };
 
@@ -326,6 +342,104 @@ const fieldsWViewers = {
     answersViewersUser: { select: { id: true, username: true, classrooms: { select: { id: true, name: true } } } },
     answersViewersClassroom: { select: { id: true, name: true, users: { select: { id: true, username: true } } } },
     appliers: { select: { id: true, username: true } },
+};
+
+const fieldsWAnswers = {
+    id: true,
+    title: true,
+    description: true,
+    createdAt: true,
+    updatedAt: true,
+    enabled: true,
+    replicable: true,
+    creator: { select: { id: true, username: true, institutionId: true } },
+    applicability: true,
+    visibility: true,
+    answersVisibility: true,
+    managers: { select: { id: true, username: true, institutionId: true } },
+    pages: {
+        orderBy: { placement: 'asc' as any },
+        select: {
+            id: true,
+            type: true,
+            placement: true,
+            itemGroups: {
+                orderBy: { placement: 'asc' as any },
+                select: {
+                    id: true,
+                    type: true,
+                    placement: true,
+                    isRepeatable: true,
+                    items: {
+                        orderBy: { placement: 'asc' as any },
+                        select: {
+                            id: true,
+                            text: true,
+                            description: true,
+                            type: true,
+                            placement: true,
+                            enabled: true,
+                            itemOptions: {
+                                orderBy: { placement: 'asc' as any },
+                                select: {
+                                    id: true,
+                                    text: true,
+                                    placement: true,
+                                    files: { select: { id: true, path: true } },
+                                    optionAnswers: {
+                                        select: {
+                                            id: true,
+                                            text: true,
+                                            group: {
+                                                select: { id: true, applicationAnswer: { select: { id: true, userId: true } } },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            files: { select: { id: true, path: true, description: true } },
+                            itemValidations: { select: { type: true, argument: true, customMessage: true } },
+                            itemAnswers: {
+                                select: {
+                                    id: true,
+                                    text: true,
+                                    files: { select: { id: true, path: true } },
+                                    group: { select: { id: true, applicationAnswer: { select: { id: true, userId: true } } } },
+                                },
+                            },
+                            tableAnswers: {
+                                select: {
+                                    id: true,
+                                    text: true,
+                                    columnId: true,
+                                    group: { select: { id: true, applicationAnswer: { select: { id: true, userId: true } } } },
+                                },
+                            },
+                        },
+                    },
+                    tableColumns: { select: { id: true, text: true, placement: true } },
+                    dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
+                },
+            },
+            dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
+        },
+    },
+    applications: {
+        select: {
+            id: true,
+            applier: { select: { id: true, username: true, institutionId: true } },
+            createdAt: true,
+            answers: {
+                select: {
+                    id: true,
+                    user: { select: { id: true, username: true } },
+                    date: true,
+                    approved: true,
+                    coordinate: { select: { latitude: true, longitude: true } },
+                },
+            },
+        },
+    },
 };
 
 export const createProtocol = async (req: Request, res: Response) => {
@@ -1167,6 +1281,83 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
                   };
 
         res.status(200).json({ message: 'Protocol found.', data: visibleProtocol });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const getProtocolWithAnswers = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // ID from params
+        const protocolId: number = parseInt(req.params.protocolId);
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is allowed to get the protocol
+        await checkAuthorization(user, protocolId, 'getWAnswers');
+        // Get protocol with nested content included
+        const protocol = await prismaClient.protocol.findUniqueOrThrow({
+            where: {
+                id: protocolId,
+                OR: [
+                    { managers: { some: { id: user.id } } },
+                    { answersViewersUser: { some: { id: user.id } }, enabled: true },
+                    { answersViewersClassroom: { some: { users: { some: { id: user.id } } } }, enabled: true },
+                    { creatorId: user.id },
+                    { answersVisibility: VisibilityMode.PUBLIC, enabled: true },
+                ],
+            },
+            select: fieldsWAnswers,
+        });
+
+        // Filter unapproved answers if user is not allowed to see/approve them
+        for (const application of protocol.applications) {
+            if (
+                user.role !== UserRole.ADMIN &&
+                (user.id !== protocol.creator.id ||
+                    !protocol.managers.some((manager) => manager.id === user.id) ||
+                    user.id !== application.applier.id ||
+                    user.institutionId !== application.applier.institutionId ||
+                    user.institutionId !== protocol.creator.institutionId ||
+                    user.role === UserRole.USER ||
+                    user.role === UserRole.GUEST)
+            ) {
+                application.answers = application.answers.filter((answer: any) => answer.approved);
+            }
+        }
+
+        // Filter answers that are not visible to the user
+        for (const page of protocol.pages) {
+            for (const itemGroup of page.itemGroups) {
+                for (const item of itemGroup.items) {
+                    item.itemAnswers = item.itemAnswers.filter((itemAnswer) =>
+                        protocol.applications.some((application) =>
+                            application.answers.some((answer) => answer.id === itemAnswer.group.applicationAnswer.id)
+                        )
+                    );
+                    item.tableAnswers = item.tableAnswers.filter((tableAnswer) =>
+                        protocol.applications.some((application) =>
+                            application.answers.some((answer) => answer.id === tableAnswer.group.applicationAnswer.id)
+                        )
+                    );
+                    for (const itemOption of item.itemOptions) {
+                        itemOption.optionAnswers = itemOption.optionAnswers.filter((optionAnswer) =>
+                            protocol.applications.some((application) =>
+                                application.answers.some((answer) => answer.id === optionAnswer.group.applicationAnswer.id)
+                            )
+                        );
+                    }
+                }
+            }
+        }
+
+        // Filter other properties that are not visible to the user
+        protocol.managers = [];
+        protocol.creator.institutionId = null;
+        for (const application of protocol.applications) {
+            application.applier.institutionId = null;
+        }
+
+        res.status(200).json({ message: 'Protocol with answers found.', data: protocol });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
