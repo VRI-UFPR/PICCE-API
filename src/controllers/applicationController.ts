@@ -19,7 +19,7 @@ const getApplicationUserRoles = async (user: User, application: any, application
         application ||
         (await prismaClient.application.findUniqueOrThrow({
             where: { id: applicationId },
-            select: {
+            include: {
                 viewersClassroom: { select: { users: { select: { id: true } } } },
                 viewersUser: { select: { id: true } },
                 answersViewersClassroom: { select: { users: { select: { id: true } } } },
@@ -97,8 +97,11 @@ const getApplicationUserActions = async (user: User, application: any, applicati
     const toGetVisible = true;
     // No one can perform getAll operations on applications
     const toGetAll = user.role === UserRole.ADMIN;
+    // Only answer viewers/applier/protocol creator/protocol managers can perform get answers operations on applications
+    const toGetAnswers =
+        roles.answersViewer || roles.applier || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
 
-    return { toUpdate, toDelete, toGet, toGetMy, toGetVisible, toGetAll };
+    return { toUpdate, toDelete, toGet, toGetMy, toGetVisible, toGetAll, toGetAnswers };
 };
 
 const checkAuthorization = async (user: User, applicationId: number | undefined, protocolId: number | undefined, action: string) => {
@@ -131,7 +134,7 @@ const checkAuthorization = async (user: User, applicationId: number | undefined,
             // Only viewers/protocol managers/protocol creator/applier can perform get operations on applications
             const roles = await getApplicationUserRoles(user, undefined, applicationId);
             if (!roles.viewer && !roles.applier && !roles.protocolCreator && !roles.protocolManager)
-                throw new Error('This user is not authorized to perform this action');
+                throw new Error('This user is not authorized to perform this action:' + JSON.stringify(roles));
             break;
         }
     }
@@ -343,7 +346,7 @@ export const createApplication = async (req: Request, res: Response) => {
             actions: await getApplicationUserActions(user, createdApplication, undefined),
         };
         // Filter sensitive fields
-        const filteredApplication = dropSensitiveFields(createdApplication);
+        const filteredApplication = dropSensitiveFields(processedApplication);
 
         res.status(201).json({ message: 'Application created.', data: filteredApplication });
     } catch (error: any) {
@@ -405,7 +408,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
             actions: await getApplicationUserActions(user, updatedApplication, undefined),
         };
         // Filter sensitive fields
-        const filteredApplication = dropSensitiveFields(updatedApplication);
+        const filteredApplication = dropSensitiveFields(processedApplication);
 
         res.status(200).json({ message: 'Application updated.', data: filteredApplication });
     } catch (error: any) {
@@ -533,7 +536,9 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
             actions: await getApplicationUserActions(user, application, applicationId),
         };
         // Filter sensitive fields
-        const filteredApplication = processedApplication.actions.toUpdate ? application : dropSensitiveFields(application);
+        const filteredApplication = processedApplication.actions.toUpdate
+            ? processedApplication
+            : dropSensitiveFields(processedApplication);
 
         res.status(200).json({ message: 'Application found.', data: filteredApplication });
     } catch (error: any) {

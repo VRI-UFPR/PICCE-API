@@ -73,6 +73,8 @@ const getProtocolUserActions = async (user: User, protocol: any, protocolId: num
     const toGetMy = true;
     // Only answers viewers/creator/managers can perform getWAnswers operations on protocols
     const toGetWAnswers = roles.answersViewer || roles.creator || roles.manager || user.role === UserRole.ADMIN;
+    // Only appliers/managers/creator can apply to protocols
+    const toApply = roles.applier || roles.manager || roles.creator || user.role === UserRole.ADMIN;
 
     return { toUpdate, toDelete, toGet, toGetAll, toGetVisible, toGetMy, toGetWAnswers };
 };

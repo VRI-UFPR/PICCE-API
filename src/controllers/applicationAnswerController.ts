@@ -20,7 +20,7 @@ const getApplicationUserRoles = async (user: User, application: any, application
         application ||
         (await prismaClient.application.findUniqueOrThrow({
             where: { id: applicationId },
-            select: {
+            include: {
                 viewersClassroom: { select: { users: { select: { id: true } } } },
                 viewersUser: { select: { id: true } },
                 answersViewersClassroom: { select: { users: { select: { id: true } } } },
