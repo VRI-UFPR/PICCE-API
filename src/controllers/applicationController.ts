@@ -14,62 +14,126 @@ import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 
+const getApplicationUserRoles = async (user: User, application: any, applicationId: number | undefined) => {
+    application =
+        application ||
+        (await prismaClient.application.findUniqueOrThrow({
+            where: { id: applicationId },
+            select: {
+                viewersClassroom: { select: { users: { select: { id: true } } } },
+                viewersUser: { select: { id: true } },
+                answersViewersClassroom: { select: { users: { select: { id: true } } } },
+                answersViewersUser: { select: { id: true } },
+                applier: { select: { id: true } },
+                protocol: { select: { creatorId: true, managers: { select: { id: true } } } },
+            },
+        }));
+
+    const protocolCreator = !!(application?.protocol.creatorId === user.id);
+    const protocolManager = !!application?.protocol.managers?.some((manager: any) => manager.id === user.id);
+    const applier = !!(application?.applier.id === user.id);
+    const viewer = !!(
+        application?.visibility === VisibilityMode.PUBLIC ||
+        (application?.visibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
+        application?.viewersUser?.some((viewer: any) => viewer.id === user.id) ||
+        application?.viewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
+    );
+    const answersViewer = !!(
+        application?.answersVisibility === VisibilityMode.PUBLIC ||
+        (application?.answersVisibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
+        application?.answersViewersUser?.some((viewer: any) => viewer.id === user.id) ||
+        application?.answersViewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
+    );
+
+    return { protocolCreator, protocolManager, applier, viewer, answersViewer };
+};
+
+const getProtocolUserRoles = async (user: User, protocol: any, protocolId: number | undefined) => {
+    protocol =
+        protocol ||
+        (await prismaClient.protocol.findUniqueOrThrow({
+            where: { id: protocolId },
+            include: {
+                managers: { select: { id: true } },
+                appliers: { select: { id: true } },
+                viewersUser: { select: { id: true } },
+                viewersClassroom: { select: { users: { select: { id: true } } } },
+                answersViewersUser: { select: { id: true } },
+                answersViewersClassroom: { select: { users: { select: { id: true } } } },
+            },
+        }));
+
+    const creator = protocol?.creatorId === user.id;
+    const manager = !!protocol?.managers?.some((manager: any) => manager.id === user.id);
+    const applier = !!protocol?.appliers?.some((applier: any) => applier.id === user.id);
+    const viewer = !!(
+        protocol?.visibility === VisibilityMode.PUBLIC ||
+        (protocol?.visibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
+        protocol?.viewersUser?.some((viewer: any) => viewer.id === user.id) ||
+        protocol?.viewersClassroom?.some((classroom: any) => classroom.users.some((viewer: any) => viewer.id === user.id))
+    );
+    const answersViewer = !!(
+        protocol?.answersVisibility === VisibilityMode.PUBLIC ||
+        (protocol?.answersVisibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
+        protocol?.answersViewersUser?.some((viewer: any) => viewer.id === user.id) ||
+        protocol?.answersViewersClassroom?.some((classroom: any) => classroom.users.some((viewer: any) => viewer.id === user.id))
+    );
+
+    return { creator, manager, applier, viewer, answersViewer };
+};
+
+const getApplicationUserActions = async (user: User, application: Application, applicationId: number | undefined) => {
+    const roles = await getApplicationUserRoles(user, application, applicationId);
+
+    // Only protocol managers/applier/protocol creator can perform update operations on applications
+    const toUpdate = roles.applier || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
+    // Only protocol managers/applier/protocol creator can perform delete operations on applications
+    const toDelete = roles.applier || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
+    // Only viewers/applier/protocol creator/protocol manager can perform get operations on applications
+    const toGet = roles.viewer || roles.applier || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
+    // Anyone can perform getMy operations on applications (since the result is filtered according to the user)
+    const toGetMy = true;
+    // Anyone can perform getVisible operations on applications (since the result is filtered according to the user)
+    const toGetVisible = true;
+    // No one can perform getAll operations on applications
+    const toGetAll = user.role === UserRole.ADMIN;
+
+    return { toUpdate, toDelete, toGet, toGetMy, toGetVisible, toGetAll };
+};
+
 const checkAuthorization = async (user: User, applicationId: number | undefined, protocolId: number | undefined, action: string) => {
     if (user.role === UserRole.ADMIN) return;
 
     switch (action) {
-        case 'create':
-            // All users except USERS and GUESTS can perform create operations on applications, but only if the protocol is public or the user is an applier
-            const protocol = await prismaClient.protocol.findUnique({
-                where: {
-                    id: protocolId,
-                    OR: [{ applicability: VisibilityMode.PUBLIC }, { appliers: { some: { id: user.id } } }],
-                    enabled: true,
-                },
-            });
-            if (!protocol || user.role === UserRole.USER || user.role === UserRole.GUEST)
+        case 'create': {
+            // Only managers/appliers/creator can perform update/delete operations on applications
+            const roles = await getProtocolUserRoles(user, undefined, protocolId);
+            if (!roles.applier && !roles.creator && !roles.manager) throw new Error('This user is not authorized to perform this action');
+            break;
+        }
+        case 'update':
+        case 'delete': {
+            // Only protocol managers/applier/protocol creator can perform update/delete operations on applications
+            const roles = await getApplicationUserRoles(user, undefined, applicationId);
+            if (!roles.applier && !roles.protocolCreator && !roles.protocolManager)
                 throw new Error('This user is not authorized to perform this action');
             break;
-        case 'update':
-            // Only ADMINs or the applier can perform update operations on applications
-            const updateApplication = await prismaClient.application.findUnique({
-                where: {
-                    id: applicationId,
-                    applierId: user.id,
-                },
-            });
-            if (!updateApplication) throw new Error('This user is not authorized to perform this action');
-            break;
+        }
         case 'getMy':
         case 'getVisible':
-            // All users can perform getMy/getVisible operations on applications (the result will be filtered based on the user)
+            // Anyone can perform getMy/getVisible operations on applications (the result will be filtered based on the user)
             break;
         case 'getAll':
-            // Only ADMINs can perform getAll operations on applications
+            // No one can perform getAll operations on applications
             throw new Error('This user is not authorized to perform this action');
             break;
-        case 'get':
-            // Only ADMINs or the viewers of the application can perform get operations on applications
-            const getApplication = await prismaClient.application.findUnique({
-                where: {
-                    id: applicationId,
-                    OR: [
-                        { visibility: 'PUBLIC' },
-                        { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
-                        { viewersUser: { some: { id: user.id } } },
-                        { applierId: user.id },
-                    ],
-                },
-            });
-            if (!getApplication) throw new Error('This user is not authorized to perform this action');
+        case 'get': {
+            // Only viewers/protocol managers/protocol creator/applier can perform get operations on applications
+            const roles = await getApplicationUserRoles(user, undefined, applicationId);
+            if (!roles.viewer && !roles.applier && !roles.protocolCreator && !roles.protocolManager)
+                throw new Error('This user is not authorized to perform this action');
             break;
-        case 'delete':
-            // Only ADMINs or the applier can perform delete operations on applications
-            const deleteApplication = await prismaClient.application.findUnique({
-                where: { id: applicationId, applierId: user.id },
-            });
-            if (!deleteApplication) throw new Error('This user is not authorized to perform this action');
-            break;
+        }
     }
 };
 

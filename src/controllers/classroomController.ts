@@ -30,56 +30,89 @@ const publicFields = {
     users: { select: { id: true, name: true, username: true, role: true } },
 };
 
-// Only admins or the coordinator of the institution can perform C-UD operations on classrooms
+const getClassroomUserRoles = async (user: User, classroom: any, classroomId: number | undefined) => {
+    classroom =
+        classroom ||
+        (await prismaClient.classroom.findUniqueOrThrow({
+            where: { id: classroomId },
+            include: { users: { select: { id: true } } },
+        }));
+
+    const creator = classroom?.creatorId === user.id;
+    const member = classroom?.users.some((u: any) => u.id === user.id);
+    const institutionMember = classroom?.institutionId === user.institutionId;
+
+    return { creator, member, institutionMember };
+};
+
+const getClassroomUserActions = async (user: User, classroom: any, classroomId: number | undefined) => {
+    const roles = await getClassroomUserRoles(user, classroom, classroomId);
+
+    // Only institution members (except users and guests)/creator can perform update operations on classrooms
+    const toUpdate =
+        roles.creator ||
+        (roles.institutionMember && user.role !== UserRole.USER && user.role !== UserRole.GUEST) ||
+        user.role === UserRole.ADMIN;
+    // Only institution members (except users and guests)/creator can perform delete operations on classrooms
+    const toDelete =
+        roles.creator ||
+        (roles.institutionMember && user.role !== UserRole.USER && user.role !== UserRole.GUEST) ||
+        user.role === UserRole.ADMIN;
+    // Only institution members (except users and guests)/creator can perform get operations on classrooms
+    const toGet =
+        roles.creator ||
+        (roles.institutionMember && user.role !== UserRole.USER && user.role !== UserRole.GUEST) ||
+        user.role === UserRole.ADMIN;
+    // No one can perform get all classrooms operation on classrooms
+    const toGetAll = user.role === UserRole.ADMIN;
+    // Anyone except users and guests can perform create operations on classrooms
+    const toSearch = user.role !== UserRole.USER && user.role !== UserRole.GUEST;
+    // Anyone can perform getMy operation on classrooms
+    const toGetMy = true;
+
+    return { toUpdate, toDelete, toGet, toGetAll, toSearch, toGetMy };
+};
+
 const checkAuthorization = async (user: User, classroomId: number | undefined, institutionId: number | undefined, action: string) => {
     if (user.role === UserRole.ADMIN) return;
 
     switch (action) {
         case 'create':
-            // Only APPLIERS, PUBLISHERS and COORDINATORS can create classrooms (if institutionId is provided, the user must be from that institution)
+            // Anyone except users and guests can perform create operations on classrooms (if institutionId is provided, the user must be from that institution)
             if (user.role === UserRole.USER || user.role === UserRole.GUEST || (institutionId && user.institutionId !== institutionId))
                 throw new Error('This user is not authorized to perform this action');
             break;
-        case 'update':
-        case 'delete':
-            // Only APPLIERS, PUBLISHERS and COORDINATORS from the institution or the creator of the classroom can update/delete it
-            const classroomToUpdate = await prismaClient.classroom.findUnique({
-                where: {
-                    id: classroomId,
-                    OR: user.institutionId ? [{ institutionId: user.institutionId }, { creatorId: user.id }] : [{ creatorId: user.id }],
-                },
-            });
+        case 'update': {
+            // Only institution members (except users and guests)/creator can perform update/delete operations on classrooms (if institutionId is provided, the user must be from that institution)
+            const roles = await getClassroomUserRoles(user, undefined, classroomId);
             if (
+                (!roles.creator && !roles.institutionMember) ||
                 user.role === UserRole.USER ||
                 user.role === UserRole.GUEST ||
-                (institutionId && institutionId !== user.institutionId) ||
-                !classroomToUpdate
+                (institutionId && user.institutionId !== institutionId)
             )
                 throw new Error('This user is not authorized to perform this action');
-
             break;
+        }
         case 'getAll':
-            // Only ADMINs can perform get all classrooms operation
+            // No one can perform get all classrooms operation on classrooms
             throw new Error('This user is not authorized to perform this action');
             break;
         case 'get':
-            // Only APPLYERS, PUBLISHERS and COORDINATORS from the institution or the creator of the classroom can get it
-            const getClassroom = await prismaClient.classroom.findUnique({
-                where: {
-                    id: classroomId,
-                    OR: user.institutionId ? [{ institutionId: user.institutionId }, { creatorId: user.id }] : [{ creatorId: user.id }],
-                },
-            });
-            if (user.role === UserRole.USER || user.role === UserRole.GUEST || !getClassroom)
+        case 'delete': {
+            // Only institution members (except users and guests)/creator can perform get/delete operations on classrooms
+            const roles = await getClassroomUserRoles(user, undefined, classroomId);
+            if ((!roles.creator && !roles.institutionMember) || user.role === UserRole.USER || user.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
             break;
+        }
         case 'search':
-            // All users except USERS and GUESTS can perform search classrooms operation
+            // Anyone except USERS and GUESTS can perform search classrooms operation
             if (user.role === UserRole.USER || user.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
             break;
         case 'getMy':
-            // All users can perform get my classrooms operation (the result will be filtered based on the user)
+            // Anyone can perform getMy operation on classrooms (since the result is filtered according to the user)
             break;
     }
 };

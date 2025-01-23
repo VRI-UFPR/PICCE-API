@@ -26,28 +26,60 @@ const fields = {
     updatedAt: true,
 };
 
+const getInstitutionUserRoles = async (user: User, institution: any, institutionId: number | undefined) => {
+    institution =
+        institution ||
+        (await prismaClient.institution.findUniqueOrThrow({
+            where: { id: institutionId },
+            include: { users: { select: { id: true } } },
+        }));
+
+    const member = institution.users.some((u: any) => u.id === user.id);
+    const coordinator = institution.users.some((u: any) => u.id === user.id && u.role === UserRole.COORDINATOR);
+
+    return { member, coordinator };
+};
+
+const getInstitutionUserActions = async (user: User, institution: any, institutionId: number | undefined) => {
+    const roles = await getInstitutionUserRoles(user, institution, institutionId);
+
+    // Only the coordinator can perform update operations on an institution
+    const toUpdate = roles.coordinator || user.role === UserRole.ADMIN;
+    // Only the coordinator can perform delete operations on an institution
+    const toDelete = roles.coordinator || user.role === UserRole.ADMIN;
+    // Only members (except users and guests) can perform get operations on institutions
+    const toGet = (roles.member && user.role !== UserRole.USER && user.role !== UserRole.GUEST) || user.role === UserRole.ADMIN;
+    // No one can perform getAll operations on institutions
+    const toGetAll = user.role === UserRole.ADMIN;
+    // Anyone (except users and guests) can perform getVisible operations on institutions
+    const toGetVisible = user.role !== UserRole.USER && user.role !== UserRole.GUEST;
+
+    return { toUpdate, toDelete, toGet, toGetAll, toGetVisible };
+};
+
 const checkAuthorization = async (user: User, institutionId: number | undefined, action: string) => {
     if (user.role === UserRole.ADMIN) return;
 
     switch (action) {
         case 'create':
         case 'getAll':
-            // Only ADMINs can perform create/getAll operations on institutions
+            // No one can perform create/getAll operations on institutions
             throw new Error('This user is not authorized to perform this action');
             break;
         case 'update':
-        case 'delete':
-            // Only ADMINs and COORDINATORs of an institution can perform update/delete operations on it
-            if (user.role !== UserRole.COORDINATOR || user.institutionId !== institutionId)
+        case 'delete': {
+            // Only the coordinator can perform update/delete operations on an institution
+            const roles = await getInstitutionUserRoles(user, undefined, institutionId);
+            if (!roles.coordinator) throw new Error('This user is not authorized to perform this action');
+        }
+        case 'get': {
+            // Only members (except users and guests) can perform get operations on institutions
+            const roles = await getInstitutionUserRoles(user, undefined, institutionId);
+            if (!roles.member || user.role === UserRole.USER || user.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
-            break;
-        case 'get':
-            // Only ADMINs and members (except USERs) of an institution can perform get/getVisible operations on it (the result will be filtered based on user)
-            if (user.role === UserRole.USER || user.role === UserRole.GUEST || user.institutionId !== institutionId)
-                throw new Error('This user is not authorized to perform this action');
-            break;
+        }
         case 'getVisible':
-            // Only USERs can't perform getVisible operations on institutions
+            // Anyone (except users and guests) can perform getVisible operations on institutions
             if (user.role === UserRole.USER || user.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
             break;

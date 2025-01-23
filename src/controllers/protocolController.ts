@@ -9,69 +9,113 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import { ItemType, ItemGroupType, PageType, ItemValidationType, User, UserRole, VisibilityMode, DependencyType } from '@prisma/client';
+import {
+    ItemType,
+    ItemGroupType,
+    PageType,
+    ItemValidationType,
+    User,
+    UserRole,
+    VisibilityMode,
+    DependencyType,
+    Protocol,
+} from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
 
+const getProtocolUserRoles = async (user: User, protocol: any, protocolId: number | undefined) => {
+    protocol =
+        protocol ||
+        (await prismaClient.protocol.findUniqueOrThrow({
+            where: { id: protocolId },
+            include: {
+                managers: { select: { id: true } },
+                appliers: { select: { id: true } },
+                viewersUser: { select: { id: true } },
+                viewersClassroom: { select: { users: { select: { id: true } } } },
+                answersViewersUser: { select: { id: true } },
+                answersViewersClassroom: { select: { users: { select: { id: true } } } },
+            },
+        }));
+
+    const creator = protocol?.creatorId === user.id;
+    const manager = !!protocol?.managers?.some((manager: any) => manager.id === user.id);
+    const applier = !!protocol?.appliers?.some((applier: any) => applier.id === user.id);
+    const viewer = !!(
+        protocol?.visibility === VisibilityMode.PUBLIC ||
+        (protocol?.visibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
+        protocol?.viewersUser?.some((viewer: any) => viewer.id === user.id) ||
+        protocol?.viewersClassroom?.some((classroom: any) => classroom.users.some((viewer: any) => viewer.id === user.id))
+    );
+    const answersViewer = !!(
+        protocol?.answersVisibility === VisibilityMode.PUBLIC ||
+        (protocol?.answersVisibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
+        protocol?.answersViewersUser?.some((viewer: any) => viewer.id === user.id) ||
+        protocol?.answersViewersClassroom?.some((classroom: any) => classroom.users.some((viewer: any) => viewer.id === user.id))
+    );
+
+    return { creator, manager, applier, viewer, answersViewer };
+};
+
+const getProtocolUserActions = async (user: User, protocol: any, protocolId: number | undefined) => {
+    const roles = await getProtocolUserRoles(user, protocol, protocolId);
+    // Only managers/creator can perform update/delete operations on protocols
+    const toUpdate = roles.manager || roles.creator || user.role === UserRole.ADMIN;
+    const toDelete = roles.manager || roles.creator || user.role === UserRole.ADMIN;
+    // Only viewers/creator/managers/appliers can perform get operations on protocols
+    const toGet = roles.viewer || roles.creator || roles.manager || roles.applier || user.role === UserRole.ADMIN;
+    // No one can perform getAll operations on protocols
+    const toGetAll = user.role === UserRole.ADMIN;
+    // Anyone can perform getVisible and getMy operations on protocols (since the content is filtered according to the user)
+    const toGetVisible = true;
+    const toGetMy = true;
+    // Only answers viewers/creator/managers can perform getWAnswers operations on protocols
+    const toGetWAnswers = roles.answersViewer || roles.creator || roles.manager || user.role === UserRole.ADMIN;
+
+    return { toUpdate, toDelete, toGet, toGetAll, toGetVisible, toGetMy, toGetWAnswers };
+};
+
 const checkAuthorization = async (user: User, protocolId: number | undefined, action: string) => {
+    // Admins can perform any action
     if (user.role === UserRole.ADMIN) return;
 
     switch (action) {
         case 'create':
-            // Only publishers, coordinators and admins can perform create operations on protocols
+            // Anyone except users, appliers and guests can create protocols
             if (user.role === UserRole.USER || user.role === UserRole.APPLIER || user.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action.');
             break;
         case 'update':
-        case 'delete':
-            // Only admins, the creator or the managers of the protocol can perform update/delete operations on it
-            const deleteProtocol = await prismaClient.protocol.findUnique({
-                where: { id: protocolId, OR: [{ managers: { some: { id: user.id } } }, { creatorId: user.id }] },
-            });
-            if (!deleteProtocol) throw new Error('This user is not authorized to perform this action.');
+        case 'delete': {
+            // Only managers/creator can perform update/delete operations on protocols
+            const roles = await getProtocolUserRoles(user, undefined, protocolId);
+            if (!roles.manager && !roles.creator) throw new Error('This user is not authorized to perform this action.');
             break;
+        }
         case 'getAll':
-            // Only admins can perform getAll operations on protocols
+            // No one can perform getAll operations on protocols
             throw new Error('This user is not authorized to perform this action.');
             break;
         case 'getVisible':
-            // All users can perform getVisible operations on protocols (the result will be filtered based on the user)
+        case 'getMy':
+            // Anyone can perform getVisible and getMy operations on protocols (since the content is filtered according to the user)
             break;
-        case 'get':
-            // Only admins, the creator, the managers, the appliers or the viewers of the protocol can perform get operations on it
-            const getProtocol = await prismaClient.protocol.findUnique({
-                where: {
-                    id: protocolId,
-                    OR: [
-                        { managers: { some: { id: user.id } } },
-                        { appliers: { some: { id: user.id } } },
-                        { viewersUser: { some: { id: user.id } } },
-                        { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
-                        { creatorId: user.id },
-                        { visibility: VisibilityMode.PUBLIC },
-                    ],
-                },
-            });
-            if (!getProtocol) throw new Error('This user is not authorized to perform this action.');
+        case 'get': {
+            // Only viewers/creator/managers/appliers can perform get operations on protocols
+            const roles = await getProtocolUserRoles(user, undefined, protocolId);
+            if (!roles.viewer && !roles.creator && !roles.applier && !roles.manager)
+                throw new Error('This user is not authorized to perform this action.');
             break;
-        case 'getWAnswers':
-            // Only admins, the creator, the managers, the appliers or the viewers of the protocol can perform get operations on it
-            const getProtocolWAnswers = await prismaClient.protocol.findUnique({
-                where: {
-                    id: protocolId,
-                    OR: [
-                        { managers: { some: { id: user.id } } },
-                        { answersViewersUser: { some: { id: user.id } } },
-                        { answersViewersClassroom: { some: { users: { some: { id: user.id } } } } },
-                        { creatorId: user.id },
-                        { answersVisibility: VisibilityMode.PUBLIC },
-                    ],
-                },
-            });
-            if (!getProtocolWAnswers) throw new Error('This user is not authorized to perform this action.');
+        }
+        case 'getWAnswers': {
+            // Only answers viewers/creator/managers can perform getWAnswers operations on protocols
+            const roles = await getProtocolUserRoles(user, undefined, protocolId);
+            if (!roles.answersViewer && !roles.creator && !roles.manager)
+                throw new Error('This user is not authorized to perform this action.');
             break;
+        }
     }
 };
 

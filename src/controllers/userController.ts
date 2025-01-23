@@ -28,12 +28,12 @@ const checkAuthorization = async (
 
     switch (action) {
         case 'create':
-            // Only USERs, GUESTs and APPLIERs can't perform create operations on users, other roles need to respect the hierarchy
+            // Anyone (except users and guests) can perform create operations on users, respecting the hierarchy
             if (
                 role === UserRole.ADMIN ||
                 (curUser.role === UserRole.COORDINATOR && role === UserRole.COORDINATOR) ||
                 (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER) ||
-                curUser.role === UserRole.APPLIER ||
+                (curUser.role === UserRole.APPLIER && role !== UserRole.USER) ||
                 curUser.role === UserRole.USER ||
                 curUser.role === UserRole.GUEST ||
                 (institutionId && curUser.institutionId !== institutionId) ||
@@ -44,17 +44,16 @@ const checkAuthorization = async (
             break;
         case 'update':
             if (
-                // Only admins or the user itself can perform update operations on it, respecting the hierarchy
+                // Only the user itself can perform update operations on it, respecting the hierarchy
                 Number(curUser.id) !== userId ||
-                role === UserRole.ADMIN ||
+                (curUser.role === UserRole.COORDINATOR && role === UserRole.ADMIN) ||
                 (curUser.role === UserRole.PUBLISHER &&
+                    role !== UserRole.PUBLISHER &&
                     role !== UserRole.USER &&
-                    role !== UserRole.APPLIER &&
-                    role !== UserRole.PUBLISHER) ||
+                    role !== UserRole.APPLIER) ||
                 (curUser.role === UserRole.APPLIER && role !== UserRole.USER && role !== UserRole.APPLIER) ||
                 (curUser.role === UserRole.USER && role !== UserRole.USER) ||
-                curUser.role === UserRole.GUEST ||
-                role === UserRole.GUEST
+                curUser.role === UserRole.GUEST
             ) {
                 throw new Error('This user is not authorized to perform this action');
             }
@@ -64,22 +63,26 @@ const checkAuthorization = async (
             throw new Error('This user is not authorized to perform this action');
             break;
         case 'get':
-            // Only admins, members (except USERs and GUESTs) of its institution or the user itself can perform get operations on it
-            const user: User | null = await prismaClient.user.findUnique({ where: { id: userId, institutionId: curUser.institutionId } });
+            // Only the user itself (except guests) and institution members (except users and guests) can perform get operations on it
+            const user: User | null = await prismaClient.user.findUnique({ where: { id: userId } });
             if (
                 !user ||
-                !user.institutionId ||
-                (curUser.role === UserRole.USER && curUser.id !== userId) ||
+                (user.institutionId &&
+                    curUser.institutionId !== user.institutionId &&
+                    curUser.role !== UserRole.USER &&
+                    curUser.role !== UserRole.GUEST) ||
+                (!user.institutionId && userId !== curUser.id) ||
                 curUser.role === UserRole.GUEST
             )
                 throw new Error('This user is not authorized to perform this action');
             break;
         case 'search':
+            // Anyone (except users and guests) can perform search operations on users
             if (curUser.role === UserRole.USER || curUser.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
             break;
         case 'delete':
-            // Only ADMINs or the user itself can perform update/delete operations on it
+            // Only the user itself can perform delete operations on it
             if (curUser.id !== userId) throw new Error('This user is not authorized to perform this action');
             break;
     }
