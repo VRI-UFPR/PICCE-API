@@ -82,7 +82,7 @@ const getProtocolUserRoles = async (user: User, protocol: any, protocolId: numbe
     return { creator, manager, applier, viewer, answersViewer };
 };
 
-const getApplicationUserActions = async (user: User, application: Application, applicationId: number | undefined) => {
+const getApplicationUserActions = async (user: User, application: any, applicationId: number | undefined) => {
     const roles = await getApplicationUserRoles(user, application, applicationId);
 
     // Only protocol managers/applier/protocol creator can perform update operations on applications
@@ -179,13 +179,34 @@ const validateVisibility = async (
     }
 };
 
+const dropSensitiveFields = (application: any) => {
+    const filteredApplication = { ...application };
+    delete filteredApplication.viewersUser;
+    delete filteredApplication.viewersClassroom;
+    delete filteredApplication.answersViewersUser;
+    delete filteredApplication.answersViewersClassroom;
+    delete filteredApplication.protocol.managers;
+    delete filteredApplication.protocol.creatorId;
+    return filteredApplication;
+};
+
+const dropUnapprovedAnswers = (application: any) => {
+    const filteredApplication = { ...application };
+    filteredApplication.answers = filteredApplication.answers.filter((answer: any) => answer.approved);
+    return filteredApplication;
+};
+
 const fields = {
     id: true,
-    protocol: { select: { id: true, title: true, description: true } },
     visibility: true,
     answersVisibility: true,
     keepLocation: true,
     applier: { select: { id: true, username: true, institutionId: true } },
+    viewersClassroom: { select: { users: { select: { id: true } } } },
+    viewersUser: { select: { id: true } },
+    answersViewersClassroom: { select: { users: { select: { id: true } } } },
+    answersViewersUser: { select: { id: true } },
+    protocol: { select: { id: true, title: true, description: true, creatorId: true, managers: { select: { id: true } } } },
     createdAt: true,
     updatedAt: true,
 };
@@ -316,7 +337,15 @@ export const createApplication = async (req: Request, res: Response) => {
             select: fieldsWViewers,
         });
 
-        res.status(201).json({ message: 'Application created.', data: createdApplication });
+        // Embed user actions in the response
+        const processedApplication = {
+            ...createdApplication,
+            actions: await getApplicationUserActions(user, createdApplication, undefined),
+        };
+        // Filter sensitive fields
+        const filteredApplication = dropSensitiveFields(createdApplication);
+
+        res.status(201).json({ message: 'Application created.', data: filteredApplication });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -370,7 +399,15 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
             select: fieldsWViewers,
         });
 
-        res.status(200).json({ message: 'Application updated.', data: updatedApplication });
+        // Embed user actions in the response
+        const processedApplication = {
+            ...updatedApplication,
+            actions: await getApplicationUserActions(user, updatedApplication, undefined),
+        };
+        // Filter sensitive fields
+        const filteredApplication = dropSensitiveFields(updatedApplication);
+
+        res.status(200).json({ message: 'Application updated.', data: filteredApplication });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -388,7 +425,17 @@ export const getMyApplications = async (req: Request, res: Response): Promise<vo
             select: fieldsWViewers,
         });
 
-        res.status(200).json({ message: 'All your applications found.', data: applications });
+        // Embed user actions in the response
+        const processedApplications = await Promise.all(
+            applications.map(async (application) => ({
+                ...application,
+                actions: await getApplicationUserActions(user, application, application.id),
+            }))
+        );
+        // Filter sensitive fields
+        const filteredApplications = processedApplications.map((application) => dropSensitiveFields(application));
+
+        res.status(200).json({ message: 'All your applications found.', data: filteredApplications });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -416,7 +463,17 @@ export const getVisibleApplications = async (req: Request, res: Response): Promi
                       select: fields,
                   });
 
-        res.status(200).json({ message: 'All visible applications found.', data: applications });
+        // Embed user actions in the response
+        const processedApplications = await Promise.all(
+            applications.map(async (application) => ({
+                ...application,
+                actions: await getApplicationUserActions(user, application, application.id),
+            }))
+        );
+        // Filter sensitive fields
+        const filteredApplications = processedApplications.map((application) => dropSensitiveFields(application));
+
+        res.status(200).json({ message: 'All visible applications found.', data: filteredApplications });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -433,7 +490,17 @@ export const getAllApplications = async (req: Request, res: Response): Promise<v
             select: fieldsWViewers,
         });
 
-        res.status(200).json({ message: 'All applications found.', data: applications });
+        // Embed user actions in the response
+        const processedApplications = await Promise.all(
+            applications.map(async (application) => ({
+                ...application,
+                actions: await getApplicationUserActions(user, application, application.id),
+            }))
+        );
+        // Filter sensitive fields
+        const filteredApplications = processedApplications.map((application) => dropSensitiveFields(application));
+
+        res.status(200).json({ message: 'All applications found.', data: filteredApplications });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -460,19 +527,15 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
             },
             select: fieldsWViewers,
         });
-        // Filter the application based on the user's role
-        const visibleApplication =
-            user.role === UserRole.ADMIN || application.applier.id === user.id
-                ? application
-                : {
-                      ...application,
-                      viewersUser: undefined,
-                      viewersClassroom: undefined,
-                      answersViewersUser: undefined,
-                      answersViewersClassroom: undefined,
-                  };
+        // Embed user actions in the response
+        const processedApplication = {
+            ...application,
+            actions: await getApplicationUserActions(user, application, applicationId),
+        };
+        // Filter sensitive fields
+        const filteredApplication = processedApplication.actions.toUpdate ? application : dropSensitiveFields(application);
 
-        res.status(200).json({ message: 'Application found.', data: visibleApplication });
+        res.status(200).json({ message: 'Application found.', data: filteredApplication });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -491,8 +554,15 @@ export const getApplicationWithProtocol = async (req: Request, res: Response): P
             where: { id: applicationId },
             select: fieldsWProtocol,
         });
+        // Embed user actions in the response
+        const processedApplication = {
+            ...application,
+            actions: await getApplicationUserActions(user, application, applicationId),
+        };
+        // Filter sensitive fields
+        const filteredApplication = processedApplication;
 
-        res.status(200).json({ message: 'Application with protocol found.', data: application });
+        res.status(200).json({ message: 'Application with protocol found.', data: filteredApplication });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }

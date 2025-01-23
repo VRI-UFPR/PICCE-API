@@ -154,8 +154,10 @@ export const createClassroom = async (req: Request, res: Response) => {
                 creator: { connect: { id: user.id } },
             },
         });
+        // Embed user actions in the response
+        const processedClassroom = { ...createdClassroom, actions: await getClassroomUserActions(user, createdClassroom, undefined) };
 
-        res.status(201).json({ message: 'Classroom created.', data: createdClassroom });
+        res.status(201).json({ message: 'Classroom created.', data: processedClassroom });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -193,7 +195,10 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
             select: fields,
         });
 
-        res.status(200).json({ message: 'Classroom updated.', data: updatedClassroom });
+        // Embed user actions in the response
+        const processedClassroom = { ...updatedClassroom, actions: await getClassroomUserActions(user, updatedClassroom, undefined) };
+
+        res.status(200).json({ message: 'Classroom updated.', data: processedClassroom });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -207,8 +212,14 @@ export const getAllClassrooms = async (req: Request, res: Response): Promise<voi
         await checkAuthorization(user, undefined, undefined, 'getAll');
         // Prisma operation
         const classrooms = await prismaClient.classroom.findMany({ select: fields });
+        // Embed user actions in the response
+        const processedClassrooms = await Promise.all(
+            classrooms.map(async (classroom) => {
+                return { ...classroom, actions: await getClassroomUserActions(user, classroom, undefined) };
+            })
+        );
 
-        res.status(200).json({ message: 'All classrooms found.', data: classrooms });
+        res.status(200).json({ message: 'All classrooms found.', data: processedClassrooms });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -224,8 +235,10 @@ export const getClassroom = async (req: Request, res: Response): Promise<void> =
         await checkAuthorization(user, classroomId, undefined, 'get');
         // Prisma operation
         const classroom = await prismaClient.classroom.findUniqueOrThrow({ where: { id: classroomId }, select: fields });
+        // Embed user actions in the response
+        const processedClassroom = { ...classroom, actions: await getClassroomUserActions(user, classroom, classroomId) };
 
-        res.status(200).json({ message: 'Classroom found.', data: classroom });
+        res.status(200).json({ message: 'Classroom found.', data: processedClassroom });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -242,8 +255,14 @@ export const getMyClassrooms = async (req: Request, res: Response): Promise<void
             where: { users: { some: { id: user.id } } },
             select: fields,
         });
+        // Embed user actions in the response
+        const processedClassrooms = await Promise.all(
+            classrooms.map(async (classroom) => {
+                return { ...classroom, actions: await getClassroomUserActions(user, classroom, undefined) };
+            })
+        );
 
-        res.status(200).json({ message: 'My classrooms found.', data: classrooms });
+        res.status(200).json({ message: 'My classrooms found.', data: processedClassrooms });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -267,8 +286,14 @@ export const searchClassroomByName = async (req: Request, res: Response): Promis
             where: { name: { startsWith: term } },
             select: publicFields,
         });
+        // Embed user actions in the response
+        const processedClassrooms = await Promise.all(
+            classrooms.map(async (classroom) => {
+                return { ...classroom, actions: await getClassroomUserActions(curUser, classroom, undefined) };
+            })
+        );
 
-        res.status(200).json({ message: 'Searched classrooms found.', data: classrooms });
+        res.status(200).json({ message: 'Searched classrooms found.', data: processedClassrooms });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }

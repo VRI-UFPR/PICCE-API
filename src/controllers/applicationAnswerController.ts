@@ -258,6 +258,14 @@ const validateAnswers = async (itemAnswerGroups: any, applicationId: number) => 
         }
     }
 };
+
+const dropSensitiveFields = (applicationAnswer: any) => {
+    const filteredApplicationAnswer = { ...applicationAnswer };
+    delete filteredApplicationAnswer.userId;
+    delete filteredApplicationAnswer.application;
+    return filteredApplicationAnswer;
+};
+
 const fields = {
     id: true,
     date: true,
@@ -266,8 +274,8 @@ const fields = {
     createdAt: true,
     updatedAt: true,
     approved: true,
-    coordinateId: true,
     coordinate: { select: { latitude: true, longitude: true } },
+    application: { select: { applierId: true, protocol: { select: { creatorId: true, managers: { select: { id: true } } } } } },
     itemAnswerGroups: {
         select: {
             id: true,
@@ -422,8 +430,15 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 select: fields,
             });
         });
+        // Embed user actions in the response
+        const processedApplicationAnswer = {
+            ...createdApplicationAnswer,
+            actions: await getApplicationAnswerActions(user, createdApplicationAnswer, undefined),
+        };
+        // Filter sensitive fields from the response
+        const filteredApplicationAnswer = dropSensitiveFields(processedApplicationAnswer);
 
-        res.status(201).json({ message: 'Application answer created.', data: createdApplicationAnswer });
+        res.status(201).json({ message: 'Application answer created.', data: filteredApplicationAnswer });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
@@ -640,7 +655,15 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
             return await prisma.applicationAnswer.findUnique({ where: { id: applicationAnswerId }, select: fields });
         });
 
-        res.status(200).json({ message: 'Application answer updated.', data: upsertedApplicationAnswer });
+        // Embed user actions in the response
+        const processedApplicationAnswer = {
+            ...upsertedApplicationAnswer,
+            actions: await getApplicationAnswerActions(user, upsertedApplicationAnswer, undefined),
+        };
+        // Filter sensitive fields from the response
+        const filteredApplicationAnswer = dropSensitiveFields(processedApplicationAnswer);
+
+        res.status(200).json({ message: 'Application answer updated.', data: filteredApplicationAnswer });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
@@ -655,9 +678,20 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
         // Check if user is allowed to get all application answers
         await checkAuthorization(user, undefined, undefined, 'getAll');
         // Prisma operation
-        const applicationAnswers: ApplicationAnswer[] = await prismaClient.applicationAnswer.findMany({ select: fields });
+        const applicationAnswers = await prismaClient.applicationAnswer.findMany({ select: fields });
+        // Embed user actions in the response
+        const processedApplicationAnswers = await Promise.all(
+            applicationAnswers.map(async (applicationAnswer) => {
+                return {
+                    ...applicationAnswer,
+                    actions: await getApplicationAnswerActions(user, applicationAnswer, undefined),
+                };
+            })
+        );
+        // Filter sensitive fields from the response
+        const filteredApplicationAnswers = processedApplicationAnswers.map(dropSensitiveFields);
 
-        res.status(200).json({ message: 'All application answers found.', data: applicationAnswers });
+        res.status(200).json({ message: 'All application answers found.', data: filteredApplicationAnswers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -670,12 +704,23 @@ export const getMyApplicationAnswers = async (req: Request, res: Response): Prom
         // Check if user is allowed to get their application answers
         await checkAuthorization(user, undefined, undefined, 'getMy');
         // Prisma operation
-        const applicationAnswers: ApplicationAnswer[] = await prismaClient.applicationAnswer.findMany({
+        const applicationAnswers = await prismaClient.applicationAnswer.findMany({
             where: { userId: user.id },
             select: fields,
         });
+        // Embed user actions in the response
+        const processedApplicationAnswers = await Promise.all(
+            applicationAnswers.map(async (applicationAnswer) => {
+                return {
+                    ...applicationAnswer,
+                    actions: await getApplicationAnswerActions(user, applicationAnswer, undefined),
+                };
+            })
+        );
+        // Filter sensitive fields from the response
+        const filteredApplicationAnswers = processedApplicationAnswers.map(dropSensitiveFields);
 
-        res.status(200).json({ message: 'My application answers found.', data: applicationAnswers });
+        res.status(200).json({ message: 'My application answers found.', data: filteredApplicationAnswers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -690,12 +735,19 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
         // Check if user is allowed to view this application answer
         await checkAuthorization(user, applicationAnswerId, undefined, 'get');
         // Prisma operation
-        const applicationAnswer: ApplicationAnswer = await prismaClient.applicationAnswer.findUniqueOrThrow({
+        const applicationAnswer = await prismaClient.applicationAnswer.findUniqueOrThrow({
             where: { id: applicationAnswerId },
             select: fields,
         });
+        // Embed user actions in the response
+        const processedApplicationAnswer = {
+            ...applicationAnswer,
+            actions: await getApplicationAnswerActions(user, applicationAnswer, undefined),
+        };
+        // Filter sensitive fields from the response
+        const filteredApplicationAnswer = dropSensitiveFields(processedApplicationAnswer);
 
-        res.status(200).json({ message: 'Application answer found.', data: applicationAnswer });
+        res.status(200).json({ message: 'Application answer found.', data: filteredApplicationAnswer });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -715,8 +767,15 @@ export const approveApplicationAnswer = async (req: Request, res: Response): Pro
             data: { approved: true },
             select: fields,
         });
+        // Embed user actions in the response
+        const processedApplicationAnswer = {
+            ...approvedApplicationAnswer,
+            actions: await getApplicationAnswerActions(user, approvedApplicationAnswer, undefined),
+        };
+        // Filter sensitive fields from the response
+        const filteredApplicationAnswer = dropSensitiveFields(processedApplicationAnswer);
 
-        res.status(200).json({ message: 'Application answer approved.', data: approvedApplicationAnswer });
+        res.status(200).json({ message: 'Application answer approved.', data: filteredApplicationAnswer });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }

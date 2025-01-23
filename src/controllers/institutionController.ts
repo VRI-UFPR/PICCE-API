@@ -26,6 +26,13 @@ const fields = {
     updatedAt: true,
 };
 
+const dropSensitiveFields = (institution: any) => {
+    const filteredInstitution = { ...institution };
+    for (const user of filteredInstitution.users) delete user.role;
+    for (const classroom of filteredInstitution.classrooms) for (const user of classroom.users) delete user.role;
+    return filteredInstitution;
+};
+
 const getInstitutionUserRoles = async (user: User, institution: any, institutionId: number | undefined) => {
     institution =
         institution ||
@@ -109,8 +116,15 @@ export const createInstitution = async (req: Request, res: Response) => {
             data: { id: institution.id, name: institution.name, type: institution.type, addressId: institution.addressId },
             select: fields,
         });
+        // Embed user actions in the response
+        const processedInstitution = {
+            ...createdInstitution,
+            actions: await getInstitutionUserActions(user, createdInstitution, undefined),
+        };
+        // Filter roles from the response
+        const filteredInstitution = dropSensitiveFields(processedInstitution);
 
-        res.status(201).json({ message: 'Institution created.', data: createdInstitution });
+        res.status(201).json({ message: 'Institution created.', data: filteredInstitution });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -141,8 +155,15 @@ export const updateInstitution = async (req: Request, res: Response): Promise<vo
             data: { name: institution.name, type: institution.type, addressId: institution.addressId },
             select: fields,
         });
+        // Embed user actions in the response
+        const processedInstitution = {
+            ...updatedInstitution,
+            actions: await getInstitutionUserActions(user, updatedInstitution, institutionId),
+        };
+        // Filter roles from the response
+        const filteredInstitution = dropSensitiveFields(processedInstitution);
 
-        res.status(200).json({ message: 'Institution updated.', data: updatedInstitution });
+        res.status(200).json({ message: 'Institution updated.', data: filteredInstitution });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -156,8 +177,19 @@ export const getAllInstitutions = async (req: Request, res: Response): Promise<v
         await checkAuthorization(user, undefined, 'getAll');
         // Prisma operation
         const institutions = await prismaClient.institution.findMany({ select: fields });
+        // Embed user actions in the response
+        const processedInstitutions = await Promise.all(
+            institutions.map(async (institution) => {
+                return {
+                    ...institution,
+                    actions: await getInstitutionUserActions(user, institution, institution.id),
+                };
+            })
+        );
+        // Filter roles from the response
+        const filteredInstitutions = processedInstitutions.map((institution) => dropSensitiveFields(institution));
 
-        res.status(200).json({ message: 'All institutions found.', data: institutions });
+        res.status(200).json({ message: 'All institutions found.', data: filteredInstitutions });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -172,10 +204,23 @@ export const getVisibleInstitutions = async (req: Request, res: Response): Promi
         // Prisma operation
         const institutions =
             user.role === UserRole.ADMIN
-                ? await prismaClient.institution.findMany({ select: fields })
-                : await prismaClient.institution.findMany({ where: { users: { some: { id: user.id } } }, select: fields });
+                ? // Admins can see all institutions
+                  await prismaClient.institution.findMany({ select: fields })
+                : // Other users can see only their institutions
+                  await prismaClient.institution.findMany({ where: { users: { some: { id: user.id } } }, select: fields });
+        // Embed user actions in the response
+        const processedInstitutions = await Promise.all(
+            institutions.map(async (institution) => {
+                return {
+                    ...institution,
+                    actions: await getInstitutionUserActions(user, institution, institution.id),
+                };
+            })
+        );
+        // Filter roles from the response
+        const filteredInstitutions = processedInstitutions.map((institution) => dropSensitiveFields(institution));
 
-        res.status(200).json({ message: 'My institutions found.', data: institutions });
+        res.status(200).json({ message: 'Visible institutions found.', data: filteredInstitutions });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -191,8 +236,15 @@ export const getInstitution = async (req: Request, res: Response): Promise<void>
         await checkAuthorization(user, institutionId, 'get');
         // Prisma operation
         const institution = await prismaClient.institution.findUniqueOrThrow({ where: { id: institutionId }, select: fields });
+        // Embed user actions in the response
+        const processedInstitution = {
+            ...institution,
+            actions: await getInstitutionUserActions(user, institution, institutionId),
+        };
+        // Filter roles from the response
+        const filteredInstitution = dropSensitiveFields(processedInstitution);
 
-        res.status(200).json({ message: 'Institution found.', data: institution });
+        res.status(200).json({ message: 'Institution found.', data: filteredInstitution });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }

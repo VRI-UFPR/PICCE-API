@@ -327,6 +327,17 @@ const validatePlacements = async (placements: number[]) => {
     }
 };
 
+const dropSensitiveFields = (protocol: any) => {
+    const filteredProtocol = { ...protocol };
+    delete filteredProtocol.managers;
+    delete filteredProtocol.appliers;
+    delete filteredProtocol.viewersUser;
+    delete filteredProtocol.viewersClassroom;
+    delete filteredProtocol.answersViewersUser;
+    delete filteredProtocol.answersViewersClassroom;
+    return filteredProtocol;
+};
+
 const fields = {
     id: true,
     title: true,
@@ -339,6 +350,12 @@ const fields = {
     applicability: true,
     visibility: true,
     answersVisibility: true,
+    managers: { select: { id: true } },
+    appliers: { select: { id: true } },
+    viewersUser: { select: { id: true } },
+    viewersClassroom: { select: { users: { select: { id: true } } } },
+    answersViewersUser: { select: { id: true } },
+    answersViewersClassroom: { select: { users: { select: { id: true } } } },
     pages: {
         orderBy: { placement: 'asc' as any },
         select: {
@@ -750,7 +767,11 @@ export const createProtocol = async (req: Request, res: Response) => {
             // Return the created application answer with nested content included
             return await prisma.protocol.findUnique({ where: { id: createdProtocol.id }, select: fieldsWViewers });
         });
-        res.status(201).json({ message: 'Protocol created.', data: createdProtocol });
+        // Embed user actions in the response
+        const processedProtocol = { ...createdProtocol, actions: getProtocolUserActions(user, createdProtocol, undefined) };
+        // Filter sensitive fields
+        const filteredProtocol = dropSensitiveFields(processedProtocol);
+        res.status(201).json({ message: 'Protocol created.', data: filteredProtocol });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
@@ -1212,7 +1233,12 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             return await prisma.protocol.findUnique({ where: { id: id }, select: fieldsWViewers });
         });
 
-        res.status(200).json({ message: 'Protocol updated.', data: upsertedProtocol });
+        // Embed user actions in the response
+        const processedProtocol = { ...upsertedProtocol, actions: getProtocolUserActions(user, upsertedProtocol, undefined) };
+        // Filter sensitive fields
+        const filteredProtocol = dropSensitiveFields(processedProtocol);
+
+        res.status(200).json({ message: 'Protocol updated.', data: filteredProtocol });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
@@ -1228,8 +1254,10 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
         await checkAuthorization(user, undefined, 'getAll');
         // Prisma operation
         const protocol = await prismaClient.protocol.findMany({ select: fieldsWViewers });
+        // Filter sensitive fields
+        const filteredProtocol = protocol.map((protocol) => dropSensitiveFields(protocol));
 
-        res.status(200).json({ message: 'All protocols found.', data: protocol });
+        res.status(200).json({ message: 'All protocols found.', data: filteredProtocol });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -1260,7 +1288,17 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
                       select: fields,
                   });
 
-        res.status(200).json({ message: 'Visible protocols found.', data: protocols });
+        // Embed user actions in the response
+        const processedProtocols = await Promise.all(
+            protocols.map(async (protocol) => ({
+                ...protocol,
+                actions: getProtocolUserActions(user, protocol, undefined),
+            }))
+        );
+        // Filter sensitive fields
+        const filteredProtocols = processedProtocols.map((protocol) => dropSensitiveFields(protocol));
+
+        res.status(200).json({ message: 'Visible protocols found.', data: filteredProtocols });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -1275,8 +1313,17 @@ export const getMyProtocols = async (req: Request, res: Response): Promise<void>
             where: { OR: [{ managers: { some: { id: user.id } }, creatorId: user.id }] },
             select: fieldsWViewers,
         });
+        // Embed user actions in the response
+        const processedProtocols = await Promise.all(
+            protocols.map(async (protocol) => ({
+                ...protocol,
+                actions: getProtocolUserActions(user, protocol, undefined),
+            }))
+        );
+        // Filter sensitive fields
+        const filteredProtocols = processedProtocols.map((protocol) => dropSensitiveFields(protocol));
 
-        res.status(200).json({ message: 'My protocols found.', data: protocols });
+        res.status(200).json({ message: 'My protocols found.', data: filteredProtocols });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
