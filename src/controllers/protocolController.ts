@@ -76,7 +76,7 @@ const getProtocolUserActions = async (user: User, protocol: any, protocolId: num
     // Only appliers/managers/creator can apply to protocols
     const toApply = roles.applier || roles.manager || roles.creator || user.role === UserRole.ADMIN;
 
-    return { toUpdate, toDelete, toGet, toGetAll, toGetVisible, toGetMy, toGetWAnswers };
+    return { toUpdate, toDelete, toGet, toGetAll, toGetVisible, toGetMy, toGetWAnswers, toApply };
 };
 
 const checkAuthorization = async (user: User, protocolId: number | undefined, action: string) => {
@@ -770,7 +770,7 @@ export const createProtocol = async (req: Request, res: Response) => {
             return await prisma.protocol.findUnique({ where: { id: createdProtocol.id }, select: fieldsWViewers });
         });
         // Embed user actions in the response
-        const processedProtocol = { ...createdProtocol, actions: getProtocolUserActions(user, createdProtocol, undefined) };
+        const processedProtocol = { ...createdProtocol, actions: await getProtocolUserActions(user, createdProtocol, undefined) };
         // Filter sensitive fields
         const filteredProtocol = dropSensitiveFields(processedProtocol);
         res.status(201).json({ message: 'Protocol created.', data: filteredProtocol });
@@ -1236,7 +1236,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
         });
 
         // Embed user actions in the response
-        const processedProtocol = { ...upsertedProtocol, actions: getProtocolUserActions(user, upsertedProtocol, undefined) };
+        const processedProtocol = { ...upsertedProtocol, actions: await getProtocolUserActions(user, upsertedProtocol, undefined) };
         // Filter sensitive fields
         const filteredProtocol = dropSensitiveFields(processedProtocol);
 
@@ -1294,7 +1294,7 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
         const processedProtocols = await Promise.all(
             protocols.map(async (protocol) => ({
                 ...protocol,
-                actions: getProtocolUserActions(user, protocol, undefined),
+                actions: await getProtocolUserActions(user, protocol, undefined),
             }))
         );
         // Filter sensitive fields
@@ -1319,7 +1319,7 @@ export const getMyProtocols = async (req: Request, res: Response): Promise<void>
         const processedProtocols = await Promise.all(
             protocols.map(async (protocol) => ({
                 ...protocol,
-                actions: getProtocolUserActions(user, protocol, undefined),
+                actions: await getProtocolUserActions(user, protocol, undefined),
             }))
         );
         // Filter sensitive fields
