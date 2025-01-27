@@ -40,7 +40,7 @@ const getProtocolUserRoles = async (user: User, protocol: any, protocolId: numbe
             },
         }));
 
-    const creator = protocol?.creatorId === user.id;
+    const creator = protocol?.creator?.id === user.id;
     const manager = !!protocol?.managers?.some((manager: any) => manager.id === user.id);
     const applier = !!protocol?.appliers?.some((applier: any) => applier.id === user.id);
     const viewer = !!(
@@ -76,7 +76,16 @@ const getProtocolUserActions = async (user: User, protocol: any, protocolId: num
     // Only appliers/managers/creator can apply to protocols
     const toApply = roles.applier || roles.manager || roles.creator || user.role === UserRole.ADMIN;
 
-    return { toUpdate, toDelete, toGet, toGetAll, toGetVisible, toGetMy, toGetWAnswers, toApply };
+    return {
+        toUpdate,
+        toDelete,
+        toGet,
+        toGetAll,
+        toGetVisible,
+        toGetMy,
+        toGetWAnswers,
+        toApply,
+    };
 };
 
 const checkAuthorization = async (user: User, protocolId: number | undefined, action: string) => {
@@ -1355,16 +1364,18 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
             select: fieldsWViewers,
         });
 
-        const visibleProtocol =
+        const processedProtocol = { ...protocol, actions: await getProtocolUserActions(user, protocol, undefined) };
+
+        const filteredProtocol =
             user.role !== UserRole.USER &&
             (user.role === UserRole.ADMIN ||
-                protocol.creator.id === user.id ||
-                protocol.managers.some((manager) => manager.id === user.id) ||
-                protocol.appliers.some((applier) => applier.id === user.id) ||
-                protocol.applicability === VisibilityMode.PUBLIC)
-                ? protocol
+                processedProtocol.creator.id === user.id ||
+                processedProtocol.managers.some((manager) => manager.id === user.id) ||
+                processedProtocol.appliers.some((applier) => applier.id === user.id) ||
+                processedProtocol.applicability === VisibilityMode.PUBLIC)
+                ? processedProtocol
                 : {
-                      ...protocol,
+                      ...processedProtocol,
                       viewersUser: undefined,
                       viewersClassroom: undefined,
                       answersViewersUser: undefined,
@@ -1373,7 +1384,7 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
                       managers: undefined,
                   };
 
-        res.status(200).json({ message: 'Protocol found.', data: visibleProtocol });
+        res.status(200).json({ message: 'Protocol found.', data: filteredProtocol });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
