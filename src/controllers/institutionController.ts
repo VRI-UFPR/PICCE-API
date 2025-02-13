@@ -28,7 +28,7 @@ const fields = {
 
 const dropSensitiveFields = (institution: any) => {
     const filteredInstitution = { ...institution };
-    for (const user of filteredInstitution.users) delete user.role;
+    // for (const user of filteredInstitution.users) delete user.role;
     for (const classroom of filteredInstitution.classrooms) for (const user of classroom.users) delete user.role;
     return filteredInstitution;
 };
@@ -38,7 +38,7 @@ const getInstitutionUserRoles = async (user: User, institution: any, institution
         institution ||
         (await prismaClient.institution.findUniqueOrThrow({
             where: { id: institutionId },
-            include: { users: { select: { id: true } } },
+            include: { users: { select: { id: true, role: true } } },
         }));
 
     const member = institution.users.some((u: any) => u.id === user.id);
