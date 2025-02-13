@@ -45,15 +45,10 @@ const checkAuthorization = async (
         case 'update':
             if (
                 // Only the user itself can perform update operations on it, respecting the hierarchy
-                Number(curUser.id) !== userId ||
-                (curUser.role === UserRole.COORDINATOR && role === UserRole.ADMIN) ||
-                (curUser.role === UserRole.PUBLISHER &&
-                    role !== UserRole.PUBLISHER &&
-                    role !== UserRole.USER &&
-                    role !== UserRole.APPLIER) ||
-                (curUser.role === UserRole.APPLIER && role !== UserRole.USER && role !== UserRole.APPLIER) ||
-                (curUser.role === UserRole.USER && role !== UserRole.USER) ||
-                curUser.role === UserRole.GUEST
+                Number(curUser.id) !== userId &&
+                ((curUser.role === UserRole.COORDINATOR && (role === UserRole.ADMIN || role === UserRole.COORDINATOR)) ||
+                    ((curUser.role === UserRole.PUBLISHER || curUser.role === UserRole.APPLIER) && role !== UserRole.USER) ||
+                    curUser.role === UserRole.GUEST)
             ) {
                 throw new Error('This user is not authorized to perform this action');
             }
