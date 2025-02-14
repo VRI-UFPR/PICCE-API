@@ -36,7 +36,7 @@ app.use(
 
 // API routes
 app.use('/api', routes, errorFormatterMiddleware);
-app.use('/uploads', express.static(path.basename('uploads')));
+app.use('/api/uploads', express.static(path.basename('uploads')));
 
 // Server starting point
 const server = app.listen(3000);
