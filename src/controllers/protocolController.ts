@@ -9,23 +9,14 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import {
-    ItemType,
-    ItemGroupType,
-    PageType,
-    ItemValidationType,
-    User,
-    UserRole,
-    VisibilityMode,
-    DependencyType,
-    Protocol,
-} from '@prisma/client';
+import { ItemType, ItemGroupType, PageType, ItemValidationType, User, UserRole, VisibilityMode, DependencyType } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
+import { getApplicationUserActions } from './applicationController';
 
-const getProtocolUserRoles = async (user: User, protocol: any, protocolId: number | undefined) => {
+export const getProtocolUserRoles = async (user: User, protocol: any, protocolId: number | undefined) => {
     protocol =
         protocol ||
         (await prismaClient.protocol.findUniqueOrThrow({
@@ -602,7 +593,6 @@ export const createProtocol = async (req: Request, res: Response) => {
                 pages: yup.array().of(pagesSchema).min(1).required(),
                 managers: yup.array().of(yup.number()).default([]),
                 visibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)).required(),
-                creatorId: yup.number().required(),
                 applicability: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)).required(),
                 answersVisibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)).required(),
                 viewersUser: yup.array().of(yup.number()).default([]),
@@ -648,7 +638,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                     title: protocol.title,
                     description: protocol.description,
                     enabled: protocol.enabled,
-                    creatorId: protocol.creatorId,
+                    creatorId: user.id,
                     managers: { connect: protocol.managers.map((manager) => ({ id: manager })) },
                     visibility: protocol.visibility as VisibilityMode,
                     applicability: protocol.applicability as VisibilityMode,
@@ -1265,8 +1255,15 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
         await checkAuthorization(user, undefined, 'getAll');
         // Prisma operation
         const protocol = await prismaClient.protocol.findMany({ select: fieldsWViewers });
+        // Embed user actions in the response
+        const processedProtocol = await Promise.all(
+            protocol.map(async (protocol) => ({
+                ...protocol,
+                actions: await getProtocolUserActions(user, protocol, undefined),
+            }))
+        );
         // Filter sensitive fields
-        const filteredProtocol = protocol.map((protocol) => dropSensitiveFields(protocol));
+        const filteredProtocol = processedProtocol.map((protocol) => dropSensitiveFields(protocol));
 
         res.status(200).json({ message: 'All protocols found.', data: filteredProtocol });
     } catch (error: any) {
@@ -1429,7 +1426,7 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
             }
         }
 
-        // Filter answers that are not visible to the user
+        // Filter answers that are not visible to the user (the ones associated with the applications filtered above)
         for (const page of protocol.pages) {
             for (const itemGroup of page.itemGroups) {
                 for (const item of itemGroup.items) {
@@ -1457,15 +1454,25 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
                 }
             }
         }
-
+        // Embed user actions in the response
+        const processedProtocol = {
+            ...protocol,
+            actions: await getProtocolUserActions(user, protocol, undefined),
+            applications: await Promise.all(
+                protocol.applications.map((application) => ({
+                    ...application,
+                    actions: getApplicationUserActions(user, application, undefined),
+                }))
+            ),
+        };
         // Filter other properties that are not visible to the user
-        protocol.managers = [];
-        protocol.creator.institutionId = null;
-        for (const application of protocol.applications) {
+        processedProtocol.managers = [];
+        processedProtocol.creator.institutionId = null;
+        for (const application of processedProtocol.applications) {
             application.applier.institutionId = null;
         }
 
-        res.status(200).json({ message: 'Protocol with answers found.', data: protocol });
+        res.status(200).json({ message: 'Protocol with answers found.', data: processedProtocol });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }

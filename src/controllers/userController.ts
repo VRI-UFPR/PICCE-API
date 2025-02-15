@@ -16,6 +16,35 @@ import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
 import { hashSync } from 'bcrypt';
 
+const getPeerUserRoles = async (curUser: User, user: any, userId: number | undefined) => {
+    user = user || (await prismaClient.user.findUniqueOrThrow({ where: { id: userId } }));
+
+    const creator = user.creatorId === curUser.id;
+    const coordinator = curUser.role === UserRole.COORDINATOR && curUser.institutionId && curUser.institutionId === user.institutionId;
+    const itself = curUser.id === userId;
+
+    return { creator, coordinator, itself };
+};
+
+export const getPeerUserActions = async (curUser: User, user: any, userId: number | undefined) => {
+    const roles = await getPeerUserRoles(curUser, user, userId);
+
+    // Only the user itself, its creator and its institution coordinators can perform update operations on it
+    const toUpdate = roles.creator || roles.coordinator || roles.itself;
+    // Only the user itself, its creator and its institution coordinators can perform delete operations on it
+    const toDelete = roles.creator || roles.coordinator || roles.itself;
+    // Only the user itself, its creator and its institution coordinators can perform get operations on it
+    const toGet = roles.creator || roles.coordinator || roles.itself;
+    // Only admins can perform get all users operation
+    const toGetAll = curUser.role === UserRole.ADMIN;
+    // Anyone (except users and guests) can perform search operations on users
+    const toSearch = curUser.role !== UserRole.USER && curUser.role !== UserRole.GUEST;
+    // Anyone (except users and guests) can perform getManaged operations on users
+    const toGetManaged = curUser.role !== UserRole.USER && curUser.role !== UserRole.GUEST;
+
+    return { toUpdate, toDelete, toGet, toGetAll, toSearch, toGetManaged };
+};
+
 const checkAuthorization = async (
     curUser: User,
     userId: number | undefined,
@@ -176,8 +205,10 @@ export const createUser = async (req: Request, res: Response) => {
             },
             select: fields,
         });
+        // Embed user actions in the response
+        const processedUser = { ...createdUser, actions: await getPeerUserActions(curUser, createdUser, undefined) };
 
-        res.status(201).json({ message: 'User created.', data: createdUser });
+        res.status(201).json({ message: 'User created.', data: processedUser });
     } catch (error: any) {
         const file = req.file as Express.Multer.File;
         if (file) if (existsSync(file.path)) unlinkSync(file.path);
@@ -240,8 +271,10 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
 
             return updatedUser;
         });
+        // Embed user actions in the response
+        const processedUser = { ...updatedUser, actions: await getPeerUserActions(curUser, updatedUser, userId) };
 
-        res.status(200).json({ message: 'User updated.', data: updatedUser });
+        res.status(200).json({ message: 'User updated.', data: processedUser });
     } catch (error: any) {
         const file = req.file as Express.Multer.File;
         if (file) if (existsSync(file.path)) unlinkSync(file.path);
@@ -257,8 +290,12 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
         await checkAuthorization(curUser, undefined, undefined, undefined, 'getAll');
         // Prisma operation
         const users = await prismaClient.user.findMany({ select: fields });
+        // Embed user actions in the response
+        const processedUsers = await Promise.all(
+            users.map(async (user) => ({ ...user, actions: await getPeerUserActions(curUser, user, user.id) }))
+        );
 
-        res.status(200).json({ message: 'All users found.', data: users });
+        res.status(200).json({ message: 'All users found.', data: processedUsers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -285,8 +322,12 @@ export const getManagedUsers = async (req: Request, res: Response): Promise<void
             },
             select: publicFields,
         });
+        // Embed user actions in the response
+        const processedUsers = await Promise.all(
+            users.map(async (user) => ({ ...user, actions: await getPeerUserActions(curUser, user, user.id) }))
+        );
 
-        res.status(200).json({ message: 'Managed users found.', data: users });
+        res.status(200).json({ message: 'Managed users found.', data: processedUsers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -302,8 +343,10 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
         await checkAuthorization(curUser, userId, undefined, undefined, 'get');
         // Prisma operation
         const user = await prismaClient.user.findUniqueOrThrow({ where: { id: userId }, select: fields });
+        // Embed user actions in the response
+        const processedUser = { ...user, actions: await getPeerUserActions(curUser, user, userId) };
 
-        res.status(200).json({ message: 'User found.', data: user });
+        res.status(200).json({ message: 'User found.', data: processedUser });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -333,8 +376,12 @@ export const searchUserByUsername = async (req: Request, res: Response): Promise
             },
             select: publicFields,
         });
+        // Embed user actions in the response
+        const processedUsers = await Promise.all(
+            users.map(async (user) => ({ ...user, actions: await getPeerUserActions(curUser, user, user.id) }))
+        );
 
-        res.status(200).json({ message: 'Searched users found.', data: users });
+        res.status(200).json({ message: 'Searched users found.', data: processedUsers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }

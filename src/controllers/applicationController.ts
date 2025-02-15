@@ -13,6 +13,7 @@ import { Application, User, VisibilityMode, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
+import { getProtocolUserRoles } from './protocolController';
 
 const getApplicationUserRoles = async (user: User, application: any, applicationId: number | undefined) => {
     application =
@@ -48,41 +49,7 @@ const getApplicationUserRoles = async (user: User, application: any, application
     return { protocolCreator, protocolManager, applier, viewer, answersViewer };
 };
 
-const getProtocolUserRoles = async (user: User, protocol: any, protocolId: number | undefined) => {
-    protocol =
-        protocol ||
-        (await prismaClient.protocol.findUniqueOrThrow({
-            where: { id: protocolId },
-            include: {
-                managers: { select: { id: true } },
-                appliers: { select: { id: true } },
-                viewersUser: { select: { id: true } },
-                viewersClassroom: { select: { users: { select: { id: true } } } },
-                answersViewersUser: { select: { id: true } },
-                answersViewersClassroom: { select: { users: { select: { id: true } } } },
-            },
-        }));
-
-    const creator = protocol?.creatorId === user.id;
-    const manager = !!protocol?.managers?.some((manager: any) => manager.id === user.id);
-    const applier = !!protocol?.appliers?.some((applier: any) => applier.id === user.id);
-    const viewer = !!(
-        protocol?.visibility === VisibilityMode.PUBLIC ||
-        (protocol?.visibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
-        protocol?.viewersUser?.some((viewer: any) => viewer.id === user.id) ||
-        protocol?.viewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
-    );
-    const answersViewer = !!(
-        protocol?.answersVisibility === VisibilityMode.PUBLIC ||
-        (protocol?.answersVisibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
-        protocol?.answersViewersUser?.some((viewer: any) => viewer.id === user.id) ||
-        protocol?.answersViewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
-    );
-
-    return { creator, manager, applier, viewer, answersViewer };
-};
-
-const getApplicationUserActions = async (user: User, application: any, applicationId: number | undefined) => {
+export const getApplicationUserActions = async (user: User, application: any, applicationId: number | undefined) => {
     const roles = await getApplicationUserRoles(user, application, applicationId);
 
     // Only protocol managers/applier/protocol creator can perform update operations on applications

@@ -15,59 +15,7 @@ import prismaClient from '../services/prismaClient';
 import jwt from 'jsonwebtoken';
 import errorFormatter from '../services/errorFormatter';
 import ms from 'ms';
-import { compareSync, hashSync } from 'bcrypt';
-
-// export const signUp = async (req: Request, res: Response) => {
-//     try {
-//         // Yup schemas
-//         const signUpSchema = yup
-//             .object()
-//             .shape({
-//                 id: yup.number(),
-//                 name: yup.string().min(1).max(255).required(),
-//                 username: yup.string().min(3).max(20).required(),
-//                 hash: yup.string().required(),
-//                 role: yup.string().oneOf(Object.values(UserRole)).required(),
-//                 institutionId: yup.number(),
-//                 classrooms: yup.array().of(yup.number()).default([]),
-//             })
-//             .noUnknown();
-//         // Yup parsing/validation
-//         const signingUser = await signUpSchema.validate(req.body, { stripUnknown: false });
-//         // Password encryption
-//         signingUser.hash = hashSync(signingUser.hash, 10);
-//         // Prisma operation
-//         const createdUser = await prismaClient.user.create({
-//             data: {
-//                 id: signingUser.id,
-//                 name: signingUser.name,
-//                 username: signingUser.username,
-//                 hash: signingUser.hash,
-//                 role: signingUser.role,
-//                 institutionId: signingUser.institutionId,
-//                 classrooms: { connect: signingUser.classrooms.map((classroomId) => ({ id: classroomId })) },
-//             },
-//             include: { profileImage: true },
-//         });
-//         // JWT token creation
-//         const token = jwt.sign({ id: createdUser.id, username: createdUser.username }, process.env.JWT_SECRET as string, {
-//             expiresIn: process.env.JWT_EXPIRATION,
-//         });
-//         res.status(201).json({
-//             message: 'User signed up.',
-//             data: {
-//                 id: createdUser.id,
-//                 role: createdUser.role,
-//                 token: token,
-//                 expiresIn: process.env.JWT_EXPIRATION,
-//                 institutionId: createdUser.institutionId,
-//                 profileImage: createdUser.profileImage ? { path: createdUser.profileImage.path } : undefined,
-//             },
-//         });
-//     } catch (error: any) {
-//         res.status(400).json(errorFormatter(error));
-//     }
-// };
+import { compareSync } from 'bcrypt';
 
 export const signIn = async (req: Request, res: Response) => {
     try {
@@ -80,15 +28,11 @@ export const signIn = async (req: Request, res: Response) => {
         const signingUser = await signInSchema.validate(req.body, { stripUnknown: false });
         // Prisma operation
         const user = await prismaClient.user.findUniqueOrThrow({
-            where: {
-                username: signingUser.username,
-            },
+            where: { username: signingUser.username },
             include: { profileImage: true },
         });
         // Password check
-        if (!compareSync(signingUser.hash, user.hash)) {
-            throw new Error('Invalid credentials.');
-        }
+        if (!compareSync(signingUser.hash, user.hash)) throw new Error('Invalid credentials.');
         // JWT token creation
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET as string, {
             expiresIn: process.env.JWT_EXPIRATION,
@@ -177,9 +121,7 @@ export const acceptTerms = async (req: Request, res: Response) => {
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is authorized to accept terms
-        if (user.id === 1) {
-            throw new Error('Cannot accept terms as anonymous user.');
-        }
+        if (user.role === UserRole.GUEST) throw new Error('Cannot accept terms as guest.');
         // Prisma operation
         const updatedUser = await prismaClient.user.update({ where: { id: user.id }, data: { acceptedTerms: true } });
 

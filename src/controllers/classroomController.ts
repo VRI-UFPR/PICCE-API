@@ -45,7 +45,7 @@ const getClassroomUserRoles = async (user: User, classroom: any, classroomId: nu
     return { creator, member, institutionMember };
 };
 
-const getClassroomUserActions = async (user: User, classroom: any, classroomId: number | undefined) => {
+export const getClassroomUserActions = async (user: User, classroom: any, classroomId: number | undefined) => {
     const roles = await getClassroomUserRoles(user, classroom, classroomId);
 
     // Only institution members (except users and guests)/creator can perform update operations on classrooms
