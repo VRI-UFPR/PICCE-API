@@ -39,7 +39,7 @@ const getClassroomUserRoles = async (user: User, classroom: any, classroomId: nu
         }));
 
     const creator = classroom?.creatorId === user.id;
-    const member = classroom?.users.some((u: any) => u.id === user.id);
+    const member = classroom?.users?.some((u: any) => u.id === user.id);
     const institutionMember = classroom?.institutionId === user.institutionId;
 
     return { creator, member, institutionMember };
@@ -69,6 +69,8 @@ const getClassroomUserActions = async (user: User, classroom: any, classroomId: 
     const toSearch = user.role !== UserRole.USER && user.role !== UserRole.GUEST;
     // Anyone can perform getMy operation on classrooms
     const toGetMy = true;
+    // Anyone can perform getManaged operation on classrooms
+    const toGetManaged = true;
 
     return { toUpdate, toDelete, toGet, toGetAll, toSearch, toGetMy };
 };
@@ -112,6 +114,7 @@ const checkAuthorization = async (user: User, classroomId: number | undefined, i
                 throw new Error('This user is not authorized to perform this action');
             break;
         case 'getMy':
+        case 'getManaged':
             // Anyone can perform getMy operation on classrooms (since the result is filtered according to the user)
             break;
     }
@@ -268,6 +271,38 @@ export const getMyClassrooms = async (req: Request, res: Response): Promise<void
     }
 };
 
+export const getManagedClassrooms = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is authorized to get his managed classrooms
+        await checkAuthorization(user, undefined, undefined, 'getManaged');
+        // Prisma operation
+        const classrooms = await prismaClient.classroom.findMany({
+            where: {
+                ...(user.role !== UserRole.ADMIN && {
+                    // Admins can manage all classrooms
+                    OR: [
+                        ...(user.role === UserRole.COORDINATOR ? [{ institutionId: user.institutionId }] : []), // Coordinators can manage classrooms from their institutions and users they created
+                        { creatorId: user.id }, // Publishers and appliers can only manage classrooms they created
+                    ],
+                }),
+            },
+            select: fields,
+        });
+        // Embed user actions in the response
+        const processedClassrooms = await Promise.all(
+            classrooms.map(async (classroom) => {
+                return { ...classroom, actions: await getClassroomUserActions(user, classroom, undefined) };
+            })
+        );
+
+        res.status(200).json({ message: 'My managed classrooms found.', data: processedClassrooms });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
 export const searchClassroomByName = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from passport-jwt
@@ -283,7 +318,12 @@ export const searchClassroomByName = async (req: Request, res: Response): Promis
         const { term } = await searchUserSchema.validate(req.body);
         // Prisma operation
         const classrooms = await prismaClient.classroom.findMany({
-            where: { name: { startsWith: term } },
+            where: {
+                name: { startsWith: term },
+                ...(curUser.role !== UserRole.ADMIN && {
+                    OR: [{ institutionId: curUser.institutionId }, { institutionId: null }],
+                }),
+            },
             select: publicFields,
         });
         // Embed user actions in the response

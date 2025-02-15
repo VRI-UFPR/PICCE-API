@@ -47,13 +47,13 @@ const getProtocolUserRoles = async (user: User, protocol: any, protocolId: numbe
         protocol?.visibility === VisibilityMode.PUBLIC ||
         (protocol?.visibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
         protocol?.viewersUser?.some((viewer: any) => viewer.id === user.id) ||
-        protocol?.viewersClassroom?.some((classroom: any) => classroom.users.some((viewer: any) => viewer.id === user.id))
+        protocol?.viewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
     );
     const answersViewer = !!(
         protocol?.answersVisibility === VisibilityMode.PUBLIC ||
         (protocol?.answersVisibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
         protocol?.answersViewersUser?.some((viewer: any) => viewer.id === user.id) ||
-        protocol?.answersViewersClassroom?.some((classroom: any) => classroom.users.some((viewer: any) => viewer.id === user.id))
+        protocol?.answersViewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
     );
 
     return { creator, manager, applier, viewer, answersViewer };
@@ -1370,8 +1370,8 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
             user.role !== UserRole.USER &&
             (user.role === UserRole.ADMIN ||
                 processedProtocol.creator.id === user.id ||
-                processedProtocol.managers.some((manager) => manager.id === user.id) ||
-                processedProtocol.appliers.some((applier) => applier.id === user.id) ||
+                processedProtocol.managers?.some((manager) => manager.id === user.id) ||
+                processedProtocol.appliers?.some((applier) => applier.id === user.id) ||
                 processedProtocol.applicability === VisibilityMode.PUBLIC)
                 ? processedProtocol
                 : {
@@ -1418,7 +1418,7 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
             if (
                 user.role !== UserRole.ADMIN &&
                 (user.id !== protocol.creator.id ||
-                    !protocol.managers.some((manager) => manager.id === user.id) ||
+                    !protocol.managers?.some((manager) => manager.id === user.id) ||
                     user.id !== application.applier.id ||
                     user.institutionId !== application.applier.institutionId ||
                     user.institutionId !== protocol.creator.institutionId ||
@@ -1433,21 +1433,25 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
         for (const page of protocol.pages) {
             for (const itemGroup of page.itemGroups) {
                 for (const item of itemGroup.items) {
-                    item.itemAnswers = item.itemAnswers.filter((itemAnswer) =>
-                        protocol.applications.some((application) =>
-                            application.answers.some((answer) => answer.id === itemAnswer.group.applicationAnswer.id)
-                        )
+                    item.itemAnswers = item.itemAnswers.filter(
+                        (itemAnswer) =>
+                            protocol.applications?.some(
+                                (application) => application.answers?.some((answer) => answer.id === itemAnswer.group.applicationAnswer.id)
+                            )
                     );
-                    item.tableAnswers = item.tableAnswers.filter((tableAnswer) =>
-                        protocol.applications.some((application) =>
-                            application.answers.some((answer) => answer.id === tableAnswer.group.applicationAnswer.id)
-                        )
+                    item.tableAnswers = item.tableAnswers.filter(
+                        (tableAnswer) =>
+                            protocol.applications?.some(
+                                (application) => application.answers?.some((answer) => answer.id === tableAnswer.group.applicationAnswer.id)
+                            )
                     );
                     for (const itemOption of item.itemOptions) {
-                        itemOption.optionAnswers = itemOption.optionAnswers.filter((optionAnswer) =>
-                            protocol.applications.some((application) =>
-                                application.answers.some((answer) => answer.id === optionAnswer.group.applicationAnswer.id)
-                            )
+                        itemOption.optionAnswers = itemOption.optionAnswers.filter(
+                            (optionAnswer) =>
+                                protocol.applications?.some(
+                                    (application) =>
+                                        application.answers?.some((answer) => answer.id === optionAnswer.group.applicationAnswer.id)
+                                )
                         );
                     }
                 }

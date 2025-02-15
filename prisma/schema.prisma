@@ -209,7 +209,10 @@ model User {
   visibleApplicationAnswers Application[]       @relation(name: "ApplicationAnswersViewersUsers") // applications that the user can see the answers
   classrooms                Classroom[]         @relation(name: "ClassroomUsers") // classrooms that the user is in
   createdClassrooms         Classroom[]         @relation(name: "ClassroomCreator") // classrooms that the user has created
+  createdUsers              User[]              @relation(name: "UserCreator") // users that the user has created
 
+  creatorId Int?
+  creator  User? @relation(name: "UserCreator", fields: [creatorId], references: [id], onDelete: SetNull)
   institutionId Int?
   institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
 }

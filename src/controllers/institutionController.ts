@@ -41,8 +41,8 @@ const getInstitutionUserRoles = async (user: User, institution: any, institution
             include: { users: { select: { id: true, role: true } } },
         }));
 
-    const member = institution.users.some((u: any) => u.id === user.id);
-    const coordinator = institution.users.some((u: any) => u.id === user.id && u.role === UserRole.COORDINATOR);
+    const member = institution.users?.some((u: any) => u.id === user.id);
+    const coordinator = institution.users?.some((u: any) => u.id === user.id && u.role === UserRole.COORDINATOR);
 
     return { member, coordinator };
 };
