@@ -28,6 +28,7 @@ const publicFields = {
     id: true,
     name: true,
     users: { select: { id: true, name: true, username: true, role: true } },
+    institution: { select: { id: true, name: true } },
 };
 
 const getClassroomUserRoles = async (user: User, classroom: any, classroomId: number | undefined) => {

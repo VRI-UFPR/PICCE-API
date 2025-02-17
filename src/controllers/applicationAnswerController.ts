@@ -9,45 +9,12 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import { ApplicationAnswer, User, UserRole, VisibilityMode } from '@prisma/client';
+import { ApplicationAnswer, User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
-
-const getApplicationUserRoles = async (user: User, application: any, applicationId: number | undefined) => {
-    application =
-        application ||
-        (await prismaClient.application.findUniqueOrThrow({
-            where: { id: applicationId },
-            include: {
-                viewersClassroom: { select: { users: { select: { id: true } } } },
-                viewersUser: { select: { id: true } },
-                answersViewersClassroom: { select: { users: { select: { id: true } } } },
-                answersViewersUser: { select: { id: true } },
-                applier: { select: { id: true } },
-                protocol: { select: { creatorId: true, managers: { select: { id: true } } } },
-            },
-        }));
-
-    const protocolCreator = !!(application?.protocol.creatorId === user.id);
-    const protocolManager = !!application?.protocol.managers?.some((manager: any) => manager.id === user.id);
-    const applier = !!(application?.applier.id === user.id);
-    const viewer = !!(
-        application?.visibility === VisibilityMode.PUBLIC ||
-        (application?.visibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
-        application?.viewersUser?.some((viewer: any) => viewer.id === user.id) ||
-        application?.viewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
-    );
-    const answersViewer = !!(
-        application?.answersVisibility === VisibilityMode.PUBLIC ||
-        (application?.answersVisibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
-        application?.answersViewersUser?.some((viewer: any) => viewer.id === user.id) ||
-        application?.answersViewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
-    );
-
-    return { protocolCreator, protocolManager, applier, viewer, answersViewer };
-};
+import { getApplicationUserRoles } from './applicationController';
 
 const getApplicationAnswerUserRoles = async (user: User, applicationAnswer: any, applicationAnswerId: number | undefined) => {
     applicationAnswer =

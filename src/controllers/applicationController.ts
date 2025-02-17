@@ -15,7 +15,7 @@ import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { getProtocolUserRoles } from './protocolController';
 
-const getApplicationUserRoles = async (user: User, application: any, applicationId: number | undefined) => {
+export const getApplicationUserRoles = async (user: User, application: any, applicationId: number | undefined) => {
     application =
         application ||
         (await prismaClient.application.findUniqueOrThrow({
@@ -67,8 +67,10 @@ export const getApplicationUserActions = async (user: User, application: any, ap
     // Only answer viewers/applier/protocol creator/protocol managers can perform get answers operations on applications
     const toGetAnswers =
         roles.answersViewer || roles.applier || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
+    // Only protocol managers/protocol creator/application applier can perform approve operations on application answers
+    const toApproveAnswers = roles.applier || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
 
-    return { toUpdate, toDelete, toGet, toGetMy, toGetVisible, toGetAll, toGetAnswers };
+    return { toUpdate, toDelete, toGet, toGetMy, toGetVisible, toGetAll, toGetAnswers, toApproveAnswers };
 };
 
 const checkAuthorization = async (user: User, applicationId: number | undefined, protocolId: number | undefined, action: string) => {
@@ -695,7 +697,13 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
             ])
         );
 
-        res.status(200).json({ message: 'Application with answers found.', data: applicationWithAnswers });
+        // Embed user actions in the response
+        const processedApplication = {
+            ...applicationWithAnswers,
+            actions: await getApplicationUserActions(user, applicationWithAnswers, undefined),
+        };
+
+        res.status(200).json({ message: 'Application with answers found.', data: processedApplication });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }

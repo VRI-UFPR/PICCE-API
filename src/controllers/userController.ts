@@ -30,11 +30,11 @@ export const getPeerUserActions = async (curUser: User, user: any, userId: numbe
     const roles = await getPeerUserRoles(curUser, user, userId);
 
     // Only the user itself, its creator and its institution coordinators can perform update operations on it
-    const toUpdate = roles.creator || roles.coordinator || roles.itself;
+    const toUpdate = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
     // Only the user itself, its creator and its institution coordinators can perform delete operations on it
-    const toDelete = roles.creator || roles.coordinator || roles.itself;
+    const toDelete = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
     // Only the user itself, its creator and its institution coordinators can perform get operations on it
-    const toGet = roles.creator || roles.coordinator || roles.itself;
+    const toGet = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
     // Only admins can perform get all users operation
     const toGetAll = curUser.role === UserRole.ADMIN;
     // Anyone (except users and guests) can perform search operations on users
