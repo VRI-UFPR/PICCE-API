@@ -67,13 +67,13 @@ const checkAuthorization = async (
             // Only viewers/applier/protocol creator/protocol managers of the application can perform create operations on application answers
             const roles = await getApplicationUserRoles(user, undefined, applicationId);
             if (!roles.viewer && !roles.applier && !roles.protocolCreator && !roles.protocolManager)
-                throw new Error('This user is not authorized to perform this action.');
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'update': {
             // Only the creator can perform update operations on application answers
             const roles = await getApplicationAnswerUserRoles(user, undefined, applicationAnswerId);
-            if (!roles.creator) throw new Error('This user is not authorized to perform this action.');
+            if (!roles.creator) throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'get':
@@ -81,18 +81,18 @@ const checkAuthorization = async (
             // Only protocol managers/protocol creator/application applier/creator can perform get/delete operations on application answers
             const roles = await getApplicationAnswerUserRoles(user, undefined, applicationAnswerId);
             if (!roles.creator && !roles.applicationApplier && !roles.protocolCreator && !roles.protocolManager)
-                throw new Error('This user is not authorized to perform this action.');
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'approve': {
             // Only protocol managers/protocol creator/application applier can perform approve operations on application answers
             const roles = await getApplicationAnswerUserRoles(user, undefined, applicationAnswerId);
             if (!roles.applicationApplier && !roles.protocolCreator && !roles.protocolManager)
-                throw new Error('This user is not authorized to perform this action.');
+                throw new Error('This user is not authorized to perform this action');
         }
         case 'getAll':
             // No one can perform getAll operations on application answers
-            throw new Error('This user is not authorized to perform this action.');
+            throw new Error('This user is not authorized to perform this action');
             break;
         case 'getMy':
             // Anyone can perform getMy operations on application answers (since the content is filtered according to the user)

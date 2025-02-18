@@ -22,6 +22,7 @@ export const getProtocolUserRoles = async (user: User, protocol: any, protocolId
         (await prismaClient.protocol.findUniqueOrThrow({
             where: { id: protocolId },
             include: {
+                creator: { select: { id: true, institutionId: true } },
                 managers: { select: { id: true } },
                 appliers: { select: { id: true } },
                 viewersUser: { select: { id: true } },
@@ -31,6 +32,7 @@ export const getProtocolUserRoles = async (user: User, protocol: any, protocolId
             },
         }));
 
+    const coordinator = user.role === UserRole.COORDINATOR && protocol?.creator?.institutionId === user.institutionId;
     const creator = protocol?.creator?.id === user.id;
     const manager = !!protocol?.managers?.some((manager: any) => manager.id === user.id);
     const applier = !!protocol?.appliers?.some((applier: any) => applier.id === user.id);
@@ -47,25 +49,25 @@ export const getProtocolUserRoles = async (user: User, protocol: any, protocolId
         protocol?.answersViewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
     );
 
-    return { creator, manager, applier, viewer, answersViewer };
+    return { creator, manager, applier, viewer, answersViewer, coordinator };
 };
 
 const getProtocolUserActions = async (user: User, protocol: any, protocolId: number | undefined) => {
     const roles = await getProtocolUserRoles(user, protocol, protocolId);
-    // Only managers/creator can perform update/delete operations on protocols
-    const toUpdate = roles.manager || roles.creator || user.role === UserRole.ADMIN;
-    const toDelete = roles.manager || roles.creator || user.role === UserRole.ADMIN;
-    // Only viewers/creator/managers/appliers can perform get operations on protocols
-    const toGet = roles.viewer || roles.creator || roles.manager || roles.applier || user.role === UserRole.ADMIN;
+    // Only managers/creator/institution coordinator can perform update/delete operations on protocols
+    const toUpdate = roles.manager || roles.coordinator || roles.creator || user.role === UserRole.ADMIN;
+    const toDelete = roles.manager || roles.coordinator || roles.creator || user.role === UserRole.ADMIN;
+    // Only viewers/creator/managers/appliers/institution coordinator can perform get operations on protocols
+    const toGet = roles.viewer || roles.coordinator || roles.creator || roles.manager || roles.applier || user.role === UserRole.ADMIN;
     // No one can perform getAll operations on protocols
     const toGetAll = user.role === UserRole.ADMIN;
     // Anyone can perform getVisible and getMy operations on protocols (since the content is filtered according to the user)
     const toGetVisible = true;
     const toGetMy = true;
-    // Only answers viewers/creator/managers can perform getWAnswers operations on protocols
-    const toGetWAnswers = roles.answersViewer || roles.creator || roles.manager || user.role === UserRole.ADMIN;
-    // Only appliers/managers/creator can apply to protocols
-    const toApply = roles.applier || roles.manager || roles.creator || user.role === UserRole.ADMIN;
+    // Only answers viewers/creator/managers/institution coordinator can perform getWAnswers operations on protocols
+    const toGetWAnswers = roles.answersViewer || roles.coordinator || roles.creator || roles.manager || user.role === UserRole.ADMIN;
+    // Only appliers/managers/creator/institution coordinator can apply to protocols
+    const toApply = roles.applier || roles.manager || roles.coordinator || roles.creator || user.role === UserRole.ADMIN;
 
     return {
         toUpdate,
@@ -87,35 +89,36 @@ const checkAuthorization = async (user: User, protocolId: number | undefined, ac
         case 'create':
             // Anyone except users, appliers and guests can create protocols
             if (user.role === UserRole.USER || user.role === UserRole.APPLIER || user.role === UserRole.GUEST)
-                throw new Error('This user is not authorized to perform this action.');
+                throw new Error('This user is not authorized to perform this action');
             break;
         case 'update':
         case 'delete': {
-            // Only managers/creator can perform update/delete operations on protocols
+            // Only managers/creator/coordinator can perform update/delete operations on protocols
             const roles = await getProtocolUserRoles(user, undefined, protocolId);
-            if (!roles.manager && !roles.creator) throw new Error('This user is not authorized to perform this action.');
+            if (!roles.manager && !roles.creator && !roles.coordinator)
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'getAll':
             // No one can perform getAll operations on protocols
-            throw new Error('This user is not authorized to perform this action.');
+            throw new Error('This user is not authorized to perform this action');
             break;
         case 'getVisible':
         case 'getMy':
             // Anyone can perform getVisible and getMy operations on protocols (since the content is filtered according to the user)
             break;
         case 'get': {
-            // Only viewers/creator/managers/appliers can perform get operations on protocols
+            // Only viewers/creator/managers/appliers/coordinator can perform get operations on protocols
             const roles = await getProtocolUserRoles(user, undefined, protocolId);
-            if (!roles.viewer && !roles.creator && !roles.applier && !roles.manager)
-                throw new Error('This user is not authorized to perform this action.');
+            if (!roles.viewer && !roles.creator && !roles.applier && !roles.manager && !roles.coordinator)
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'getWAnswers': {
-            // Only answers viewers/creator/managers can perform getWAnswers operations on protocols
+            // Only answers viewers/creator/managers/coordinator can perform getWAnswers operations on protocols
             const roles = await getProtocolUserRoles(user, undefined, protocolId);
-            if (!roles.answersViewer && !roles.creator && !roles.manager)
-                throw new Error('This user is not authorized to perform this action.');
+            if (!roles.answersViewer && !roles.creator && !roles.manager && !roles.coordinator)
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
     }
@@ -348,7 +351,7 @@ const fields = {
     updatedAt: true,
     enabled: true,
     replicable: true,
-    creator: { select: { id: true, username: true } },
+    creator: { select: { id: true, username: true, institutionId: true } },
     applicability: true,
     visibility: true,
     answersVisibility: true,
@@ -1290,6 +1293,7 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
                               { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
                               { creatorId: user.id },
                               { visibility: VisibilityMode.PUBLIC },
+                              ...(user.role === UserRole.COORDINATOR ? [{ creator: { institutionId: user.institutionId } }] : []),
                           ],
                           enabled: true,
                       },
@@ -1356,6 +1360,7 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
                     { viewersClassroom: { some: { users: { some: { id: user.id } } } }, enabled: true },
                     { creatorId: user.id },
                     { visibility: VisibilityMode.PUBLIC, enabled: true },
+                    ...(user.role === UserRole.COORDINATOR ? [{ creator: { institutionId: user.institutionId } }] : []),
                 ],
             },
             select: fieldsWViewers,
@@ -1364,12 +1369,13 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
         const processedProtocol = { ...protocol, actions: await getProtocolUserActions(user, protocol, undefined) };
 
         const filteredProtocol =
-            user.role !== UserRole.USER &&
-            (user.role === UserRole.ADMIN ||
-                processedProtocol.creator.id === user.id ||
-                processedProtocol.managers?.some((manager) => manager.id === user.id) ||
-                processedProtocol.appliers?.some((applier) => applier.id === user.id) ||
-                processedProtocol.applicability === VisibilityMode.PUBLIC)
+            (user.role !== UserRole.USER &&
+                (user.role === UserRole.ADMIN ||
+                    processedProtocol.creator.id === user.id ||
+                    processedProtocol.managers?.some((manager) => manager.id === user.id) ||
+                    processedProtocol.appliers?.some((applier) => applier.id === user.id) ||
+                    processedProtocol.applicability === VisibilityMode.PUBLIC)) ||
+            (user.role === UserRole.COORDINATOR && processedProtocol.creator.institutionId === user.id)
                 ? processedProtocol
                 : {
                       ...processedProtocol,
@@ -1405,6 +1411,7 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
                     { answersViewersClassroom: { some: { users: { some: { id: user.id } } } }, enabled: true },
                     { creatorId: user.id },
                     { answersVisibility: VisibilityMode.PUBLIC, enabled: true },
+                    ...(user.role === UserRole.COORDINATOR ? [{ creator: { institutionId: user.institutionId } }] : []),
                 ],
             },
             select: fieldsWAnswers,
