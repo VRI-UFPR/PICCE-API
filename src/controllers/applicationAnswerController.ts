@@ -15,6 +15,78 @@ import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
 
+const getApplicationUserRoles = async (user: User, application: any, applicationId: number | undefined) => {
+    application =
+        application ||
+        (await prismaClient.application.findUniqueOrThrow({
+            where: { id: applicationId },
+            include: {
+                viewersClassroom: { select: { users: { select: { id: true } } } },
+                viewersUser: { select: { id: true } },
+                answersViewersClassroom: { select: { users: { select: { id: true } } } },
+                answersViewersUser: { select: { id: true } },
+                applier: { select: { id: true } },
+                protocol: { select: { creatorId: true, managers: { select: { id: true } } } },
+            },
+        }));
+
+    const protocolCreator = !!(application?.protocol.creatorId === user.id);
+    const protocolManager = !!application?.protocol.managers?.some((manager: any) => manager.id === user.id);
+    const applier = !!(application?.applier.id === user.id);
+    const viewer = !!(
+        application?.visibility === VisibilityMode.PUBLIC ||
+        (application?.visibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
+        application?.viewersUser?.some((viewer: any) => viewer.id === user.id) ||
+        application?.viewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
+    );
+    const answersViewer = !!(
+        application?.answersVisibility === VisibilityMode.PUBLIC ||
+        (application?.answersVisibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
+        application?.answersViewersUser?.some((viewer: any) => viewer.id === user.id) ||
+        application?.answersViewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
+    );
+
+    return { protocolCreator, protocolManager, applier, viewer, answersViewer };
+};
+
+const getApplicationAnswerUserRoles = async (user: User, applicationAnswer: any, applicationAnswerId: number | undefined) => {
+    applicationAnswer =
+        applicationAnswer ||
+        (await prismaClient.applicationAnswer.findUniqueOrThrow({
+            where: { id: applicationAnswerId },
+            include: {
+                application: { select: { applierId: true, protocol: { select: { creatorId: true, managers: { select: { id: true } } } } } },
+            },
+        }));
+
+    const protocolCreator = !!(applicationAnswer?.application.protocol.creatorId === user.id);
+    const protocolManager = !!applicationAnswer?.application.protocol.managers?.some((manager: any) => manager.id === user.id);
+    const applicationApplier = !!(applicationAnswer?.application.applierId === user.id);
+    const creator = !!(applicationAnswer.userId === user.id);
+
+    return { protocolCreator, protocolManager, applicationApplier, creator };
+};
+
+const getApplicationAnswerActions = async (user: User, applicationAnswer: any, applicationAnswerId: number | undefined) => {
+    const roles = await getApplicationAnswerUserRoles(user, applicationAnswer, applicationAnswerId);
+
+    // Only the creator can perform update operations on application answers
+    const toUpdate = roles.creator || user.role === UserRole.ADMIN;
+    // Only protocol managers/protocol creator/application applier/creator can perform get/delete operations on application answers
+    const toDelete =
+        roles.creator || roles.applicationApplier || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
+    const toGet =
+        roles.creator || roles.applicationApplier || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
+    // Only protocol managers/protocol creator/application applier can perform approve operations on application answers
+    const toApprove = roles.applicationApplier || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
+    // No one can perform getAll operations on application answers
+    const toGetAll = user.role === UserRole.ADMIN;
+    // Anyone can perform getMy operations on application answers (since the content is filtered according to the user)
+    const toGetMy = true;
+
+    return { toUpdate, toDelete, toGet, toApprove, toGetAll, toGetMy };
+};
+
 const checkAuthorization = async (
     user: User,
     applicationAnswerId: number | undefined,
@@ -24,52 +96,39 @@ const checkAuthorization = async (
     if (user.role === UserRole.ADMIN) return;
 
     switch (action) {
-        case 'create':
-            // Only ADMINs, the applier or viewers of the application can perform create operations on application answers
-            const application = await prismaClient.application.findUnique({
-                where: {
-                    id: applicationId,
-                    OR: [
-                        { visibility: VisibilityMode.PUBLIC },
-                        { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
-                        { viewersUser: { some: { id: user.id } } },
-                        { applierId: user.id },
-                    ],
-                },
-            });
-            if (!application) throw new Error('This user is not authorized to perform this action.');
-
-            break;
-        case 'update':
-        case 'get':
-        case 'delete':
-            // Only ADMINs or the creator of the application answer can perform update/get/delete operations on application answers
-            const applicationAnswer = await prismaClient.applicationAnswer.findUnique({
-                where: { id: applicationAnswerId, userId: user.id },
-            });
-            if (!applicationAnswer) throw new Error('This user is not authorized to perform this action.');
-
-            break;
-        case 'approve':
-            // Only the applier of the application or a member of its institution (expect APPLIERs, USERs and GUESTs) can perform approve operations on application answers
-            const answersApplication = await prismaClient.applicationAnswer.findUnique({
-                where: { id: applicationAnswerId },
-                select: { application: { select: { applier: { select: { id: true, institutionId: true } } } } },
-            });
-            if (
-                (answersApplication?.application.applier.id !== user.id &&
-                    answersApplication?.application.applier.institutionId !== user.institutionId) ||
-                user.role === UserRole.GUEST ||
-                user.role === UserRole.USER ||
-                user.role === UserRole.APPLIER
-            )
+        case 'create': {
+            // Only viewers/applier/protocol creator/protocol managers of the application can perform create operations on application answers
+            const roles = await getApplicationUserRoles(user, undefined, applicationId);
+            if (!roles.viewer && !roles.applier && !roles.protocolCreator && !roles.protocolManager)
                 throw new Error('This user is not authorized to perform this action.');
+            break;
+        }
+        case 'update': {
+            // Only the creator can perform update operations on application answers
+            const roles = await getApplicationAnswerUserRoles(user, undefined, applicationAnswerId);
+            if (!roles.creator) throw new Error('This user is not authorized to perform this action.');
+            break;
+        }
+        case 'get':
+        case 'delete': {
+            // Only protocol managers/protocol creator/application applier/creator can perform get/delete operations on application answers
+            const roles = await getApplicationAnswerUserRoles(user, undefined, applicationAnswerId);
+            if (!roles.creator && !roles.applicationApplier && !roles.protocolCreator && !roles.protocolManager)
+                throw new Error('This user is not authorized to perform this action.');
+            break;
+        }
+        case 'approve': {
+            // Only protocol managers/protocol creator/application applier can perform approve operations on application answers
+            const roles = await getApplicationAnswerUserRoles(user, undefined, applicationAnswerId);
+            if (!roles.applicationApplier && !roles.protocolCreator && !roles.protocolManager)
+                throw new Error('This user is not authorized to perform this action.');
+        }
         case 'getAll':
-            // Only ADMINs can perform get all application answers operation
+            // No one can perform getAll operations on application answers
             throw new Error('This user is not authorized to perform this action.');
             break;
         case 'getMy':
-            // All users can perform getMy operations on application answers (the results will be filtered based on the user)
+            // Anyone can perform getMy operations on application answers (since the content is filtered according to the user)
             break;
     }
 };
@@ -199,6 +258,14 @@ const validateAnswers = async (itemAnswerGroups: any, applicationId: number) => 
         }
     }
 };
+
+const dropSensitiveFields = (applicationAnswer: any) => {
+    const filteredApplicationAnswer = { ...applicationAnswer };
+    delete filteredApplicationAnswer.userId;
+    delete filteredApplicationAnswer.application;
+    return filteredApplicationAnswer;
+};
+
 const fields = {
     id: true,
     date: true,
@@ -207,8 +274,8 @@ const fields = {
     createdAt: true,
     updatedAt: true,
     approved: true,
-    coordinateId: true,
     coordinate: { select: { latitude: true, longitude: true } },
+    application: { select: { applierId: true, protocol: { select: { creatorId: true, managers: { select: { id: true } } } } } },
     itemAnswerGroups: {
         select: {
             id: true,
@@ -363,8 +430,15 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 select: fields,
             });
         });
+        // Embed user actions in the response
+        const processedApplicationAnswer = {
+            ...createdApplicationAnswer,
+            actions: await getApplicationAnswerActions(user, createdApplicationAnswer, undefined),
+        };
+        // Filter sensitive fields from the response
+        const filteredApplicationAnswer = dropSensitiveFields(processedApplicationAnswer);
 
-        res.status(201).json({ message: 'Application answer created.', data: createdApplicationAnswer });
+        res.status(201).json({ message: 'Application answer created.', data: filteredApplicationAnswer });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
@@ -581,7 +655,15 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
             return await prisma.applicationAnswer.findUnique({ where: { id: applicationAnswerId }, select: fields });
         });
 
-        res.status(200).json({ message: 'Application answer updated.', data: upsertedApplicationAnswer });
+        // Embed user actions in the response
+        const processedApplicationAnswer = {
+            ...upsertedApplicationAnswer,
+            actions: await getApplicationAnswerActions(user, upsertedApplicationAnswer, undefined),
+        };
+        // Filter sensitive fields from the response
+        const filteredApplicationAnswer = dropSensitiveFields(processedApplicationAnswer);
+
+        res.status(200).json({ message: 'Application answer updated.', data: filteredApplicationAnswer });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
@@ -596,9 +678,20 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
         // Check if user is allowed to get all application answers
         await checkAuthorization(user, undefined, undefined, 'getAll');
         // Prisma operation
-        const applicationAnswers: ApplicationAnswer[] = await prismaClient.applicationAnswer.findMany({ select: fields });
+        const applicationAnswers = await prismaClient.applicationAnswer.findMany({ select: fields });
+        // Embed user actions in the response
+        const processedApplicationAnswers = await Promise.all(
+            applicationAnswers.map(async (applicationAnswer) => {
+                return {
+                    ...applicationAnswer,
+                    actions: await getApplicationAnswerActions(user, applicationAnswer, undefined),
+                };
+            })
+        );
+        // Filter sensitive fields from the response
+        const filteredApplicationAnswers = processedApplicationAnswers.map(dropSensitiveFields);
 
-        res.status(200).json({ message: 'All application answers found.', data: applicationAnswers });
+        res.status(200).json({ message: 'All application answers found.', data: filteredApplicationAnswers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -611,12 +704,23 @@ export const getMyApplicationAnswers = async (req: Request, res: Response): Prom
         // Check if user is allowed to get their application answers
         await checkAuthorization(user, undefined, undefined, 'getMy');
         // Prisma operation
-        const applicationAnswers: ApplicationAnswer[] = await prismaClient.applicationAnswer.findMany({
+        const applicationAnswers = await prismaClient.applicationAnswer.findMany({
             where: { userId: user.id },
             select: fields,
         });
+        // Embed user actions in the response
+        const processedApplicationAnswers = await Promise.all(
+            applicationAnswers.map(async (applicationAnswer) => {
+                return {
+                    ...applicationAnswer,
+                    actions: await getApplicationAnswerActions(user, applicationAnswer, undefined),
+                };
+            })
+        );
+        // Filter sensitive fields from the response
+        const filteredApplicationAnswers = processedApplicationAnswers.map(dropSensitiveFields);
 
-        res.status(200).json({ message: 'My application answers found.', data: applicationAnswers });
+        res.status(200).json({ message: 'My application answers found.', data: filteredApplicationAnswers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -631,12 +735,19 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
         // Check if user is allowed to view this application answer
         await checkAuthorization(user, applicationAnswerId, undefined, 'get');
         // Prisma operation
-        const applicationAnswer: ApplicationAnswer = await prismaClient.applicationAnswer.findUniqueOrThrow({
+        const applicationAnswer = await prismaClient.applicationAnswer.findUniqueOrThrow({
             where: { id: applicationAnswerId },
             select: fields,
         });
+        // Embed user actions in the response
+        const processedApplicationAnswer = {
+            ...applicationAnswer,
+            actions: await getApplicationAnswerActions(user, applicationAnswer, undefined),
+        };
+        // Filter sensitive fields from the response
+        const filteredApplicationAnswer = dropSensitiveFields(processedApplicationAnswer);
 
-        res.status(200).json({ message: 'Application answer found.', data: applicationAnswer });
+        res.status(200).json({ message: 'Application answer found.', data: filteredApplicationAnswer });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -656,8 +767,15 @@ export const approveApplicationAnswer = async (req: Request, res: Response): Pro
             data: { approved: true },
             select: fields,
         });
+        // Embed user actions in the response
+        const processedApplicationAnswer = {
+            ...approvedApplicationAnswer,
+            actions: await getApplicationAnswerActions(user, approvedApplicationAnswer, undefined),
+        };
+        // Filter sensitive fields from the response
+        const filteredApplicationAnswer = dropSensitiveFields(processedApplicationAnswer);
 
-        res.status(200).json({ message: 'Application answer approved.', data: approvedApplicationAnswer });
+        res.status(200).json({ message: 'Application answer approved.', data: filteredApplicationAnswer });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }

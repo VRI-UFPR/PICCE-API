@@ -26,28 +26,67 @@ const fields = {
     updatedAt: true,
 };
 
+const dropSensitiveFields = (institution: any) => {
+    const filteredInstitution = { ...institution };
+    // for (const user of filteredInstitution.users) delete user.role;
+    for (const classroom of filteredInstitution.classrooms) for (const user of classroom.users) delete user.role;
+    return filteredInstitution;
+};
+
+const getInstitutionUserRoles = async (user: User, institution: any, institutionId: number | undefined) => {
+    institution =
+        institution ||
+        (await prismaClient.institution.findUniqueOrThrow({
+            where: { id: institutionId },
+            include: { users: { select: { id: true, role: true } } },
+        }));
+
+    const member = institution.users.some((u: any) => u.id === user.id);
+    const coordinator = institution.users.some((u: any) => u.id === user.id && u.role === UserRole.COORDINATOR);
+
+    return { member, coordinator };
+};
+
+const getInstitutionUserActions = async (user: User, institution: any, institutionId: number | undefined) => {
+    const roles = await getInstitutionUserRoles(user, institution, institutionId);
+
+    // Only the coordinator can perform update operations on an institution
+    const toUpdate = roles.coordinator || user.role === UserRole.ADMIN;
+    // Only the coordinator can perform delete operations on an institution
+    const toDelete = roles.coordinator || user.role === UserRole.ADMIN;
+    // Only members (except users and guests) can perform get operations on institutions
+    const toGet = (roles.member && user.role !== UserRole.USER && user.role !== UserRole.GUEST) || user.role === UserRole.ADMIN;
+    // No one can perform getAll operations on institutions
+    const toGetAll = user.role === UserRole.ADMIN;
+    // Anyone (except users and guests) can perform getVisible operations on institutions
+    const toGetVisible = user.role !== UserRole.USER && user.role !== UserRole.GUEST;
+
+    return { toUpdate, toDelete, toGet, toGetAll, toGetVisible };
+};
+
 const checkAuthorization = async (user: User, institutionId: number | undefined, action: string) => {
     if (user.role === UserRole.ADMIN) return;
 
     switch (action) {
         case 'create':
         case 'getAll':
-            // Only ADMINs can perform create/getAll operations on institutions
+            // No one can perform create/getAll operations on institutions
             throw new Error('This user is not authorized to perform this action');
             break;
         case 'update':
-        case 'delete':
-            // Only ADMINs and COORDINATORs of an institution can perform update/delete operations on it
-            if (user.role !== UserRole.COORDINATOR || user.institutionId !== institutionId)
+        case 'delete': {
+            // Only the coordinator can perform update/delete operations on an institution
+            const roles = await getInstitutionUserRoles(user, undefined, institutionId);
+            if (!roles.coordinator) throw new Error('This user is not authorized to perform this action');
+        }
+        case 'get': {
+            // Only members (except users and guests) can perform get operations on institutions
+            const roles = await getInstitutionUserRoles(user, undefined, institutionId);
+            if (!roles.member || user.role === UserRole.USER || user.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
-            break;
-        case 'get':
-            // Only ADMINs and members (except USERs) of an institution can perform get/getVisible operations on it (the result will be filtered based on user)
-            if (user.role === UserRole.USER || user.role === UserRole.GUEST || user.institutionId !== institutionId)
-                throw new Error('This user is not authorized to perform this action');
-            break;
+        }
         case 'getVisible':
-            // Only USERs can't perform getVisible operations on institutions
+            // Anyone (except users and guests) can perform getVisible operations on institutions
             if (user.role === UserRole.USER || user.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
             break;
@@ -77,8 +116,15 @@ export const createInstitution = async (req: Request, res: Response) => {
             data: { id: institution.id, name: institution.name, type: institution.type, addressId: institution.addressId },
             select: fields,
         });
+        // Embed user actions in the response
+        const processedInstitution = {
+            ...createdInstitution,
+            actions: await getInstitutionUserActions(user, createdInstitution, undefined),
+        };
+        // Filter roles from the response
+        const filteredInstitution = dropSensitiveFields(processedInstitution);
 
-        res.status(201).json({ message: 'Institution created.', data: createdInstitution });
+        res.status(201).json({ message: 'Institution created.', data: filteredInstitution });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -109,8 +155,15 @@ export const updateInstitution = async (req: Request, res: Response): Promise<vo
             data: { name: institution.name, type: institution.type, addressId: institution.addressId },
             select: fields,
         });
+        // Embed user actions in the response
+        const processedInstitution = {
+            ...updatedInstitution,
+            actions: await getInstitutionUserActions(user, updatedInstitution, institutionId),
+        };
+        // Filter roles from the response
+        const filteredInstitution = dropSensitiveFields(processedInstitution);
 
-        res.status(200).json({ message: 'Institution updated.', data: updatedInstitution });
+        res.status(200).json({ message: 'Institution updated.', data: filteredInstitution });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -124,8 +177,19 @@ export const getAllInstitutions = async (req: Request, res: Response): Promise<v
         await checkAuthorization(user, undefined, 'getAll');
         // Prisma operation
         const institutions = await prismaClient.institution.findMany({ select: fields });
+        // Embed user actions in the response
+        const processedInstitutions = await Promise.all(
+            institutions.map(async (institution) => {
+                return {
+                    ...institution,
+                    actions: await getInstitutionUserActions(user, institution, institution.id),
+                };
+            })
+        );
+        // Filter roles from the response
+        const filteredInstitutions = processedInstitutions.map((institution) => dropSensitiveFields(institution));
 
-        res.status(200).json({ message: 'All institutions found.', data: institutions });
+        res.status(200).json({ message: 'All institutions found.', data: filteredInstitutions });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -140,10 +204,23 @@ export const getVisibleInstitutions = async (req: Request, res: Response): Promi
         // Prisma operation
         const institutions =
             user.role === UserRole.ADMIN
-                ? await prismaClient.institution.findMany({ select: fields })
-                : await prismaClient.institution.findMany({ where: { users: { some: { id: user.id } } }, select: fields });
+                ? // Admins can see all institutions
+                  await prismaClient.institution.findMany({ select: fields })
+                : // Other users can see only their institutions
+                  await prismaClient.institution.findMany({ where: { users: { some: { id: user.id } } }, select: fields });
+        // Embed user actions in the response
+        const processedInstitutions = await Promise.all(
+            institutions.map(async (institution) => {
+                return {
+                    ...institution,
+                    actions: await getInstitutionUserActions(user, institution, institution.id),
+                };
+            })
+        );
+        // Filter roles from the response
+        const filteredInstitutions = processedInstitutions.map((institution) => dropSensitiveFields(institution));
 
-        res.status(200).json({ message: 'My institutions found.', data: institutions });
+        res.status(200).json({ message: 'Visible institutions found.', data: filteredInstitutions });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -159,8 +236,15 @@ export const getInstitution = async (req: Request, res: Response): Promise<void>
         await checkAuthorization(user, institutionId, 'get');
         // Prisma operation
         const institution = await prismaClient.institution.findUniqueOrThrow({ where: { id: institutionId }, select: fields });
+        // Embed user actions in the response
+        const processedInstitution = {
+            ...institution,
+            actions: await getInstitutionUserActions(user, institution, institutionId),
+        };
+        // Filter roles from the response
+        const filteredInstitution = dropSensitiveFields(processedInstitution);
 
-        res.status(200).json({ message: 'Institution found.', data: institution });
+        res.status(200).json({ message: 'Institution found.', data: filteredInstitution });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
