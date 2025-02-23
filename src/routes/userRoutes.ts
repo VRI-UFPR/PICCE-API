@@ -10,7 +10,15 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 
 import express from 'express';
 import uploader from '../services/multerUploader';
-import { createUser, updateUser, getAllUsers, getUser, deleteUser, searchUserByUsername } from '../controllers/userController';
+import {
+    createUser,
+    updateUser,
+    getAllUsers,
+    getUser,
+    deleteUser,
+    searchUserByUsername,
+    getManagedUsers,
+} from '../controllers/userController';
 import passport from '../services/passportAuth';
 
 /**
@@ -230,6 +238,33 @@ router.post('/createUser', passport.authenticate('jwt', { session: false }), upl
  *               message: Internal Server Error.
  */
 router.put('/updateUser/:userId', passport.authenticate('jwt', { session: false }), uploader.single('profileImage'), updateUser);
+
+/**
+ * @swagger
+ * /api/user/getManagedUsers:
+ *   get:
+ *     summary: Get all managed users
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: The list of all managed users
+ *         content:
+ *           application/json:
+ *             message: Managed users found.
+ *             data:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/GetUser'
+ *       500:
+ *         description: Some server error happened
+ *         content:
+ *           application/json:
+ *             error:
+ *               message: Internal Server Error.
+ */
+router.get('/getManagedUsers', passport.authenticate('jwt', { session: false }), uploader.none(), getManagedUsers);
 
 /**
  * @swagger

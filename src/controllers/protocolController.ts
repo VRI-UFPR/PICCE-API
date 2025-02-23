@@ -9,28 +9,20 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import {
-    ItemType,
-    ItemGroupType,
-    PageType,
-    ItemValidationType,
-    User,
-    UserRole,
-    VisibilityMode,
-    DependencyType,
-    Protocol,
-} from '@prisma/client';
+import { ItemType, ItemGroupType, PageType, ItemValidationType, User, UserRole, VisibilityMode, DependencyType } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
+import { getApplicationUserActions } from './applicationController';
 
-const getProtocolUserRoles = async (user: User, protocol: any, protocolId: number | undefined) => {
+export const getProtocolUserRoles = async (user: User, protocol: any, protocolId: number | undefined) => {
     protocol =
         protocol ||
         (await prismaClient.protocol.findUniqueOrThrow({
             where: { id: protocolId },
             include: {
+                creator: { select: { id: true, institutionId: true } },
                 managers: { select: { id: true } },
                 appliers: { select: { id: true } },
                 viewersUser: { select: { id: true } },
@@ -40,6 +32,7 @@ const getProtocolUserRoles = async (user: User, protocol: any, protocolId: numbe
             },
         }));
 
+    const coordinator = user.role === UserRole.COORDINATOR && protocol?.creator?.institutionId === user.institutionId;
     const creator = protocol?.creator?.id === user.id;
     const manager = !!protocol?.managers?.some((manager: any) => manager.id === user.id);
     const applier = !!protocol?.appliers?.some((applier: any) => applier.id === user.id);
@@ -47,34 +40,34 @@ const getProtocolUserRoles = async (user: User, protocol: any, protocolId: numbe
         protocol?.visibility === VisibilityMode.PUBLIC ||
         (protocol?.visibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
         protocol?.viewersUser?.some((viewer: any) => viewer.id === user.id) ||
-        protocol?.viewersClassroom?.some((classroom: any) => classroom.users.some((viewer: any) => viewer.id === user.id))
+        protocol?.viewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
     );
     const answersViewer = !!(
         protocol?.answersVisibility === VisibilityMode.PUBLIC ||
         (protocol?.answersVisibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
         protocol?.answersViewersUser?.some((viewer: any) => viewer.id === user.id) ||
-        protocol?.answersViewersClassroom?.some((classroom: any) => classroom.users.some((viewer: any) => viewer.id === user.id))
+        protocol?.answersViewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
     );
 
-    return { creator, manager, applier, viewer, answersViewer };
+    return { creator, manager, applier, viewer, answersViewer, coordinator };
 };
 
 const getProtocolUserActions = async (user: User, protocol: any, protocolId: number | undefined) => {
     const roles = await getProtocolUserRoles(user, protocol, protocolId);
-    // Only managers/creator can perform update/delete operations on protocols
-    const toUpdate = roles.manager || roles.creator || user.role === UserRole.ADMIN;
-    const toDelete = roles.manager || roles.creator || user.role === UserRole.ADMIN;
-    // Only viewers/creator/managers/appliers can perform get operations on protocols
-    const toGet = roles.viewer || roles.creator || roles.manager || roles.applier || user.role === UserRole.ADMIN;
+    // Only managers/creator/institution coordinator can perform update/delete operations on protocols
+    const toUpdate = roles.manager || roles.coordinator || roles.creator || user.role === UserRole.ADMIN;
+    const toDelete = roles.manager || roles.coordinator || roles.creator || user.role === UserRole.ADMIN;
+    // Only viewers/creator/managers/appliers/institution coordinator can perform get operations on protocols
+    const toGet = roles.viewer || roles.coordinator || roles.creator || roles.manager || roles.applier || user.role === UserRole.ADMIN;
     // No one can perform getAll operations on protocols
     const toGetAll = user.role === UserRole.ADMIN;
     // Anyone can perform getVisible and getMy operations on protocols (since the content is filtered according to the user)
     const toGetVisible = true;
     const toGetMy = true;
-    // Only answers viewers/creator/managers can perform getWAnswers operations on protocols
-    const toGetWAnswers = roles.answersViewer || roles.creator || roles.manager || user.role === UserRole.ADMIN;
-    // Only appliers/managers/creator can apply to protocols
-    const toApply = roles.applier || roles.manager || roles.creator || user.role === UserRole.ADMIN;
+    // Only answers viewers/creator/managers/institution coordinator can perform getWAnswers operations on protocols
+    const toGetWAnswers = roles.answersViewer || roles.coordinator || roles.creator || roles.manager || user.role === UserRole.ADMIN;
+    // Only appliers/managers/creator/institution coordinator can apply to protocols
+    const toApply = roles.applier || roles.manager || roles.coordinator || roles.creator || user.role === UserRole.ADMIN;
 
     return {
         toUpdate,
@@ -96,35 +89,36 @@ const checkAuthorization = async (user: User, protocolId: number | undefined, ac
         case 'create':
             // Anyone except users, appliers and guests can create protocols
             if (user.role === UserRole.USER || user.role === UserRole.APPLIER || user.role === UserRole.GUEST)
-                throw new Error('This user is not authorized to perform this action.');
+                throw new Error('This user is not authorized to perform this action');
             break;
         case 'update':
         case 'delete': {
-            // Only managers/creator can perform update/delete operations on protocols
+            // Only managers/creator/coordinator can perform update/delete operations on protocols
             const roles = await getProtocolUserRoles(user, undefined, protocolId);
-            if (!roles.manager && !roles.creator) throw new Error('This user is not authorized to perform this action.');
+            if (!roles.manager && !roles.creator && !roles.coordinator)
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'getAll':
             // No one can perform getAll operations on protocols
-            throw new Error('This user is not authorized to perform this action.');
+            throw new Error('This user is not authorized to perform this action');
             break;
         case 'getVisible':
         case 'getMy':
             // Anyone can perform getVisible and getMy operations on protocols (since the content is filtered according to the user)
             break;
         case 'get': {
-            // Only viewers/creator/managers/appliers can perform get operations on protocols
+            // Only viewers/creator/managers/appliers/coordinator can perform get operations on protocols
             const roles = await getProtocolUserRoles(user, undefined, protocolId);
-            if (!roles.viewer && !roles.creator && !roles.applier && !roles.manager)
-                throw new Error('This user is not authorized to perform this action.');
+            if (!roles.viewer && !roles.creator && !roles.applier && !roles.manager && !roles.coordinator)
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'getWAnswers': {
-            // Only answers viewers/creator/managers can perform getWAnswers operations on protocols
+            // Only answers viewers/creator/managers/coordinator can perform getWAnswers operations on protocols
             const roles = await getProtocolUserRoles(user, undefined, protocolId);
-            if (!roles.answersViewer && !roles.creator && !roles.manager)
-                throw new Error('This user is not authorized to perform this action.');
+            if (!roles.answersViewer && !roles.creator && !roles.manager && !roles.coordinator)
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
     }
@@ -357,7 +351,7 @@ const fields = {
     updatedAt: true,
     enabled: true,
     replicable: true,
-    creator: { select: { id: true, username: true } },
+    creator: { select: { id: true, username: true, institutionId: true } },
     applicability: true,
     visibility: true,
     answersVisibility: true,
@@ -602,7 +596,6 @@ export const createProtocol = async (req: Request, res: Response) => {
                 pages: yup.array().of(pagesSchema).min(1).required(),
                 managers: yup.array().of(yup.number()).default([]),
                 visibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)).required(),
-                creatorId: yup.number().required(),
                 applicability: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)).required(),
                 answersVisibility: yup.mixed<VisibilityMode>().oneOf(Object.values(VisibilityMode)).required(),
                 viewersUser: yup.array().of(yup.number()).default([]),
@@ -648,7 +641,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                     title: protocol.title,
                     description: protocol.description,
                     enabled: protocol.enabled,
-                    creatorId: protocol.creatorId,
+                    creatorId: user.id,
                     managers: { connect: protocol.managers.map((manager) => ({ id: manager })) },
                     visibility: protocol.visibility as VisibilityMode,
                     applicability: protocol.applicability as VisibilityMode,
@@ -1265,8 +1258,15 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
         await checkAuthorization(user, undefined, 'getAll');
         // Prisma operation
         const protocol = await prismaClient.protocol.findMany({ select: fieldsWViewers });
+        // Embed user actions in the response
+        const processedProtocol = await Promise.all(
+            protocol.map(async (protocol) => ({
+                ...protocol,
+                actions: await getProtocolUserActions(user, protocol, undefined),
+            }))
+        );
         // Filter sensitive fields
-        const filteredProtocol = protocol.map((protocol) => dropSensitiveFields(protocol));
+        const filteredProtocol = processedProtocol.map((protocol) => dropSensitiveFields(protocol));
 
         res.status(200).json({ message: 'All protocols found.', data: filteredProtocol });
     } catch (error: any) {
@@ -1293,6 +1293,7 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
                               { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
                               { creatorId: user.id },
                               { visibility: VisibilityMode.PUBLIC },
+                              ...(user.role === UserRole.COORDINATOR ? [{ creator: { institutionId: user.institutionId } }] : []),
                           ],
                           enabled: true,
                       },
@@ -1359,6 +1360,7 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
                     { viewersClassroom: { some: { users: { some: { id: user.id } } } }, enabled: true },
                     { creatorId: user.id },
                     { visibility: VisibilityMode.PUBLIC, enabled: true },
+                    ...(user.role === UserRole.COORDINATOR ? [{ creator: { institutionId: user.institutionId } }] : []),
                 ],
             },
             select: fieldsWViewers,
@@ -1367,12 +1369,13 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
         const processedProtocol = { ...protocol, actions: await getProtocolUserActions(user, protocol, undefined) };
 
         const filteredProtocol =
-            user.role !== UserRole.USER &&
-            (user.role === UserRole.ADMIN ||
-                processedProtocol.creator.id === user.id ||
-                processedProtocol.managers.some((manager) => manager.id === user.id) ||
-                processedProtocol.appliers.some((applier) => applier.id === user.id) ||
-                processedProtocol.applicability === VisibilityMode.PUBLIC)
+            (user.role !== UserRole.USER &&
+                (user.role === UserRole.ADMIN ||
+                    processedProtocol.creator.id === user.id ||
+                    processedProtocol.managers?.some((manager) => manager.id === user.id) ||
+                    processedProtocol.appliers?.some((applier) => applier.id === user.id) ||
+                    processedProtocol.applicability === VisibilityMode.PUBLIC)) ||
+            (user.role === UserRole.COORDINATOR && processedProtocol.creator.institutionId === user.id)
                 ? processedProtocol
                 : {
                       ...processedProtocol,
@@ -1408,6 +1411,7 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
                     { answersViewersClassroom: { some: { users: { some: { id: user.id } } } }, enabled: true },
                     { creatorId: user.id },
                     { answersVisibility: VisibilityMode.PUBLIC, enabled: true },
+                    ...(user.role === UserRole.COORDINATOR ? [{ creator: { institutionId: user.institutionId } }] : []),
                 ],
             },
             select: fieldsWAnswers,
@@ -1418,7 +1422,7 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
             if (
                 user.role !== UserRole.ADMIN &&
                 (user.id !== protocol.creator.id ||
-                    !protocol.managers.some((manager) => manager.id === user.id) ||
+                    !protocol.managers?.some((manager) => manager.id === user.id) ||
                     user.id !== application.applier.id ||
                     user.institutionId !== application.applier.institutionId ||
                     user.institutionId !== protocol.creator.institutionId ||
@@ -1429,39 +1433,53 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
             }
         }
 
-        // Filter answers that are not visible to the user
+        // Filter answers that are not visible to the user (the ones associated with the applications filtered above)
         for (const page of protocol.pages) {
             for (const itemGroup of page.itemGroups) {
                 for (const item of itemGroup.items) {
-                    item.itemAnswers = item.itemAnswers.filter((itemAnswer) =>
-                        protocol.applications.some((application) =>
-                            application.answers.some((answer) => answer.id === itemAnswer.group.applicationAnswer.id)
-                        )
+                    item.itemAnswers = item.itemAnswers.filter(
+                        (itemAnswer) =>
+                            protocol.applications?.some(
+                                (application) => application.answers?.some((answer) => answer.id === itemAnswer.group.applicationAnswer.id)
+                            )
                     );
-                    item.tableAnswers = item.tableAnswers.filter((tableAnswer) =>
-                        protocol.applications.some((application) =>
-                            application.answers.some((answer) => answer.id === tableAnswer.group.applicationAnswer.id)
-                        )
+                    item.tableAnswers = item.tableAnswers.filter(
+                        (tableAnswer) =>
+                            protocol.applications?.some(
+                                (application) => application.answers?.some((answer) => answer.id === tableAnswer.group.applicationAnswer.id)
+                            )
                     );
                     for (const itemOption of item.itemOptions) {
-                        itemOption.optionAnswers = itemOption.optionAnswers.filter((optionAnswer) =>
-                            protocol.applications.some((application) =>
-                                application.answers.some((answer) => answer.id === optionAnswer.group.applicationAnswer.id)
-                            )
+                        itemOption.optionAnswers = itemOption.optionAnswers.filter(
+                            (optionAnswer) =>
+                                protocol.applications?.some(
+                                    (application) =>
+                                        application.answers?.some((answer) => answer.id === optionAnswer.group.applicationAnswer.id)
+                                )
                         );
                     }
                 }
             }
         }
-
+        // Embed user actions in the response
+        const processedProtocol = {
+            ...protocol,
+            actions: await getProtocolUserActions(user, protocol, undefined),
+            applications: await Promise.all(
+                protocol.applications.map((application) => ({
+                    ...application,
+                    actions: getApplicationUserActions(user, application, undefined),
+                }))
+            ),
+        };
         // Filter other properties that are not visible to the user
-        protocol.managers = [];
-        protocol.creator.institutionId = null;
-        for (const application of protocol.applications) {
+        processedProtocol.managers = [];
+        processedProtocol.creator.institutionId = null;
+        for (const application of processedProtocol.applications) {
             application.applier.institutionId = null;
         }
 
-        res.status(200).json({ message: 'Protocol with answers found.', data: protocol });
+        res.status(200).json({ message: 'Protocol with answers found.', data: processedProtocol });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }

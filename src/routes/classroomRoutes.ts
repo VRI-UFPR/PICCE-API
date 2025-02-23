@@ -18,6 +18,7 @@ import {
     deleteClassroom,
     getMyClassrooms,
     searchClassroomByName,
+    getManagedClassrooms,
 } from '../controllers/classroomController';
 import passport from '../services/passportAuth';
 
@@ -194,6 +195,33 @@ router.post('/createClassroom', passport.authenticate('jwt', { session: false })
  *               message: Internal Server Error.
  */
 router.put('/updateClassroom/:classroomId', passport.authenticate('jwt', { session: false }), uploader.none(), updateClassroom);
+
+/**
+ * @swagger
+ * /api/classroom/getManagedClassrooms:
+ *   get:
+ *     summary: Get all classrooms managed by the current user
+ *     tags: [Classroom]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: The list of all classrooms managed by the current user
+ *         content:
+ *           application/json:
+ *             message: Managed classrooms found.
+ *             data:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/GetClassroom'
+ *       500:
+ *         description: Some error occurred while retrieving managed classrooms.
+ *         content:
+ *           application/json:
+ *             error:
+ *               message: Internal Server Error.
+ */
+router.get('/getManagedClassrooms', passport.authenticate('jwt', { session: false }), uploader.none(), getManagedClassrooms);
 
 /**
  * @swagger

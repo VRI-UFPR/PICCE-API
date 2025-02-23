@@ -13,6 +13,8 @@ import { InstitutionType, User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
+import { getPeerUserActions } from './userController';
+import { getClassroomUserActions } from './classroomController';
 
 // Fields to be selected from the database to the response
 const fields = {
@@ -41,8 +43,8 @@ const getInstitutionUserRoles = async (user: User, institution: any, institution
             include: { users: { select: { id: true, role: true } } },
         }));
 
-    const member = institution.users.some((u: any) => u.id === user.id);
-    const coordinator = institution.users.some((u: any) => u.id === user.id && u.role === UserRole.COORDINATOR);
+    const member = institution.users?.some((u: any) => u.id === user.id);
+    const coordinator = institution.users?.some((u: any) => u.id === user.id && u.role === UserRole.COORDINATOR);
 
     return { member, coordinator };
 };
@@ -120,6 +122,16 @@ export const createInstitution = async (req: Request, res: Response) => {
         const processedInstitution = {
             ...createdInstitution,
             actions: await getInstitutionUserActions(user, createdInstitution, undefined),
+            users: await Promise.all(
+                createdInstitution.users.map(async (u) => ({ ...u, actions: await getPeerUserActions(user, u, undefined) }))
+            ),
+            classrooms: await Promise.all(
+                createdInstitution.classrooms.map(async (c) => ({
+                    ...c,
+                    users: await Promise.all(c.users.map(async (u) => ({ ...u, actions: await getPeerUserActions(user, u, undefined) }))),
+                    actions: await getClassroomUserActions(user, c, undefined),
+                }))
+            ),
         };
         // Filter roles from the response
         const filteredInstitution = dropSensitiveFields(processedInstitution);
@@ -159,6 +171,16 @@ export const updateInstitution = async (req: Request, res: Response): Promise<vo
         const processedInstitution = {
             ...updatedInstitution,
             actions: await getInstitutionUserActions(user, updatedInstitution, institutionId),
+            users: await Promise.all(
+                updatedInstitution.users.map(async (u) => ({ ...u, actions: await getPeerUserActions(user, u, undefined) }))
+            ),
+            classrooms: await Promise.all(
+                updatedInstitution.classrooms.map(async (c) => ({
+                    ...c,
+                    users: await Promise.all(c.users.map(async (u) => ({ ...u, actions: await getPeerUserActions(user, u, undefined) }))),
+                    actions: await getClassroomUserActions(user, c, institutionId),
+                }))
+            ),
         };
         // Filter roles from the response
         const filteredInstitution = dropSensitiveFields(processedInstitution);
@@ -183,6 +205,18 @@ export const getAllInstitutions = async (req: Request, res: Response): Promise<v
                 return {
                     ...institution,
                     actions: await getInstitutionUserActions(user, institution, institution.id),
+                    users: await Promise.all(
+                        institution.users.map(async (u) => ({ ...u, actions: await getPeerUserActions(user, u, undefined) }))
+                    ),
+                    classrooms: await Promise.all(
+                        institution.classrooms.map(async (c) => ({
+                            ...c,
+                            users: await Promise.all(
+                                c.users.map(async (u) => ({ ...u, actions: await getPeerUserActions(user, u, undefined) }))
+                            ),
+                            actions: await getClassroomUserActions(user, c, undefined),
+                        }))
+                    ),
                 };
             })
         );
@@ -214,6 +248,18 @@ export const getVisibleInstitutions = async (req: Request, res: Response): Promi
                 return {
                     ...institution,
                     actions: await getInstitutionUserActions(user, institution, institution.id),
+                    users: await Promise.all(
+                        institution.users.map(async (u) => ({ ...u, actions: await getPeerUserActions(user, u, undefined) }))
+                    ),
+                    classrooms: await Promise.all(
+                        institution.classrooms.map(async (c) => ({
+                            ...c,
+                            users: await Promise.all(
+                                c.users.map(async (u) => ({ ...u, actions: await getPeerUserActions(user, u, undefined) }))
+                            ),
+                            actions: await getClassroomUserActions(user, c, undefined),
+                        }))
+                    ),
                 };
             })
         );
@@ -240,6 +286,14 @@ export const getInstitution = async (req: Request, res: Response): Promise<void>
         const processedInstitution = {
             ...institution,
             actions: await getInstitutionUserActions(user, institution, institutionId),
+            users: await Promise.all(institution.users.map(async (u) => ({ ...u, actions: await getPeerUserActions(user, u, undefined) }))),
+            classrooms: await Promise.all(
+                institution.classrooms.map(async (c) => ({
+                    ...c,
+                    users: await Promise.all(c.users.map(async (u) => ({ ...u, actions: await getPeerUserActions(user, u, undefined) }))),
+                    actions: await getClassroomUserActions(user, c, institutionId),
+                }))
+            ),
         };
         // Filter roles from the response
         const filteredInstitution = dropSensitiveFields(processedInstitution);

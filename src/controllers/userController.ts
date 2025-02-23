@@ -16,7 +16,35 @@ import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
 import { hashSync } from 'bcrypt';
 
-// Only admins or the user itself can perform --UD operations on users
+const getPeerUserRoles = async (curUser: User, user: any, userId: number | undefined) => {
+    user = user || (await prismaClient.user.findUniqueOrThrow({ where: { id: userId } }));
+
+    const creator = user.creatorId === curUser.id;
+    const coordinator = curUser.role === UserRole.COORDINATOR && curUser.institutionId && curUser.institutionId === user.institutionId;
+    const itself = curUser.id === userId;
+
+    return { creator, coordinator, itself };
+};
+
+export const getPeerUserActions = async (curUser: User, user: any, userId: number | undefined) => {
+    const roles = await getPeerUserRoles(curUser, user, userId);
+
+    // Only the user itself, its creator and its institution coordinators can perform update operations on it
+    const toUpdate = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
+    // Only the user itself, its creator and its institution coordinators can perform delete operations on it
+    const toDelete = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
+    // Only the user itself, its creator and its institution coordinators can perform get operations on it
+    const toGet = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
+    // Only admins can perform get all users operation
+    const toGetAll = curUser.role === UserRole.ADMIN;
+    // Anyone (except users and guests) can perform search operations on users
+    const toSearch = curUser.role !== UserRole.USER && curUser.role !== UserRole.GUEST;
+    // Anyone (except users and guests) can perform getManaged operations on users
+    const toGetManaged = curUser.role !== UserRole.USER && curUser.role !== UserRole.GUEST;
+
+    return { toUpdate, toDelete, toGet, toGetAll, toSearch, toGetManaged };
+};
+
 const checkAuthorization = async (
     curUser: User,
     userId: number | undefined,
@@ -30,56 +58,80 @@ const checkAuthorization = async (
         case 'create':
             // Anyone (except users and guests) can perform create operations on users, respecting the hierarchy
             if (
-                role === UserRole.ADMIN ||
-                (curUser.role === UserRole.COORDINATOR && role === UserRole.COORDINATOR) ||
-                (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER) ||
-                (curUser.role === UserRole.APPLIER && role !== UserRole.USER) ||
-                curUser.role === UserRole.USER ||
-                curUser.role === UserRole.GUEST ||
-                (institutionId && curUser.institutionId !== institutionId) ||
-                role === UserRole.GUEST
+                role === UserRole.ADMIN || // Admins cannot be created
+                (curUser.role === UserRole.COORDINATOR && // Coordinators can only manage publishers, appliers and users
+                    role !== UserRole.PUBLISHER &&
+                    role !== UserRole.APPLIER &&
+                    role !== UserRole.USER) ||
+                (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER) || // Publishers can only manage users
+                (curUser.role === UserRole.APPLIER && role !== UserRole.USER) || // Appliers can only manage users
+                curUser.role === UserRole.USER || // Users cannot perform create operations
+                curUser.role === UserRole.GUEST || // Guests cannot perform create operations
+                (institutionId && curUser.institutionId !== institutionId) || // Users cannot insert people in institutions to which they do not belong
+                (role === UserRole.COORDINATOR && institutionId === undefined) || // Coordinators must belong to an institution
+                role === UserRole.GUEST // Users cannot be created as guests
             ) {
                 throw new Error('This user is not authorized to perform this action');
             }
             break;
-        case 'update':
+        case 'update': {
+            // Only the user itself, its creator and its institution coordinators can perform update operations on it, respecting the hierarchy
+            const user: User | null = await prismaClient.user.findUniqueOrThrow({ where: { id: userId } });
             if (
-                // Only the user itself can perform update operations on it, respecting the hierarchy
-                Number(curUser.id) !== userId &&
-                ((curUser.role === UserRole.COORDINATOR && (role === UserRole.ADMIN || role === UserRole.COORDINATOR)) ||
-                    ((curUser.role === UserRole.PUBLISHER || curUser.role === UserRole.APPLIER) && role !== UserRole.USER) ||
-                    curUser.role === UserRole.GUEST)
+                (curUser.id !== userId &&
+                    curUser.id !== user.creatorId &&
+                    (curUser.role !== UserRole.COORDINATOR || curUser.institutionId !== user.institutionId)) ||
+                (curUser.id === userId && role) || // The user itself cannot change its role
+                (curUser.role === UserRole.COORDINATOR && // Coordinators can only manage publishers, appliers and users
+                    role !== UserRole.PUBLISHER &&
+                    role !== UserRole.APPLIER &&
+                    role !== UserRole.USER) ||
+                (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER) || // Publishers can only manage users
+                (curUser.role === UserRole.APPLIER && role !== UserRole.USER) || // Appliers can only manage users
+                curUser.role === UserRole.GUEST || // Guests cannot perform update operations
+                role === UserRole.GUEST || // Users cannot be updated to guests
+                (institutionId && curUser.institutionId !== institutionId) // Users cannot insert people in institutions to which they do not belong
             ) {
                 throw new Error('This user is not authorized to perform this action');
             }
             break;
+        }
         case 'getAll':
             // Only ADMINs can perform get all users operation
             throw new Error('This user is not authorized to perform this action');
             break;
-        case 'get':
-            // Only the user itself (except guests) and institution members (except users and guests) can perform get operations on it
-            const user: User | null = await prismaClient.user.findUnique({ where: { id: userId } });
+        case 'get': {
+            // Only the user itself (except guests), its creator and institution members (except users and guests) can perform get operations on it
+            const user: User | null = await prismaClient.user.findUniqueOrThrow({ where: { id: userId } });
             if (
-                !user ||
-                (user.institutionId &&
-                    curUser.institutionId !== user.institutionId &&
-                    curUser.role !== UserRole.USER &&
-                    curUser.role !== UserRole.GUEST) ||
-                (!user.institutionId && userId !== curUser.id) ||
-                curUser.role === UserRole.GUEST
+                (userId !== curUser.id &&
+                    user.creatorId !== curUser.id &&
+                    ((user.institutionId && user.institutionId !== curUser.institutionId) || // Users cannot get information from users from other institutions
+                        curUser.role === UserRole.USER || // Users cannot get information from other users
+                        curUser.role === UserRole.GUEST || // Guests cannot get information from other users
+                        user.institutionId === undefined)) || // Users cannot get information from users without institutions
+                user.role === UserRole.GUEST // No one can get information from guests
             )
                 throw new Error('This user is not authorized to perform this action');
             break;
+        }
+        case 'getManaged':
         case 'search':
             // Anyone (except users and guests) can perform search operations on users
             if (curUser.role === UserRole.USER || curUser.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
             break;
-        case 'delete':
-            // Only the user itself can perform delete operations on it
-            if (curUser.id !== userId) throw new Error('This user is not authorized to perform this action');
+        case 'delete': {
+            // Only the user itself, its creator and its institution coordinators can perform delete operations on it
+            const user: User | null = await prismaClient.user.findUniqueOrThrow({ where: { id: userId } });
+            if (
+                curUser.id !== userId &&
+                curUser.id !== user.creatorId &&
+                (curUser.role !== UserRole.COORDINATOR || curUser.institutionId !== user.institutionId)
+            )
+                throw new Error('This user is not authorized to perform this action');
             break;
+        }
     }
 };
 
@@ -149,11 +201,14 @@ export const createUser = async (req: Request, res: Response) => {
                 classrooms: { connect: user.classrooms.map((id) => ({ id: id })) },
                 profileImage: file ? { create: { path: file.path } } : undefined,
                 institution: { connect: user.institutionId ? { id: user.institutionId } : undefined },
+                creator: { connect: { id: curUser.id } },
             },
             select: fields,
         });
+        // Embed user actions in the response
+        const processedUser = { ...createdUser, actions: await getPeerUserActions(curUser, createdUser, undefined) };
 
-        res.status(201).json({ message: 'User created.', data: createdUser });
+        res.status(201).json({ message: 'User created.', data: processedUser });
     } catch (error: any) {
         const file = req.file as Express.Multer.File;
         if (file) if (existsSync(file.path)) unlinkSync(file.path);
@@ -216,8 +271,10 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
 
             return updatedUser;
         });
+        // Embed user actions in the response
+        const processedUser = { ...updatedUser, actions: await getPeerUserActions(curUser, updatedUser, userId) };
 
-        res.status(200).json({ message: 'User updated.', data: updatedUser });
+        res.status(200).json({ message: 'User updated.', data: processedUser });
     } catch (error: any) {
         const file = req.file as Express.Multer.File;
         if (file) if (existsSync(file.path)) unlinkSync(file.path);
@@ -233,8 +290,44 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
         await checkAuthorization(curUser, undefined, undefined, undefined, 'getAll');
         // Prisma operation
         const users = await prismaClient.user.findMany({ select: fields });
+        // Embed user actions in the response
+        const processedUsers = await Promise.all(
+            users.map(async (user) => ({ ...user, actions: await getPeerUserActions(curUser, user, user.id) }))
+        );
 
-        res.status(200).json({ message: 'All users found.', data: users });
+        res.status(200).json({ message: 'All users found.', data: processedUsers });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const getManagedUsers = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // User from Passport-JWT
+        const curUser = req.user as User;
+        // Check if user is authorized to get managed users
+        await checkAuthorization(curUser, undefined, undefined, undefined, 'getManaged');
+        // Prisma operation
+        const users = await prismaClient.user.findMany({
+            where: {
+                ...(curUser.role !== UserRole.ADMIN && {
+                    // Admins can manage all users
+                    role: { notIn: [UserRole.GUEST, UserRole.ADMIN] },
+                    OR: [
+                        //{ institutionId: curUser.role !== UserRole.COORDINATOR ? curUser.institutionId : undefined }, // Coordinators can manage users from their institutions and users they created
+                        ...(curUser.role === UserRole.COORDINATOR ? [{ institutionId: curUser.institutionId }] : []), // Coordinators can manage users from their institutions and users they created
+                        { creatorId: curUser.id }, // Publishers and appliers can only manage users they created
+                    ],
+                }),
+            },
+            select: publicFields,
+        });
+        // Embed user actions in the response
+        const processedUsers = await Promise.all(
+            users.map(async (user) => ({ ...user, actions: await getPeerUserActions(curUser, user, user.id) }))
+        );
+
+        res.status(200).json({ message: 'Managed users found.', data: processedUsers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -250,8 +343,10 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
         await checkAuthorization(curUser, userId, undefined, undefined, 'get');
         // Prisma operation
         const user = await prismaClient.user.findUniqueOrThrow({ where: { id: userId }, select: fields });
+        // Embed user actions in the response
+        const processedUser = { ...user, actions: await getPeerUserActions(curUser, user, userId) };
 
-        res.status(200).json({ message: 'User found.', data: user });
+        res.status(200).json({ message: 'User found.', data: processedUser });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -272,11 +367,21 @@ export const searchUserByUsername = async (req: Request, res: Response): Promise
         const { term } = await searchUserSchema.validate(req.body);
         // Prisma operation
         const users = await prismaClient.user.findMany({
-            where: { username: { startsWith: term }, role: { not: UserRole.ADMIN } },
+            where: {
+                username: { startsWith: term },
+                role: { notIn: [UserRole.GUEST, UserRole.ADMIN] },
+                ...(curUser.role !== UserRole.ADMIN && {
+                    OR: [{ institutionId: curUser.institutionId }, { institutionId: null }],
+                }),
+            },
             select: publicFields,
         });
+        // Embed user actions in the response
+        const processedUsers = await Promise.all(
+            users.map(async (user) => ({ ...user, actions: await getPeerUserActions(curUser, user, user.id) }))
+        );
 
-        res.status(200).json({ message: 'Searched users found.', data: users });
+        res.status(200).json({ message: 'Searched users found.', data: processedUsers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }

@@ -5612,7 +5612,7 @@ async function main() {
         },
     ];
 
-    const users: (Omit<User, 'createdAt' | 'updatedAt' | 'profileImageId'> & { classrooms: number[] })[] = [
+    const users: (Omit<User, 'createdAt' | 'updatedAt' | 'profileImageId' | 'creatorId'> & { classrooms: number[] })[] = [
         {
             id: 1,
             name: 'Visitante',

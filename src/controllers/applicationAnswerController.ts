@@ -9,45 +9,12 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import { ApplicationAnswer, User, UserRole, VisibilityMode } from '@prisma/client';
+import { ApplicationAnswer, User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
-
-const getApplicationUserRoles = async (user: User, application: any, applicationId: number | undefined) => {
-    application =
-        application ||
-        (await prismaClient.application.findUniqueOrThrow({
-            where: { id: applicationId },
-            include: {
-                viewersClassroom: { select: { users: { select: { id: true } } } },
-                viewersUser: { select: { id: true } },
-                answersViewersClassroom: { select: { users: { select: { id: true } } } },
-                answersViewersUser: { select: { id: true } },
-                applier: { select: { id: true } },
-                protocol: { select: { creatorId: true, managers: { select: { id: true } } } },
-            },
-        }));
-
-    const protocolCreator = !!(application?.protocol.creatorId === user.id);
-    const protocolManager = !!application?.protocol.managers?.some((manager: any) => manager.id === user.id);
-    const applier = !!(application?.applier.id === user.id);
-    const viewer = !!(
-        application?.visibility === VisibilityMode.PUBLIC ||
-        (application?.visibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
-        application?.viewersUser?.some((viewer: any) => viewer.id === user.id) ||
-        application?.viewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
-    );
-    const answersViewer = !!(
-        application?.answersVisibility === VisibilityMode.PUBLIC ||
-        (application?.answersVisibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
-        application?.answersViewersUser?.some((viewer: any) => viewer.id === user.id) ||
-        application?.answersViewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
-    );
-
-    return { protocolCreator, protocolManager, applier, viewer, answersViewer };
-};
+import { getApplicationUserRoles } from './applicationController';
 
 const getApplicationAnswerUserRoles = async (user: User, applicationAnswer: any, applicationAnswerId: number | undefined) => {
     applicationAnswer =
@@ -100,13 +67,13 @@ const checkAuthorization = async (
             // Only viewers/applier/protocol creator/protocol managers of the application can perform create operations on application answers
             const roles = await getApplicationUserRoles(user, undefined, applicationId);
             if (!roles.viewer && !roles.applier && !roles.protocolCreator && !roles.protocolManager)
-                throw new Error('This user is not authorized to perform this action.');
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'update': {
             // Only the creator can perform update operations on application answers
             const roles = await getApplicationAnswerUserRoles(user, undefined, applicationAnswerId);
-            if (!roles.creator) throw new Error('This user is not authorized to perform this action.');
+            if (!roles.creator) throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'get':
@@ -114,18 +81,18 @@ const checkAuthorization = async (
             // Only protocol managers/protocol creator/application applier/creator can perform get/delete operations on application answers
             const roles = await getApplicationAnswerUserRoles(user, undefined, applicationAnswerId);
             if (!roles.creator && !roles.applicationApplier && !roles.protocolCreator && !roles.protocolManager)
-                throw new Error('This user is not authorized to perform this action.');
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'approve': {
             // Only protocol managers/protocol creator/application applier can perform approve operations on application answers
             const roles = await getApplicationAnswerUserRoles(user, undefined, applicationAnswerId);
             if (!roles.applicationApplier && !roles.protocolCreator && !roles.protocolManager)
-                throw new Error('This user is not authorized to perform this action.');
+                throw new Error('This user is not authorized to perform this action');
         }
         case 'getAll':
             // No one can perform getAll operations on application answers
-            throw new Error('This user is not authorized to perform this action.');
+            throw new Error('This user is not authorized to perform this action');
             break;
         case 'getMy':
             // Anyone can perform getMy operations on application answers (since the content is filtered according to the user)

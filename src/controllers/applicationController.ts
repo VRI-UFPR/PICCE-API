@@ -9,12 +9,13 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import { Application, User, VisibilityMode, UserRole } from '@prisma/client';
+import { User, VisibilityMode, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
+import { getProtocolUserRoles } from './protocolController';
 
-const getApplicationUserRoles = async (user: User, application: any, applicationId: number | undefined) => {
+export const getApplicationUserRoles = async (user: User, application: any, applicationId: number | undefined) => {
     application =
         application ||
         (await prismaClient.application.findUniqueOrThrow({
@@ -25,11 +26,12 @@ const getApplicationUserRoles = async (user: User, application: any, application
                 answersViewersClassroom: { select: { users: { select: { id: true } } } },
                 answersViewersUser: { select: { id: true } },
                 applier: { select: { id: true } },
-                protocol: { select: { creatorId: true, managers: { select: { id: true } } } },
+                protocol: { select: { creator: true, managers: { select: { id: true } } } },
             },
         }));
 
-    const protocolCreator = !!(application?.protocol.creatorId === user.id);
+    const coordinator = user.role === UserRole.COORDINATOR && application?.applier?.institutionId === user.institutionId;
+    const protocolCreator = !!(application?.protocol?.creator?.id === user.id);
     const protocolManager = !!application?.protocol.managers?.some((manager: any) => manager.id === user.id);
     const applier = !!(application?.applier.id === user.id);
     const viewer = !!(
@@ -45,63 +47,43 @@ const getApplicationUserRoles = async (user: User, application: any, application
         application?.answersViewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
     );
 
-    return { protocolCreator, protocolManager, applier, viewer, answersViewer };
+    return { protocolCreator, protocolManager, applier, viewer, answersViewer, coordinator };
 };
 
-const getProtocolUserRoles = async (user: User, protocol: any, protocolId: number | undefined) => {
-    protocol =
-        protocol ||
-        (await prismaClient.protocol.findUniqueOrThrow({
-            where: { id: protocolId },
-            include: {
-                managers: { select: { id: true } },
-                appliers: { select: { id: true } },
-                viewersUser: { select: { id: true } },
-                viewersClassroom: { select: { users: { select: { id: true } } } },
-                answersViewersUser: { select: { id: true } },
-                answersViewersClassroom: { select: { users: { select: { id: true } } } },
-            },
-        }));
-
-    const creator = protocol?.creatorId === user.id;
-    const manager = !!protocol?.managers?.some((manager: any) => manager.id === user.id);
-    const applier = !!protocol?.appliers?.some((applier: any) => applier.id === user.id);
-    const viewer = !!(
-        protocol?.visibility === VisibilityMode.PUBLIC ||
-        (protocol?.visibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
-        protocol?.viewersUser?.some((viewer: any) => viewer.id === user.id) ||
-        protocol?.viewersClassroom?.some((classroom: any) => classroom.users.some((viewer: any) => viewer.id === user.id))
-    );
-    const answersViewer = !!(
-        protocol?.answersVisibility === VisibilityMode.PUBLIC ||
-        (protocol?.answersVisibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
-        protocol?.answersViewersUser?.some((viewer: any) => viewer.id === user.id) ||
-        protocol?.answersViewersClassroom?.some((classroom: any) => classroom.users.some((viewer: any) => viewer.id === user.id))
-    );
-
-    return { creator, manager, applier, viewer, answersViewer };
-};
-
-const getApplicationUserActions = async (user: User, application: any, applicationId: number | undefined) => {
+export const getApplicationUserActions = async (user: User, application: any, applicationId: number | undefined) => {
     const roles = await getApplicationUserRoles(user, application, applicationId);
 
-    // Only protocol managers/applier/protocol creator can perform update operations on applications
-    const toUpdate = roles.applier || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
-    // Only protocol managers/applier/protocol creator can perform delete operations on applications
-    const toDelete = roles.applier || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
-    // Only viewers/applier/protocol creator/protocol manager can perform get operations on applications
-    const toGet = roles.viewer || roles.applier || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
+    // Only protocol managers/applier/institution coordinator/protocol creator can perform update operations on applications
+    const toUpdate = roles.applier || roles.coordinator || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
+    // Only protocol managers/applier/institution coordinator/protocol creator can perform delete operations on applications
+    const toDelete = roles.applier || roles.coordinator || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
+    // Only viewers/applier/protocol creator/institution coordinator/protocol manager can perform get operations on applications
+    const toGet =
+        roles.viewer ||
+        roles.coordinator ||
+        roles.applier ||
+        roles.protocolCreator ||
+        roles.protocolManager ||
+        user.role === UserRole.ADMIN;
     // Anyone can perform getMy operations on applications (since the result is filtered according to the user)
     const toGetMy = true;
     // Anyone can perform getVisible operations on applications (since the result is filtered according to the user)
     const toGetVisible = true;
     // No one can perform getAll operations on applications
     const toGetAll = user.role === UserRole.ADMIN;
-    // Only answer viewers/applier/protocol creator/protocol managers can perform get answers operations on applications
+    // Only answer viewers/applier/protocol creator/institution coordinator/protocol managers can perform get answers operations on applications
     const toGetAnswers =
-        roles.answersViewer || roles.applier || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
+        roles.answersViewer ||
+        roles.applier ||
+        roles.coordinator ||
+        roles.protocolCreator ||
+        roles.protocolManager ||
+        user.role === UserRole.ADMIN;
+    // Only protocol managers/protocol creator/application/institution coordinator/applier can perform approve operations on application answers
+    const toApproveAnswers =
+        roles.applier || roles.coordinator || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
 
-    return { toUpdate, toDelete, toGet, toGetMy, toGetVisible, toGetAll, toGetAnswers };
+    return { toUpdate, toDelete, toGet, toGetMy, toGetVisible, toGetAll, toGetAnswers, toApproveAnswers };
 };
 
 const checkAuthorization = async (user: User, applicationId: number | undefined, protocolId: number | undefined, action: string) => {
@@ -109,16 +91,17 @@ const checkAuthorization = async (user: User, applicationId: number | undefined,
 
     switch (action) {
         case 'create': {
-            // Only managers/appliers/creator can perform update/delete operations on applications
+            // Only managers/appliers/creator/coordinator can perform update/delete operations on applications
             const roles = await getProtocolUserRoles(user, undefined, protocolId);
-            if (!roles.applier && !roles.creator && !roles.manager) throw new Error('This user is not authorized to perform this action');
+            if (!roles.applier && !roles.creator && !roles.manager && !roles.coordinator)
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'update':
         case 'delete': {
-            // Only protocol managers/applier/protocol creator can perform update/delete operations on applications
+            // Only protocol managers/applier/coordinator/protocol creator can perform update/delete operations on applications
             const roles = await getApplicationUserRoles(user, undefined, applicationId);
-            if (!roles.applier && !roles.protocolCreator && !roles.protocolManager)
+            if (!roles.applier && !roles.protocolCreator && !roles.protocolManager && !roles.coordinator)
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
@@ -131,10 +114,10 @@ const checkAuthorization = async (user: User, applicationId: number | undefined,
             throw new Error('This user is not authorized to perform this action');
             break;
         case 'get': {
-            // Only viewers/protocol managers/protocol creator/applier can perform get operations on applications
+            // Only viewers/protocol managers/protocol creator/coordinator/applier can perform get operations on applications
             const roles = await getApplicationUserRoles(user, undefined, applicationId);
-            if (!roles.viewer && !roles.applier && !roles.protocolCreator && !roles.protocolManager)
-                throw new Error('This user is not authorized to perform this action:' + JSON.stringify(roles));
+            if (!roles.viewer && !roles.applier && !roles.protocolCreator && !roles.protocolManager && !roles.coordinator)
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
     }
@@ -461,6 +444,7 @@ export const getVisibleApplications = async (req: Request, res: Response): Promi
                               { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
                               { viewersUser: { some: { id: user.id } } },
                               { applierId: user.id },
+                              ...(user.role === UserRole.COORDINATOR ? [{ applier: { institutionId: user.institutionId } }] : []),
                           ],
                       },
                       select: fields,
@@ -526,6 +510,7 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
                     { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
                     { viewersUser: { some: { id: user.id } } },
                     { applierId: user.id },
+                    ...(user.role === UserRole.COORDINATOR ? [{ applier: { institutionId: user.institutionId } }] : []),
                 ],
             },
             select: fieldsWViewers,
@@ -728,7 +713,13 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
             ])
         );
 
-        res.status(200).json({ message: 'Application with answers found.', data: applicationWithAnswers });
+        // Embed user actions in the response
+        const processedApplication = {
+            ...applicationWithAnswers,
+            actions: await getApplicationUserActions(user, applicationWithAnswers, undefined),
+        };
+
+        res.status(200).json({ message: 'Application with answers found.', data: processedApplication });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
