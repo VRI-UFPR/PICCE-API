@@ -21,7 +21,7 @@ const checkAuthorization = async (user: User, protocolId: number | undefined, ac
     switch (action) {
         case 'create':
             // Only publishers, coordinators and admins can perform create operations on protocols
-            if (user.role === UserRole.USER || user.role === UserRole.APPLIER)
+            if (user.role === UserRole.USER || user.role === UserRole.APPLIER || user.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action.');
             break;
         case 'update':

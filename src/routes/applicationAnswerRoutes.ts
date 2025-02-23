@@ -18,6 +18,7 @@ import {
     getMyApplicationAnswers,
     getApplicationAnswer,
     deleteApplicationAnswer,
+    approveApplicationAnswer,
 } from '../controllers/applicationAnswerController';
 
 /**
@@ -434,6 +435,49 @@ const router = express.Router();
  *               message: Internal server error.
  */
 router.post('/createApplicationAnswer', passport.authenticate('jwt', { session: false }), uploader.any(), createApplicationAnswer);
+
+/**
+ * @swagger
+ * /api/applicationAnswer/approveApplicationAnswer/{applicationAnswerId}:
+ *   put:
+ *     summary: Approve an application answer by id
+ *     tags: [ApplicationAnswer]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: applicationAnswerId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: The id of the application answer to approve
+ *     responses:
+ *       200:
+ *         description: The application answer was successfully approved
+ *         content:
+ *           application/json:
+ *             message: Application answer approved.
+ *             data:
+ *               $ref: '#/components/schemas/GetApplicationAnswer'
+ *       404:
+ *         description: Application answer not found
+ *         content:
+ *           application/json:
+ *             error:
+ *               message: Application answer not found.
+ *       500:
+ *         description: An error occurred while approving the application answer
+ *         content:
+ *           application/json:
+ *             error:
+ *               message: Internal server error.
+ */
+router.put(
+    '/approveApplicationAnswer/:applicationAnswerId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    approveApplicationAnswer
+);
 
 /**
  * @swagger

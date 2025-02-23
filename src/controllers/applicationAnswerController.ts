@@ -50,6 +50,20 @@ const checkAuthorization = async (
             if (!applicationAnswer) throw new Error('This user is not authorized to perform this action.');
 
             break;
+        case 'approve':
+            // Only the applier of the application or a member of its institution (expect APPLIERs, USERs and GUESTs) can perform approve operations on application answers
+            const answersApplication = await prismaClient.applicationAnswer.findUnique({
+                where: { id: applicationAnswerId },
+                select: { application: { select: { applier: { select: { id: true, institutionId: true } } } } },
+            });
+            if (
+                (answersApplication?.application.applier.id !== user.id &&
+                    answersApplication?.application.applier.institutionId !== user.institutionId) ||
+                user.role === UserRole.GUEST ||
+                user.role === UserRole.USER ||
+                user.role === UserRole.APPLIER
+            )
+                throw new Error('This user is not authorized to perform this action.');
         case 'getAll':
             // Only ADMINs can perform get all application answers operation
             throw new Error('This user is not authorized to perform this action.');
@@ -190,9 +204,11 @@ const fields = {
     date: true,
     userId: true,
     applicationId: true,
-    addressId: true,
     createdAt: true,
     updatedAt: true,
+    approved: true,
+    coordinateId: true,
+    coordinate: { select: { latitude: true, longitude: true } },
     itemAnswerGroups: {
         select: {
             id: true,
@@ -237,13 +253,14 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
                 optionAnswers: yup.array().of(createOptionAnswerSchema).default([]),
             })
             .noUnknown();
+        const createCoordinateSchema = yup.object().shape({ latitude: yup.number(), longitude: yup.number() }).noUnknown();
         const createApplicationAnswerSchema = yup
             .object()
             .shape({
                 id: yup.number(),
                 date: yup.date().required(),
                 applicationId: yup.number().required(),
-                addressId: yup.number(),
+                coordinate: createCoordinateSchema,
                 itemAnswerGroups: yup.array().of(createItemAnswerGroupSchema).min(1).required(),
             })
             .noUnknown();
@@ -261,11 +278,27 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         const createdApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
             const createdApplicationAnswer: ApplicationAnswer = await prisma.applicationAnswer.create({
                 data: {
-                    id: applicationAnswer.id,
                     date: applicationAnswer.date,
-                    userId: user.id,
-                    applicationId: applicationAnswer.applicationId,
-                    addressId: applicationAnswer.addressId,
+                    user: { connect: { id: user.id } },
+                    application: { connect: { id: applicationAnswer.applicationId } },
+                    coordinate:
+                        applicationAnswer.coordinate.latitude !== undefined && applicationAnswer.coordinate.longitude !== undefined
+                            ? {
+                                  connectOrCreate: {
+                                      where: {
+                                          latitude_longitude: {
+                                              latitude: applicationAnswer.coordinate.latitude,
+                                              longitude: applicationAnswer.coordinate.longitude,
+                                          },
+                                      },
+                                      create: {
+                                          latitude: applicationAnswer.coordinate.latitude,
+                                          longitude: applicationAnswer.coordinate.longitude,
+                                      },
+                                  },
+                              }
+                            : undefined,
+                    approved: false,
                 },
             });
             for (const [itemAnswerGroupIndex, itemAnswerGroup] of applicationAnswer.itemAnswerGroups.entries()) {
@@ -370,11 +403,15 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
                 optionAnswers: yup.array().of(updateOptionAnswerSchema).default([]),
             })
             .noUnknown();
+        const updateCoordinateSchema = yup
+            .object()
+            .shape({ latitude: yup.number().required(), longitude: yup.number().required() })
+            .noUnknown();
         const updateApplicationAnswerSchema = yup
             .object()
             .shape({
                 date: yup.date(),
-                addressId: yup.number(),
+                coordinate: updateCoordinateSchema,
                 itemAnswerGroups: yup.array().of(updateItemAnswerGroupSchema).min(1).required(),
             })
             .noUnknown();
@@ -393,7 +430,26 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
             // Update application answer
             await prisma.applicationAnswer.update({
                 where: { id: applicationAnswerId },
-                data: { date: applicationAnswer.date, addressId: applicationAnswer.addressId },
+                data: {
+                    date: applicationAnswer.date,
+                    coordinate:
+                        applicationAnswer.coordinate.latitude !== undefined && applicationAnswer.coordinate.longitude !== undefined
+                            ? {
+                                  connectOrCreate: {
+                                      where: {
+                                          latitude_longitude: {
+                                              latitude: applicationAnswer.coordinate.latitude,
+                                              longitude: applicationAnswer.coordinate.longitude,
+                                          },
+                                      },
+                                      create: {
+                                          latitude: applicationAnswer.coordinate.latitude,
+                                          longitude: applicationAnswer.coordinate.longitude,
+                                      },
+                                  },
+                              }
+                            : { disconnect: true },
+                },
             });
             // Remove item answer groups that are not in the updated application answer
             await prisma.itemAnswerGroup.deleteMany({
@@ -581,6 +637,27 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
         });
 
         res.status(200).json({ message: 'Application answer found.', data: applicationAnswer });
+    } catch (error: any) {
+        res.status(400).json(errorFormatter(error));
+    }
+};
+
+export const approveApplicationAnswer = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // ID from params
+        const applicationAnswerId: number = parseInt(req.params.applicationAnswerId);
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is allowed to approve this application answer
+        await checkAuthorization(user, applicationAnswerId, undefined, 'approve');
+        // Prisma operation
+        const approvedApplicationAnswer = await prismaClient.applicationAnswer.update({
+            where: { id: applicationAnswerId },
+            data: { approved: true },
+            select: fields,
+        });
+
+        res.status(200).json({ message: 'Application answer approved.', data: approvedApplicationAnswer });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }

@@ -43,12 +43,13 @@ const checkAuthorization = async (user: User, institutionId: number | undefined,
             break;
         case 'get':
             // Only ADMINs and members (except USERs) of an institution can perform get/getVisible operations on it (the result will be filtered based on user)
-            if (user.role === UserRole.USER || user.institutionId !== institutionId)
+            if (user.role === UserRole.USER || user.role === UserRole.GUEST || user.institutionId !== institutionId)
                 throw new Error('This user is not authorized to perform this action');
             break;
         case 'getVisible':
             // Only USERs can't perform getVisible operations on institutions
-            if (user.role === UserRole.USER) throw new Error('This user is not authorized to perform this action');
+            if (user.role === UserRole.USER || user.role === UserRole.GUEST)
+                throw new Error('This user is not authorized to perform this action');
             break;
     }
 };

@@ -8,6 +8,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -59,6 +60,7 @@ enum InstitutionType {
 }
 
 enum UserRole {
+  GUEST
   USER
   APPLIER
   PUBLISHER
@@ -68,6 +70,7 @@ enum UserRole {
 
 enum VisibilityMode {
   PUBLIC
+  AUTHENTICATED
   RESTRICT
 }
 
@@ -81,14 +84,13 @@ enum ItemValidationType {
 model Address {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   city    String
   state   String
   country String
 
-  institutions       Institution[]
-  applicationAnswers ApplicationAnswer[]
+  institutions Institution[]
 
   @@unique([city, state, country])
 }
@@ -96,9 +98,10 @@ model Address {
 model ApplicationAnswer {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
-  date DateTime
+  date     DateTime
+  approved Boolean  @default(false)
 
   itemAnswerGroups ItemAnswerGroup[]
 
@@ -106,14 +109,14 @@ model ApplicationAnswer {
   user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   applicationId Int
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  addressId     Int?
-  address       Address?    @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  coordinateId  Int?
+  coordinate    Coordinate? @relation(fields: [coordinateId], references: [id], onDelete: SetNull)
 }
 
 model ItemAnswer {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   text String?
 
@@ -128,7 +131,7 @@ model ItemAnswer {
 model ItemAnswerGroup {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   itemAnswers   ItemAnswer[]
   optionAnswers OptionAnswer[]
@@ -141,7 +144,7 @@ model ItemAnswerGroup {
 model OptionAnswer {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   text String?
 
@@ -156,7 +159,7 @@ model OptionAnswer {
 model TableAnswer {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   text String?
 
@@ -171,7 +174,7 @@ model TableAnswer {
 model Institution {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   name String
   type InstitutionType
@@ -186,26 +189,27 @@ model Institution {
 model User {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
-  name          String
-  username      String   @unique
-  hash          String
-  role          UserRole
-  acceptedTerms Boolean  @default(false)
+  name           String
+  username       String   @unique
+  hash           String
+  role           UserRole
+  acceptedTerms  Boolean  @default(false)
   profileImageId Int?
-  profileImage  File?   @relation(name: "UserProfileImage", fields: [profileImageId], references: [id], onDelete: SetNull) 
+  profileImage   File?    @relation(name: "UserProfileImage", fields: [profileImageId], references: [id], onDelete: SetNull)
 
-  createdProtocols     Protocol[]          @relation(name: "Creator") // protocols that the user has created
+  createdProtocols          Protocol[]          @relation(name: "Creator") // protocols that the user has created
   ownedProtocols            Protocol[]          @relation(name: "ManagersProtocols") // protocols that the user can edit
-  answeredApplications ApplicationAnswer[]
-  applications         Application[]       @relation(name: "Applier") // applications that the user has created
-  visibleApplications  Application[]       @relation(name: "ApplicationViewersUser") // applications that the user can see
-  visibleProtocols     Protocol[]          @relation(name: "ProtocolViewersUsers") // protocols that the user can see
-  appliableProtocols   Protocol[]          @relation(name: "Appliers") // protocols that the user can apply
-  visibleProtocolAnswers Protocol[]       @relation(name: "ProtocolAnswersViewersUsers") // protocols that the user can see the answers
-  visibleApplicationAnswers Application[] @relation(name: "ApplicationAnswersViewersUsers") // applications that the user can see the answers
-  classrooms           Classroom[]
+  answeredApplications      ApplicationAnswer[]
+  applications              Application[]       @relation(name: "Applier") // applications that the user has created
+  visibleApplications       Application[]       @relation(name: "ApplicationViewersUser") // applications that the user can see
+  visibleProtocols          Protocol[]          @relation(name: "ProtocolViewersUsers") // protocols that the user can see
+  appliableProtocols        Protocol[]          @relation(name: "Appliers") // protocols that the user can apply
+  visibleProtocolAnswers    Protocol[]          @relation(name: "ProtocolAnswersViewersUsers") // protocols that the user can see the answers
+  visibleApplicationAnswers Application[]       @relation(name: "ApplicationAnswersViewersUsers") // applications that the user can see the answers
+  classrooms                Classroom[]         @relation(name: "ClassroomUsers") // classrooms that the user is in
+  createdClassrooms         Classroom[]         @relation(name: "ClassroomCreator") // classrooms that the user has created
 
   institutionId Int?
   institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
@@ -214,18 +218,20 @@ model User {
 model Classroom {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   name String
 
-  users               User[]
-  visibleApplications Application[] @relation(name: "ApplicationViewersClassroom") // applications that the classroom can see
-  visibleProtocols    Protocol[] @relation(name: "ProtocolViewersClassroom") // protocols that the classroom can see
-  visibleProtocolAnswers Protocol[] @relation(name: "ProtocolAnswersViewersClassroom") // protocols that the classroom can see the answers
+  users                     User[]        @relation(name: "ClassroomUsers") // users that are in the classroom
+  visibleApplications       Application[] @relation(name: "ApplicationViewersClassroom") // applications that the classroom can see
+  visibleProtocols          Protocol[]    @relation(name: "ProtocolViewersClassroom") // protocols that the classroom can see
+  visibleProtocolAnswers    Protocol[]    @relation(name: "ProtocolAnswersViewersClassroom") // protocols that the classroom can see the answers
   visibleApplicationAnswers Application[] @relation(name: "ApplicationAnswersViewersClassroom") // applications that the classroom can see the answers
 
   institutionId Int?
   institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  creatorId     Int
+  creator       User         @relation(name: "ClassroomCreator", fields: [creatorId], references: [id], onDelete: Cascade)
 
   @@unique([name, institutionId])
 }
@@ -235,55 +241,56 @@ model Application {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  visibility VisibilityMode
+  visibility        VisibilityMode
   answersVisibility VisibilityMode
+  keepLocation      Boolean
 
-  answers          ApplicationAnswer[]
-  viewersClassroom Classroom[] @relation(name: "ApplicationViewersClassroom") // classrooms that can see the application
-  viewersUser      User[]              @relation(name: "ApplicationViewersUser") // users that can see the application
-  answersViewersUser User[] @relation(name: "ApplicationAnswersViewersUsers") // users that can see the answers
-  answersViewersClassroom Classroom[] @relation(name: "ApplicationAnswersViewersClassroom") // classrooms that can see the answers
+  answers                 ApplicationAnswer[]
+  viewersClassroom        Classroom[]         @relation(name: "ApplicationViewersClassroom") // classrooms that can see the application
+  viewersUser             User[]              @relation(name: "ApplicationViewersUser") // users that can see the application
+  answersViewersUser      User[]              @relation(name: "ApplicationAnswersViewersUsers") // users that can see the answers
+  answersViewersClassroom Classroom[]         @relation(name: "ApplicationAnswersViewersClassroom") // classrooms that can see the answers
 
-  protocolId   Int
-  protocol     Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
-  applierId Int
-  applier   User     @relation(name: "Applier", fields: [applierId], references: [id], onDelete: Cascade)
+  protocolId Int
+  protocol   Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+  applierId  Int
+  applier    User     @relation(name: "Applier", fields: [applierId], references: [id], onDelete: Cascade)
 }
 
 model Protocol {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
-  title       String
-  description String?
-  enabled     Boolean
-  replicable  Boolean
-  creatorId   Int
-  creator     User @relation(name: "Creator", fields: [creatorId], references: [id], onDelete: Cascade)
-  applicability VisibilityMode
-  visibility  VisibilityMode
-  answersVisibility VisibilityMode
-  appliers User[] @relation(name: "Appliers") // users that can apply the protocol
-  viewersUser User[] @relation(name: "ProtocolViewersUsers") // users that can see the protocol
-  viewersClassroom Classroom[] @relation(name: "ProtocolViewersClassroom") // classrooms that can see the protocol
-  answersViewersUser User[] @relation(name: "ProtocolAnswersViewersUsers") // users that can see the answers
-  answersViewersClassroom Classroom[] @relation(name: "ProtocolAnswersViewersClassroom") // classrooms that can see the answers
+  title                   String
+  description             String?
+  enabled                 Boolean
+  replicable              Boolean
+  creatorId               Int
+  creator                 User           @relation(name: "Creator", fields: [creatorId], references: [id], onDelete: Cascade)
+  applicability           VisibilityMode
+  visibility              VisibilityMode
+  answersVisibility       VisibilityMode
+  appliers                User[]         @relation(name: "Appliers") // users that can apply the protocol
+  viewersUser             User[]         @relation(name: "ProtocolViewersUsers") // users that can see the protocol
+  viewersClassroom        Classroom[]    @relation(name: "ProtocolViewersClassroom") // classrooms that can see the protocol
+  answersViewersUser      User[]         @relation(name: "ProtocolAnswersViewersUsers") // users that can see the answers
+  answersViewersClassroom Classroom[]    @relation(name: "ProtocolAnswersViewersClassroom") // classrooms that can see the answers
 
   pages        Page[]
-  managers        User[] @relation(name: "ManagersProtocols") // users that can edit the protocol
+  managers     User[]        @relation(name: "ManagersProtocols") // users that can edit the protocol
   applications Application[]
 }
 
 model Page {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   type      PageType
   placement Int
 
-  itemGroups ItemGroup[]
+  itemGroups   ItemGroup[]
   dependencies PageDependencyRule[]
 
   protocolId Int
@@ -293,7 +300,7 @@ model Page {
 model ItemGroup {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   type         ItemGroupType
   placement    Int
@@ -310,7 +317,7 @@ model ItemGroup {
 model Item {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   text        String
   description String?
@@ -318,12 +325,12 @@ model Item {
   placement   Int
   enabled     Boolean
 
-  itemOptions     ItemOption[]
-  itemAnswers     ItemAnswer[]
-  optionAnswers   OptionAnswer[]
-  tableAnswers    TableAnswer[]
-  files           File[]
-  itemValidations ItemValidation[]
+  itemOptions           ItemOption[]
+  itemAnswers           ItemAnswer[]
+  optionAnswers         OptionAnswer[]
+  tableAnswers          TableAnswer[]
+  files                 File[]
+  itemValidations       ItemValidation[]
   pageDependencies      PageDependencyRule[]
   itemGroupDependencies ItemGroupDependencyRule[]
 
@@ -334,7 +341,7 @@ model Item {
 model ItemValidation {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   type          ItemValidationType
   argument      String
@@ -349,7 +356,7 @@ model ItemValidation {
 model ItemOption {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   text      String
   placement Int
@@ -364,7 +371,7 @@ model ItemOption {
 model TableColumn {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   text      String
   placement Int
@@ -378,9 +385,9 @@ model TableColumn {
 model File {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
-  path String
+  path        String
   description String?
 
   itemId       Int?
@@ -389,13 +396,13 @@ model File {
   itemOption   ItemOption? @relation(fields: [itemOptionId], references: [id], onDelete: Cascade)
   itemAnswerId Int?
   itemAnswer   ItemAnswer? @relation(fields: [itemAnswerId], references: [id], onDelete: Cascade)
-  users        User[]     @relation(name: "UserProfileImage")
+  users        User[]      @relation(name: "UserProfileImage")
 }
 
 model ItemGroupDependencyRule {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   type          DependencyType
   argument      String
@@ -412,7 +419,7 @@ model ItemGroupDependencyRule {
 model PageDependencyRule {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
 
   type          DependencyType
   argument      String
@@ -424,4 +431,17 @@ model PageDependencyRule {
   item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@unique([pageId, itemId, type])
+}
+
+model Coordinate {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  latitude  Float
+  longitude Float
+
+  answers ApplicationAnswer[]
+
+  @@unique([latitude, longitude])
 }

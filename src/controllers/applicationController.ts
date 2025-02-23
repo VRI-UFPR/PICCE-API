@@ -19,7 +19,7 @@ const checkAuthorization = async (user: User, applicationId: number | undefined,
 
     switch (action) {
         case 'create':
-            // All users except USER can perform create operations on applications, but only if the protocol is public or the user is an applier
+            // All users except USERS and GUESTS can perform create operations on applications, but only if the protocol is public or the user is an applier
             const protocol = await prismaClient.protocol.findUnique({
                 where: {
                     id: protocolId,
@@ -27,7 +27,8 @@ const checkAuthorization = async (user: User, applicationId: number | undefined,
                     enabled: true,
                 },
             });
-            if (!protocol || user.role === UserRole.USER) throw new Error('This user is not authorized to perform this action');
+            if (!protocol || user.role === UserRole.USER || user.role === UserRole.GUEST)
+                throw new Error('This user is not authorized to perform this action');
             break;
         case 'update':
             // Only ADMINs or the applier can perform update operations on applications
@@ -119,7 +120,8 @@ const fields = {
     protocol: { select: { id: true, title: true, description: true } },
     visibility: true,
     answersVisibility: true,
-    applier: { select: { id: true, username: true } },
+    keepLocation: true,
+    applier: { select: { id: true, username: true, institutionId: true } },
     createdAt: true,
     updatedAt: true,
 };
@@ -191,7 +193,15 @@ const fieldsWProtocol = {
 
 const fieldsWAnswers = {
     ...fieldsWProtocol,
-    answers: { select: { id: true, date: true, user: { select: { id: true, username: true } } } },
+    answers: {
+        select: {
+            id: true,
+            date: true,
+            user: { select: { id: true, username: true } },
+            coordinate: { select: { latitude: true, longitude: true } },
+            approved: true,
+        },
+    },
 };
 
 export const createApplication = async (req: Request, res: Response) => {
@@ -207,6 +217,7 @@ export const createApplication = async (req: Request, res: Response) => {
                 viewersClassroom: yup.array().of(yup.number()).default([]),
                 answersViewersUser: yup.array().of(yup.number()).default([]),
                 answersViewersClassroom: yup.array().of(yup.number()).default([]),
+                keepLocation: yup.boolean().required(),
             })
             .noUnknown();
         // Yup parsing/validation
@@ -236,6 +247,7 @@ export const createApplication = async (req: Request, res: Response) => {
                 viewersClassroom: { connect: application.viewersClassroom.map((id) => ({ id: id })) },
                 answersViewersUser: { connect: application.answersViewersUser.map((id) => ({ id: id })) },
                 answersViewersClassroom: { connect: application.answersViewersClassroom.map((id) => ({ id: id })) },
+                keepLocation: application.keepLocation,
             },
             select: fieldsWViewers,
         });
@@ -260,6 +272,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
                 viewersClassroom: yup.array().of(yup.number()).default([]),
                 answersViewersUser: yup.array().of(yup.number()).default([]),
                 answersViewersClassroom: yup.array().of(yup.number()).default([]),
+                keepLocation: yup.boolean(),
             })
             .noUnknown();
         // Yup parsing/validation
@@ -288,6 +301,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
                 viewersClassroom: { set: [], connect: application.viewersClassroom.map((id) => ({ id: id })) },
                 answersViewersUser: { set: [], connect: application.answersViewersUser.map((id) => ({ id: id })) },
                 answersViewersClassroom: { set: [], connect: application.answersViewersClassroom.map((id) => ({ id: id })) },
+                keepLocation: application.keepLocation,
             },
             select: fieldsWViewers,
         });
@@ -436,6 +450,17 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
             select: fieldsWAnswers,
         });
 
+        // If the user is not the applier or a member of the institution that the applier is from, the answers will be filtered to not include unnaproved answers
+        if (
+            (user.role !== UserRole.ADMIN &&
+                user.id !== applicationWithAnswers.applier.id &&
+                user.institutionId !== applicationWithAnswers.applier.institutionId) ||
+            user.role === UserRole.USER ||
+            user.role === UserRole.GUEST ||
+            user.role === UserRole.APPLIER
+        )
+            applicationWithAnswers.answers = applicationWithAnswers.answers.filter((answer: any) => answer.approved);
+
         for (const page of applicationWithAnswers.protocol.pages) {
             for (const itemGroup of page.itemGroups) {
                 for (const item of itemGroup.items) {
@@ -559,7 +584,10 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
             }
         }
         applicationWithAnswers.answers = Object.fromEntries(
-            applicationWithAnswers.answers.map((answer: any) => [answer.id, { date: answer.date, user: answer.user }])
+            applicationWithAnswers.answers.map((answer: any) => [
+                answer.id,
+                { date: answer.date, user: answer.user, coordinate: answer.coordinate, approved: answer.approved },
+            ])
         );
 
         res.status(200).json({ message: 'Application with answers found.', data: applicationWithAnswers });

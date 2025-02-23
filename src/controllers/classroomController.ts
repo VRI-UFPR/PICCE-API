@@ -36,21 +36,24 @@ const checkAuthorization = async (user: User, classroomId: number | undefined, i
 
     switch (action) {
         case 'create':
-            // Only ADMINs or members of an institution can perform create operations on its classrooms
-            if (user.role === UserRole.USER || (institutionId && user.institutionId !== institutionId))
+            // Only APPLIERS, PUBLISHERS and COORDINATORS can create classrooms (if institutionId is provided, the user must be from that institution)
+            if (user.role === UserRole.USER || user.role === UserRole.GUEST || (institutionId && user.institutionId !== institutionId))
                 throw new Error('This user is not authorized to perform this action');
             break;
         case 'update':
         case 'delete':
-            // Only ADMINs, COORDINATORs and PUBLISHERs of an institution can perform update/delete operations on its classrooms
-            const deleteClassroom = await prismaClient.classroom.findUnique({
-                where: user.institutionId ? { id: classroomId, institutionId: user.institutionId } : { id: classroomId },
+            // Only APPLIERS, PUBLISHERS and COORDINATORS from the institution or the creator of the classroom can update/delete it
+            const classroomToUpdate = await prismaClient.classroom.findUnique({
+                where: {
+                    id: classroomId,
+                    OR: user.institutionId ? [{ institutionId: user.institutionId }, { creatorId: user.id }] : [{ creatorId: user.id }],
+                },
             });
             if (
                 user.role === UserRole.USER ||
-                user.role === UserRole.APPLIER ||
+                user.role === UserRole.GUEST ||
                 (institutionId && institutionId !== user.institutionId) ||
-                !deleteClassroom
+                !classroomToUpdate
             )
                 throw new Error('This user is not authorized to perform this action');
 
@@ -59,15 +62,21 @@ const checkAuthorization = async (user: User, classroomId: number | undefined, i
             // Only ADMINs can perform get all classrooms operation
             throw new Error('This user is not authorized to perform this action');
             break;
-        case 'get': // Only ADMINs or members (except USERs) of an institution can perform get operations on its classrooms
+        case 'get':
+            // Only APPLYERS, PUBLISHERS and COORDINATORS from the institution or the creator of the classroom can get it
             const getClassroom = await prismaClient.classroom.findUnique({
-                where: user.institutionId ? { id: classroomId, institutionId: user.institutionId } : { id: classroomId },
+                where: {
+                    id: classroomId,
+                    OR: user.institutionId ? [{ institutionId: user.institutionId }, { creatorId: user.id }] : [{ creatorId: user.id }],
+                },
             });
-            if (user.role === UserRole.USER || !user.institutionId || !getClassroom)
+            if (user.role === UserRole.USER || user.role === UserRole.GUEST || !getClassroom)
                 throw new Error('This user is not authorized to perform this action');
             break;
         case 'search':
-            if (user.role === UserRole.USER) throw new Error('This user is not authorized to perform this action');
+            // All users except USERS and GUESTS can perform search classrooms operation
+            if (user.role === UserRole.USER || user.role === UserRole.GUEST)
+                throw new Error('This user is not authorized to perform this action');
             break;
         case 'getMy':
             // All users can perform get my classrooms operation (the result will be filtered based on the user)
@@ -76,6 +85,8 @@ const checkAuthorization = async (user: User, classroomId: number | undefined, i
 };
 
 const validateUsers = async (institutionId: number | undefined, users: number[]) => {
+    const guestUsers = await prismaClient.user.findMany({ where: { id: { in: users }, role: UserRole.GUEST } });
+    if (guestUsers.length > 0) throw new Error('A classroom can not contain GUEST users.');
     if (institutionId) {
         const invalidUsers = await prismaClient.user.findMany({ where: { id: { in: users }, institutionId: { not: institutionId } } });
         if (invalidUsers.length > 0) throw new Error('An institution classroom can only contain users from the institution.');
@@ -107,6 +118,7 @@ export const createClassroom = async (req: Request, res: Response) => {
                 name: classroom.name,
                 institution: { connect: classroom.institutionId ? { id: classroom.institutionId } : undefined },
                 users: { connect: classroom.users.map((id) => ({ id: id })) },
+                creator: { connect: { id: user.id } },
             },
         });
 

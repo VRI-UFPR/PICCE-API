@@ -6,19 +6,22 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details. You should have received a copy
 # of the GNU General Public License along with PICCE-API.  If not, see <https://www.gnu.org/licenses/>
 
-FROM node:20-alpine
+FROM node:22.14.0-alpine
 
 WORKDIR /back/
 
-COPY prisma/ /back/prisma
+COPY prisma/ ./prisma/
 COPY src/ /back/src
+COPY uploads/ /back/uploads
 COPY package.json /back/
 COPY .env /back/
 
+# Adicionar dependências para OpenSSL
+RUN apk add --no-cache openssl3 libssl3
 # RUN npm install
 # Run Prisma commands
 # RUN npx prisma generate
-# RUN npx prisma db push
+# RUN npx prisma migrate dev
 # RUN npx prisma db seed
 
 # CMD ["npm", "start"]
