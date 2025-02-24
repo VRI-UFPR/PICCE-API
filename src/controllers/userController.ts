@@ -90,7 +90,8 @@ const checkAuthorization = async (
                 (curUser.role === UserRole.APPLIER && role !== UserRole.USER) || // Appliers can only manage users
                 curUser.role === UserRole.GUEST || // Guests cannot perform update operations
                 role === UserRole.GUEST || // Users cannot be updated to guests
-                (institutionId && curUser.institutionId !== institutionId) // Users cannot insert people in institutions to which they do not belong
+                (institutionId && curUser.institutionId !== institutionId) || // Users cannot insert people in institutions to which they do not belong
+                (user.role === UserRole.ADMIN && institutionId) // Admins cannot have institutions
             ) {
                 throw new Error('This user is not authorized to perform this action');
             }
@@ -135,11 +136,13 @@ const checkAuthorization = async (
     }
 };
 
-const validateClassrooms = async (institutionId: number | undefined, classrooms: number[]) => {
+const validateClassrooms = async (role: UserRole, institutionId: number | undefined, classrooms: number[]) => {
     const invalidClassrooms = await prismaClient.classroom.findMany({
         where: { id: { in: classrooms }, institutionId: { not: institutionId } },
     });
     if (invalidClassrooms.length > 0) throw new Error('Users cannot be placed in classrooms of institutions to which they do not belong.');
+    if (classrooms.length > 0 && (role === UserRole.ADMIN || role === UserRole.GUEST))
+        throw new Error('You cannot assign classrooms to this user.');
 };
 
 // Fields to be selected from the database to the response
@@ -186,7 +189,7 @@ export const createUser = async (req: Request, res: Response) => {
         // Check if user is authorized to create a user
         await checkAuthorization(curUser, undefined, user.role as UserRole, user.institutionId, 'create');
         // Validate classrooms
-        await validateClassrooms(user.institutionId, user.classrooms as number[]);
+        await validateClassrooms(curUser.role, user.institutionId, user.classrooms as number[]);
         // Multer single file
         const file = req.file as Express.Multer.File;
         // Password encryption
@@ -240,7 +243,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         // Check if user is authorized to update the user
         await checkAuthorization(curUser, userId, user.role as UserRole, undefined, 'update');
         // Validate classrooms
-        await validateClassrooms(user.institutionId, user.classrooms as number[]);
+        await validateClassrooms(curUser.role, user.institutionId, user.classrooms as number[]);
         // Multer single file
         const file = req.file as Express.Multer.File;
         // Password encryption
