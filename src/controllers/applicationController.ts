@@ -32,7 +32,7 @@ export const getApplicationUserRoles = async (user: User, application: any, appl
 
     const coordinator = user.role === UserRole.COORDINATOR && application?.applier?.institutionId === user.institutionId;
     const protocolCreator = !!(application?.protocol?.creator?.id === user.id);
-    const protocolManager = !!application?.protocol.managers?.some((manager: any) => manager.id === user.id);
+    const protocolManager = !!application?.protocol?.managers?.some((manager: any) => manager.id === user.id);
     const applier = !!(application?.applier.id === user.id);
     const viewer = !!(
         application?.visibility === VisibilityMode.PUBLIC ||

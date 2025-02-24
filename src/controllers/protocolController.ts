@@ -286,17 +286,29 @@ const validateItemValidations = async (itemType: ItemType, validations: any[]) =
         throw new Error('Min and max validations only allowed for numberbox, textbox, range and checkbox items.');
 };
 
-const validateManagers = async (managers: (number | undefined)[], institutionId: number | null) => {
-    for (const manager of managers) {
-        const user = await prismaClient.user.findUnique({
-            where: {
-                id: manager,
-                institutionId: institutionId,
-                role: { in: [UserRole.PUBLISHER, UserRole.COORDINATOR, UserRole.ADMIN] },
-            },
-        });
-        if (!user || !institutionId) throw new Error('Managers must be publishers, coordinators or admins of the same institution.');
-    }
+const validateManagers = async (managers: number[], institutionId: number | null) => {
+    const invalidManagers = await prismaClient.user.findMany({
+        where: {
+            id: { in: managers },
+            role: { notIn: [UserRole.PUBLISHER, UserRole.COORDINATOR] },
+            ...(institutionId && { institutionId: { not: institutionId } }),
+        },
+    });
+    if (invalidManagers.length > 0) throw new Error('Managers must be publishers or coordinators of the same institution.');
+};
+
+const validadeViewers = async (viewers: number[]) => {
+    const invalidViewers = await prismaClient.user.findMany({
+        where: { id: { in: viewers }, role: { in: [UserRole.ADMIN, UserRole.GUEST] } },
+    });
+    if (invalidViewers.length > 0) throw new Error('You cannot add guests or admins as viewers.');
+};
+
+const validateAppliers = async (appliers: number[]) => {
+    const invalidAppliers = await prismaClient.user.findMany({
+        where: { id: { in: appliers }, role: { notIn: [UserRole.APPLIER, UserRole.PUBLISHER, UserRole.COORDINATOR] } },
+    });
+    if (invalidAppliers.length > 0) throw new Error('Appliers must be publishers, coordinators or appliers.');
 };
 
 const validateProtocolPlacements = async (protocol: any) => {
@@ -625,7 +637,12 @@ export const createProtocol = async (req: Request, res: Response) => {
         // Check if user is allowed to create a application
         await checkAuthorization(user, undefined, 'create');
         // Check if managers are publishers, coordinators or admins of the same institution
-        await validateManagers(protocol.managers, user.institutionId);
+        await validateManagers(protocol.managers as number[], user.institutionId);
+        // Check if viewers are not guests or admins
+        await validadeViewers(protocol.viewersUser as number[]);
+        await validadeViewers(protocol.answersViewersUser as number[]);
+        // Check if appliers are publishers, coordinators or appliers
+        await validateAppliers(protocol.appliers as number[]);
         // Check if protocol placements are valid
         await validateProtocolPlacements(protocol);
         // Check if dependencies are valid
@@ -908,7 +925,12 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
         // Check if user is included in the managers, or if user is admin
         await checkAuthorization(user, id, 'update');
         // Check if managers are publishers, coordinators or admins of the same institution
-        await validateManagers(protocol.managers, user.institutionId);
+        await validateManagers(protocol.managers as number[], user.institutionId);
+        // Check if viewers are not guests or admins
+        await validadeViewers(protocol.viewersUser as number[]);
+        await validadeViewers(protocol.answersViewersUser as number[]);
+        // Check if appliers are publishers, coordinators or appliers
+        await validateAppliers(protocol.appliers as number[]);
         // Check if protocol placements are valid
         await validateProtocolPlacements(protocol);
         // Check if dependencies are valid

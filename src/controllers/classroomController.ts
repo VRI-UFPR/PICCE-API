@@ -122,8 +122,8 @@ const checkAuthorization = async (user: User, classroomId: number | undefined, i
 };
 
 const validateUsers = async (institutionId: number | undefined, users: number[]) => {
-    const guestUsers = await prismaClient.user.findMany({ where: { id: { in: users }, role: UserRole.GUEST } });
-    if (guestUsers.length > 0) throw new Error('A classroom can not contain GUEST users.');
+    const guestUsers = await prismaClient.user.findMany({ where: { id: { in: users }, role: { in: [UserRole.GUEST, UserRole.ADMIN] } } });
+    if (guestUsers.length > 0) throw new Error('A classroom can not contain GUEST or ADMIN users.');
     if (institutionId) {
         const invalidUsers = await prismaClient.user.findMany({ where: { id: { in: users }, institutionId: { not: institutionId } } });
         if (invalidUsers.length > 0) throw new Error('An institution classroom can only contain users from the institution.');
