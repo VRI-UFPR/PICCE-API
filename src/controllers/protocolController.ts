@@ -16,47 +16,54 @@ import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
 import { getApplicationUserActions } from './applicationController';
 
-export const getProtocolUserRoles = async (user: User, protocol: any, protocolId: number | undefined) => {
-    protocol =
-        protocol ||
-        (await prismaClient.protocol.findUniqueOrThrow({
-            where: { id: protocolId },
-            include: {
-                creator: { select: { id: true, institutionId: true } },
-                managers: { select: { id: true } },
-                appliers: { select: { id: true } },
-                viewersUser: { select: { id: true } },
-                viewersClassroom: { select: { users: { select: { id: true } } } },
-                answersViewersUser: { select: { id: true } },
-                answersViewersClassroom: { select: { users: { select: { id: true } } } },
-            },
-        }));
-
-    const coordinator = user.role === UserRole.COORDINATOR && protocol?.creator?.institutionId === user.institutionId;
-    const creator = protocol?.creator?.id === user.id;
-    const manager = !!protocol?.managers?.some((manager: any) => manager.id === user.id);
-    const applier = !!protocol?.appliers?.some((applier: any) => applier.id === user.id);
-    const viewer = !!(
-        protocol?.visibility === VisibilityMode.PUBLIC ||
-        (protocol?.visibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
-        protocol?.viewersUser?.some((viewer: any) => viewer.id === user.id) ||
-        protocol?.viewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
-    );
-    const answersViewer = !!(
-        protocol?.answersVisibility === VisibilityMode.PUBLIC ||
-        (protocol?.answersVisibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
-        protocol?.answersViewersUser?.some((viewer: any) => viewer.id === user.id) ||
-        protocol?.answersViewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
-    );
-
-    return { creator, manager, applier, viewer, answersViewer, coordinator };
+export const getDetailedProtocol = async (protocolId: number) => {
+    const protocol = await prismaClient.protocol.findUniqueOrThrow({
+        where: { id: protocolId },
+        include: {
+            creator: { select: { id: true, institution: { select: { id: true } } } },
+            managers: { select: { id: true, institution: { select: { id: true } } } },
+            appliers: { select: { id: true, institution: { select: { id: true } } } },
+            viewersUser: { select: { id: true, institution: { select: { id: true } } } },
+            viewersClassroom: { select: { id: true, users: { select: { id: true, institution: { select: { id: true } } } } } },
+            answersViewersUser: { select: { id: true, institution: { select: { id: true } } } },
+            answersViewersClassroom: { select: { users: { select: { id: true, institution: { select: { id: true } } } } } },
+            _count: { select: { applications: true } },
+        },
+    });
+    return protocol;
 };
 
-const getProtocolUserActions = async (user: User, protocol: any, protocolId: number | undefined) => {
-    const roles = await getProtocolUserRoles(user, protocol, protocolId);
-    // Only managers/creator/institution coordinator can perform update/delete operations on protocols
+export const getProtocolUserRoles = async (user: User, protocol: Awaited<ReturnType<typeof getDetailedProtocol>>) => {
+    const coordinator =
+        user.role === UserRole.COORDINATOR && protocol.creator.institution && protocol.creator.institution?.id === user.institutionId;
+    const instituionMember = user.institutionId === protocol.creator.institution?.id;
+    const creator = protocol.creator.id === user.id;
+    const manager = protocol.managers.some(({ id }) => id === user.id);
+    const applier = protocol.appliers.some(({ id }) => id === user.id);
+    const viewer =
+        protocol.visibility === VisibilityMode.PUBLIC ||
+        (protocol.visibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
+        protocol.viewersUser.some(({ id }) => id === user.id) ||
+        protocol.viewersClassroom.some(({ users }) => users.some(({ id }) => id === user.id));
+    const answersViewer = !!(
+        protocol.answersVisibility === VisibilityMode.PUBLIC ||
+        (protocol.answersVisibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
+        protocol.answersViewersUser.some(({ id }) => id === user.id) ||
+        protocol.answersViewersClassroom.some(({ users }) => users.some(({ id }) => id === user.id))
+    );
+
+    return { answersViewer, applier, coordinator, creator, instituionMember, manager, viewer };
+};
+
+const getProtocolUserActions = async (user: User, protocol: Awaited<ReturnType<typeof getDetailedProtocol>>) => {
+    const roles = await getProtocolUserRoles(user, protocol);
+    // Anyone except users, appliers and guests can create protocols
+    const toCreate = user.role === UserRole.ADMIN || user.role === UserRole.PUBLISHER || user.role === UserRole.COORDINATOR;
+    // Only managers/creator/institution coordinator can perform delete operations on protocols
     const toUpdate = roles.manager || roles.coordinator || roles.creator || user.role === UserRole.ADMIN;
-    const toDelete = roles.manager || roles.coordinator || roles.creator || user.role === UserRole.ADMIN;
+    // Only managers/creator/institution coordinator can perform delete operations on protocols if there are no applications
+    const toDelete =
+        ((roles.manager || roles.coordinator || roles.creator) && protocol._count.applications === 0) || user.role === UserRole.ADMIN;
     // Only viewers/creator/managers/appliers/institution coordinator can perform get operations on protocols
     const toGet = roles.viewer || roles.coordinator || roles.creator || roles.manager || roles.applier || user.role === UserRole.ADMIN;
     // No one can perform getAll operations on protocols
@@ -73,52 +80,54 @@ const getProtocolUserActions = async (user: User, protocol: any, protocolId: num
         toUpdate,
         toDelete,
         toGet,
-        toGetAll,
-        toGetVisible,
-        toGetMy,
         toGetWAnswers,
         toApply,
     };
 };
 
-const checkAuthorization = async (user: User, protocolId: number | undefined, action: string) => {
+const checkAuthorization = async (user: User, protocolId: number, action: string) => {
     // Admins can perform any action
     if (user.role === UserRole.ADMIN) return;
 
     switch (action) {
-        case 'create':
+        case 'create': {
             // Anyone except users, appliers and guests can create protocols
             if (user.role === UserRole.USER || user.role === UserRole.APPLIER || user.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
             break;
-        case 'update':
-        case 'delete': {
-            // Only managers/creator/coordinator can perform update/delete operations on protocols
-            const roles = await getProtocolUserRoles(user, undefined, protocolId);
-            if (!roles.manager && !roles.creator && !roles.coordinator)
-                throw new Error('This user is not authorized to perform this action');
+        }
+        case 'update': {
+            const detailedProtocol = await getDetailedProtocol(protocolId);
+            const actions = await getProtocolUserActions(user, detailedProtocol);
+            if (!actions.toUpdate) throw new Error('This user is not authorized to perform this action');
             break;
         }
-        case 'getAll':
+        case 'delete': {
+            const detailedProtocol = await getDetailedProtocol(protocolId);
+            const actions = await getProtocolUserActions(user, detailedProtocol);
+            if (!actions.toDelete) throw new Error('This user is not authorized to perform this action');
+            break;
+        }
+        case 'getAll': {
             // No one can perform getAll operations on protocols
             throw new Error('This user is not authorized to perform this action');
             break;
+        }
         case 'getVisible':
-        case 'getMy':
+        case 'getMy': {
             // Anyone can perform getVisible and getMy operations on protocols (since the content is filtered according to the user)
             break;
+        }
         case 'get': {
-            // Only viewers/creator/managers/appliers/coordinator can perform get operations on protocols
-            const roles = await getProtocolUserRoles(user, undefined, protocolId);
-            if (!roles.viewer && !roles.creator && !roles.applier && !roles.manager && !roles.coordinator)
-                throw new Error('This user is not authorized to perform this action');
+            const detailedProtocol = await getDetailedProtocol(protocolId);
+            const actions = await getProtocolUserActions(user, detailedProtocol);
+            if (!actions.toGet) throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'getWAnswers': {
-            // Only answers viewers/creator/managers/coordinator can perform getWAnswers operations on protocols
-            const roles = await getProtocolUserRoles(user, undefined, protocolId);
-            if (!roles.answersViewer && !roles.creator && !roles.manager && !roles.coordinator)
-                throw new Error('This user is not authorized to perform this action');
+            const detailedProtocol = await getDetailedProtocol(protocolId);
+            const actions = await getProtocolUserActions(user, detailedProtocol);
+            if (!actions.toGetWAnswers) throw new Error('This user is not authorized to perform this action');
             break;
         }
     }
@@ -635,7 +644,7 @@ export const createProtocol = async (req: Request, res: Response) => {
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is allowed to create a application
-        await checkAuthorization(user, undefined, 'create');
+        await checkAuthorization(user, 0, 'create');
         // Check if managers are publishers, coordinators or admins of the same institution
         await validateManagers(protocol.managers as number[], user.institutionId);
         // Check if viewers are not guests or admins
@@ -786,10 +795,13 @@ export const createProtocol = async (req: Request, res: Response) => {
             }
 
             // Return the created application answer with nested content included
-            return await prisma.protocol.findUnique({ where: { id: createdProtocol.id }, select: fieldsWViewers });
+            return await prisma.protocol.findUniqueOrThrow({ where: { id: createdProtocol.id }, select: fieldsWViewers });
         });
         // Embed user actions in the response
-        const processedProtocol = { ...createdProtocol, actions: await getProtocolUserActions(user, createdProtocol, undefined) };
+        const processedProtocol = {
+            ...createdProtocol,
+            actions: await getProtocolUserActions(user, await getDetailedProtocol(createdProtocol.id)),
+        };
         // Filter sensitive fields
         const filteredProtocol = dropSensitiveFields(processedProtocol);
         res.status(201).json({ message: 'Protocol created.', data: filteredProtocol });
@@ -1256,11 +1268,14 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             }
 
             // Return the updated application answer with nested content included
-            return await prisma.protocol.findUnique({ where: { id: id }, select: fieldsWViewers });
+            return await prisma.protocol.findUniqueOrThrow({ where: { id: id }, select: fieldsWViewers });
         });
 
         // Embed user actions in the response
-        const processedProtocol = { ...upsertedProtocol, actions: await getProtocolUserActions(user, upsertedProtocol, undefined) };
+        const processedProtocol = {
+            ...upsertedProtocol,
+            actions: await getProtocolUserActions(user, await getDetailedProtocol(upsertedProtocol.id)),
+        };
         // Filter sensitive fields
         const filteredProtocol = dropSensitiveFields(processedProtocol);
 
@@ -1277,14 +1292,14 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is allowed to get all protocols
-        await checkAuthorization(user, undefined, 'getAll');
+        await checkAuthorization(user, 0, 'getAll');
         // Prisma operation
         const protocol = await prismaClient.protocol.findMany({ select: fieldsWViewers });
         // Embed user actions in the response
         const processedProtocol = await Promise.all(
             protocol.map(async (protocol) => ({
                 ...protocol,
-                actions: await getProtocolUserActions(user, protocol, undefined),
+                actions: await getProtocolUserActions(user, await getDetailedProtocol(protocol.id)),
             }))
         );
         // Filter sensitive fields
@@ -1301,7 +1316,7 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is allowed to get visible protocols
-        await checkAuthorization(user, undefined, 'getVisible');
+        await checkAuthorization(user, 0, 'getVisible');
         // Prisma operation
         const protocols =
             user.role === UserRole.ADMIN
@@ -1326,7 +1341,7 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
         const processedProtocols = await Promise.all(
             protocols.map(async (protocol) => ({
                 ...protocol,
-                actions: await getProtocolUserActions(user, protocol, undefined),
+                actions: await getProtocolUserActions(user, await getDetailedProtocol(protocol.id)),
             }))
         );
         // Filter sensitive fields
@@ -1351,7 +1366,7 @@ export const getMyProtocols = async (req: Request, res: Response): Promise<void>
         const processedProtocols = await Promise.all(
             protocols.map(async (protocol) => ({
                 ...protocol,
-                actions: await getProtocolUserActions(user, protocol, undefined),
+                actions: await getProtocolUserActions(user, await getDetailedProtocol(protocol.id)),
             }))
         );
         // Filter sensitive fields
@@ -1388,7 +1403,7 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
             select: fieldsWViewers,
         });
 
-        const processedProtocol = { ...protocol, actions: await getProtocolUserActions(user, protocol, undefined) };
+        const processedProtocol = { ...protocol, actions: await getProtocolUserActions(user, await getDetailedProtocol(protocol.id)) };
 
         const filteredProtocol =
             (user.role !== UserRole.USER &&
@@ -1486,7 +1501,7 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
         // Embed user actions in the response
         const processedProtocol = {
             ...protocol,
-            actions: await getProtocolUserActions(user, protocol, undefined),
+            actions: await getProtocolUserActions(user, await getDetailedProtocol(protocol.id)),
             applications: await Promise.all(
                 protocol.applications.map((application) => ({
                     ...application,
@@ -1515,6 +1530,11 @@ export const deleteProtocol = async (req: Request, res: Response): Promise<void>
         const user = req.user as User;
         // Check if user is allowed to delete the protocol
         await checkAuthorization(user, id, 'delete');
+        // Get current number of applications
+        const applicationsCount = await prismaClient.application.count({ where: { protocolId: id } });
+        // Check if there are any applications associated with the protocol
+        if (applicationsCount > 0)
+            throw new Error('Cannot delete protocol with associated applications, please delete them first or disable the protocol.');
         // Delete protocol
         const deletedProtocol = await prismaClient.protocol.delete({ where: { id }, select: { id: true } });
 
