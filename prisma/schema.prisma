@@ -7,7 +7,7 @@
 // of the GNU General Public License along with PICCE-API.  If not, see <https://www.gnu.org/licenses/>
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
@@ -212,8 +212,8 @@ model User {
   createdClassrooms         Classroom[]         @relation(name: "ClassroomCreator") // classrooms that the user has created
   createdUsers              User[]              @relation(name: "UserCreator") // users that the user has created
 
-  creatorId Int?
-  creator  User? @relation(name: "UserCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  creatorId     Int?
+  creator       User?        @relation(name: "UserCreator", fields: [creatorId], references: [id], onDelete: SetNull)
   institutionId Int?
   institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
 }
@@ -245,8 +245,11 @@ model Application {
   updatedAt DateTime @updatedAt
 
   visibility        VisibilityMode
+  enabled           Boolean
   answersVisibility VisibilityMode
   keepLocation      Boolean
+  startDate         DateTime?      @default(now())
+  endDate           DateTime?
 
   answers                 ApplicationAnswer[]
   viewersClassroom        Classroom[]         @relation(name: "ApplicationViewersClassroom") // classrooms that can see the application

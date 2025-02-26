@@ -86,6 +86,16 @@ export const getApplicationUserActions = async (user: User, application: any, ap
     return { toUpdate, toDelete, toGet, toGetMy, toGetVisible, toGetAll, toGetAnswers, toApproveAnswers };
 };
 
+const getApplicationEnablement = async (application: any, applicationId: number | undefined) => {
+    application =
+        application ||
+        (await prismaClient.application.findUniqueOrThrow({
+            where: { id: applicationId },
+            include: { protocol: { select: { id: true, enabled: true } } },
+        }));
+    return application.protocol.enabled && application.startDate <= new Date() && application.endDate >= new Date();
+};
+
 const checkAuthorization = async (user: User, applicationId: number | undefined, protocolId: number | undefined, action: string) => {
     if (user.role === UserRole.ADMIN) return;
 
@@ -114,9 +124,15 @@ const checkAuthorization = async (user: User, applicationId: number | undefined,
             throw new Error('This user is not authorized to perform this action');
             break;
         case 'get': {
-            // Only viewers/protocol managers/protocol creator/coordinator/applier can perform get operations on applications
+            // Only viewers (if the application is enabled)/protocol managers/protocol creator/coordinator/applier can perform get operations on applications
             const roles = await getApplicationUserRoles(user, undefined, applicationId);
-            if (!roles.viewer && !roles.applier && !roles.protocolCreator && !roles.protocolManager && !roles.coordinator)
+            if (
+                (!roles.viewer || !getApplicationEnablement(undefined, applicationId)) &&
+                !roles.applier &&
+                !roles.protocolCreator &&
+                !roles.protocolManager &&
+                !roles.coordinator
+            )
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
@@ -186,6 +202,9 @@ const fields = {
     id: true,
     visibility: true,
     answersVisibility: true,
+    enabled: true,
+    startDate: true,
+    endDate: true,
     keepLocation: true,
     applier: { select: { id: true, username: true, institutionId: true } },
     viewersClassroom: { select: { users: { select: { id: true } } } },
@@ -289,6 +308,9 @@ export const createApplication = async (req: Request, res: Response) => {
                 answersViewersUser: yup.array().of(yup.number()).default([]),
                 answersViewersClassroom: yup.array().of(yup.number()).default([]),
                 keepLocation: yup.boolean().required(),
+                startDate: yup.date(),
+                endDate: yup.date(),
+                enabled: yup.boolean().required(),
             })
             .noUnknown();
         // Yup parsing/validation
@@ -319,6 +341,9 @@ export const createApplication = async (req: Request, res: Response) => {
                 answersViewersUser: { connect: application.answersViewersUser.map((id) => ({ id: id })) },
                 answersViewersClassroom: { connect: application.answersViewersClassroom.map((id) => ({ id: id })) },
                 keepLocation: application.keepLocation,
+                startDate: application.startDate,
+                endDate: application.endDate,
+                enabled: application.enabled,
             },
             select: fieldsWViewers,
         });
@@ -352,6 +377,9 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
                 answersViewersUser: yup.array().of(yup.number()).default([]),
                 answersViewersClassroom: yup.array().of(yup.number()).default([]),
                 keepLocation: yup.boolean(),
+                startDate: yup.date(),
+                endDate: yup.date(),
+                enabled: yup.boolean(),
             })
             .noUnknown();
         // Yup parsing/validation
@@ -381,6 +409,9 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
                 answersViewersUser: { set: [], connect: application.answersViewersUser.map((id) => ({ id: id })) },
                 answersViewersClassroom: { set: [], connect: application.answersViewersClassroom.map((id) => ({ id: id })) },
                 keepLocation: application.keepLocation,
+                startDate: application.startDate,
+                endDate: application.endDate,
+                enabled: application.enabled,
             },
             select: fieldsWViewers,
         });
@@ -439,13 +470,20 @@ export const getVisibleApplications = async (req: Request, res: Response): Promi
                 ? await prismaClient.application.findMany({ select: fieldsWViewers })
                 : await prismaClient.application.findMany({
                       where: {
-                          OR: [
-                              { visibility: 'PUBLIC' },
-                              { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
-                              { viewersUser: { some: { id: user.id } } },
-                              { applierId: user.id },
-                              ...(user.role === UserRole.COORDINATOR ? [{ applier: { institutionId: user.institutionId } }] : []),
+                          AND: [
+                              {
+                                  OR: [
+                                      { visibility: 'PUBLIC' },
+                                      { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                                      { viewersUser: { some: { id: user.id } } },
+                                      { applierId: user.id },
+                                      ...(user.role === UserRole.COORDINATOR ? [{ applier: { institutionId: user.institutionId } }] : []),
+                                  ],
+                              },
+                              { OR: [{ endDate: { gte: new Date() } }, { endDate: { equals: null } }] },
+                              { OR: [{ startDate: { lte: new Date() } }, { startDate: { equals: null } }] },
                           ],
+                          protocol: { enabled: true },
                       },
                       select: fields,
                   });
@@ -505,13 +543,20 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
         const application = await prismaClient.application.findUniqueOrThrow({
             where: {
                 id: applicationId,
-                OR: [
-                    { visibility: 'PUBLIC' },
-                    { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
-                    { viewersUser: { some: { id: user.id } } },
-                    { applierId: user.id },
-                    ...(user.role === UserRole.COORDINATOR ? [{ applier: { institutionId: user.institutionId } }] : []),
+                AND: [
+                    {
+                        OR: [
+                            { visibility: 'PUBLIC' },
+                            { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                            { viewersUser: { some: { id: user.id } } },
+                            { applierId: user.id },
+                            ...(user.role === UserRole.COORDINATOR ? [{ applier: { institutionId: user.institutionId } }] : []),
+                        ],
+                    },
+                    { OR: [{ endDate: { gte: new Date() } }, { endDate: { equals: null } }] },
+                    { OR: [{ startDate: { lte: new Date() } }, { startDate: { equals: null } }] },
                 ],
+                protocol: { enabled: true },
             },
             select: fieldsWViewers,
         });
@@ -568,9 +613,7 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
         await checkAuthorization(user, applicationId, undefined, 'get');
         // Prisma operation
         const applicationWithAnswers: any = await prismaClient.application.findUniqueOrThrow({
-            where: {
-                id: applicationId,
-            },
+            where: { id: applicationId },
             select: fieldsWAnswers,
         });
 

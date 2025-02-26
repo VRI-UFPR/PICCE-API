@@ -26100,7 +26100,7 @@ async function main() {
         },
     ];
 
-    const picceApplications: Omit<Application, 'createdAt' | 'updatedAt'>[] = [
+    const picceApplications: Omit<Application, 'createdAt' | 'updatedAt' | 'endDate'>[] = [
         {
             id: 1,
             protocolId: 1,
@@ -26108,6 +26108,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
         {
             id: 2,
@@ -26116,6 +26118,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
         {
             id: 3,
@@ -26124,6 +26128,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
         {
             id: 4,
@@ -26132,6 +26138,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
         {
             id: 5,
@@ -26140,6 +26148,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
         {
             id: 6,
@@ -26148,6 +26158,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
         {
             id: 7,
@@ -26156,6 +26168,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
         {
             id: 8,
@@ -26164,6 +26178,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
         {
             id: 9,
@@ -26172,6 +26188,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
         {
             id: 10,
@@ -26180,6 +26198,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
         {
             id: 11,
@@ -26188,6 +26208,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
         {
             id: 12,
@@ -26196,6 +26218,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
         {
             id: 13,
@@ -26204,6 +26228,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
         {
             id: 14,
@@ -26212,6 +26238,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
         {
             id: 15,
@@ -26220,6 +26248,8 @@ async function main() {
             visibility: VisibilityMode.PUBLIC,
             answersVisibility: VisibilityMode.PUBLIC,
             keepLocation: true,
+            startDate: new Date(),
+            enabled: true,
         },
     ];
 
