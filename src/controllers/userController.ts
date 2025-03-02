@@ -16,103 +16,122 @@ import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
 import { hashSync } from 'bcrypt';
 
-const getPeerUserRoles = async (curUser: User, user: any, userId: number | undefined) => {
-    user = user || (await prismaClient.user.findUniqueOrThrow({ where: { id: userId } }));
-
-    const creator = user.creatorId === curUser.id;
-    const coordinator = curUser.role === UserRole.COORDINATOR && curUser.institutionId && curUser.institutionId === user.institutionId;
-    const itself = curUser.id === userId;
-
-    return { creator, coordinator, itself };
+const detailedUserFields = {
+    institution: { select: { id: true } },
+    creator: { select: { id: true } },
 };
 
-export const getPeerUserActions = async (curUser: User, user: any, userId: number | undefined) => {
-    const roles = await getPeerUserRoles(curUser, user, userId);
-
-    // Only the user itself, its creator and its institution coordinators can perform update operations on it
-    const toUpdate = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
-    // Only the user itself, its creator and its institution coordinators can perform delete operations on it
-    const toDelete = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
-    // Only the user itself, its creator and its institution coordinators can perform get operations on it
-    const toGet = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
-    // Only admins can perform get all users operation
-    const toGetAll = curUser.role === UserRole.ADMIN;
-    // Anyone (except users and guests) can perform search operations on users
-    const toSearch = curUser.role !== UserRole.USER && curUser.role !== UserRole.GUEST;
-    // Anyone (except users and guests) can perform getManaged operations on users
-    const toGetManaged = curUser.role !== UserRole.USER && curUser.role !== UserRole.GUEST;
-
-    return { toUpdate, toDelete, toGet, toGetAll, toSearch, toGetManaged };
+const getDetailedUsers = async (usersIds: number[]) => {
+    return await prismaClient.user.findMany({ where: { id: { in: usersIds } }, include: detailedUserFields });
 };
 
-const checkAuthorization = async (
+const getVisibleFields = async (curUser: User, users: Awaited<ReturnType<typeof getDetailedUsers>>) => {
+    const peerUsersRoles = await getPeerUsersRoles(curUser, users);
+    const visibleFields = peerUsersRoles.map((roles, index) => {
+        const fullAccess = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
+        const baseAccess =
+            roles.viewer || roles.coordinator || roles.itself || roles.creator || roles.instituionMember || curUser.role === UserRole.ADMIN;
+
+        const fields = {
+            id: baseAccess,
+            createdAt: fullAccess,
+            updatedAt: fullAccess,
+            name: fullAccess,
+            username: baseAccess,
+            role: fullAccess,
+            acceptTerms: fullAccess,
+            profileImage: { select: { id: fullAccess, path: fullAccess } },
+            institution: { select: { id: baseAccess, name: baseAccess } },
+            classrooms: { select: { id: baseAccess, name: baseAccess } },
+        };
+
+        return fields;
+    });
+
+    return visibleFields;
+};
+
+const getPeerUsersRoles = async (curUser: User, users: Awaited<ReturnType<typeof getDetailedUsers>>) => {
+    const roles = users.map((user) => {
+        const creator = user.creator?.id === curUser.id;
+        const coordinator =
+            curUser.role === UserRole.COORDINATOR && curUser.institutionId && curUser.institutionId === user.institution?.id;
+        const instituionMember = curUser.institutionId && curUser.institutionId === user.institution?.id;
+        const itself = curUser.id === user.id;
+        const viewer = !user.institution && curUser.role !== UserRole.USER && curUser.role !== UserRole.GUEST;
+
+        return { creator, coordinator, instituionMember, itself, viewer };
+    });
+
+    return roles;
+};
+
+export const getPeerUserActions = async (curUser: User, users: Awaited<ReturnType<typeof getDetailedUsers>>) => {
+    const peerUsersRoles = await getPeerUsersRoles(curUser, users);
+
+    const actions = peerUsersRoles.map((roles) => {
+        // Only the user itself, its creator and its institution coordinators can perform update operations on it
+        const toUpdate = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
+        // Only the user itself, its creator and its institution coordinators can perform delete operations on it
+        const toDelete = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
+        // Only the user itself, its creator and its institution coordinators can perform get operations on it
+        const toGet = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
+        // Only admins can perform get all users operation
+        const toGetAll = curUser.role === UserRole.ADMIN;
+        // Anyone (except users and guests) can perform search operations on users
+        const toSearch = curUser.role !== UserRole.USER && curUser.role !== UserRole.GUEST;
+        // Anyone (except users and guests) can perform getManaged operations on users
+        const toGetManaged = curUser.role !== UserRole.USER && curUser.role !== UserRole.GUEST;
+
+        return { toDelete, toGet, toUpdate };
+    });
+
+    return actions;
+};
+
+const validateHierarchy = async (
     curUser: User,
-    userId: number | undefined,
     role: UserRole | undefined,
     institutionId: number | undefined,
-    action: string
+    userId: number | undefined
 ) => {
-    if (curUser.role === UserRole.ADMIN && role !== UserRole.ADMIN) return;
+    if (
+        role === UserRole.ADMIN || // Admins cannot be managed by anyone
+        (curUser.role === UserRole.COORDINATOR && // Coordinators can only manage publishers, appliers and users
+            role !== UserRole.PUBLISHER &&
+            role !== UserRole.APPLIER &&
+            role !== UserRole.USER) ||
+        (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER) || // Publishers can only manage users
+        (curUser.role === UserRole.APPLIER && role !== UserRole.USER) || // Appliers can only manage users
+        (institutionId && curUser.institutionId !== institutionId) || // Users cannot insert people in institutions to which they do not belong
+        (role === UserRole.COORDINATOR && institutionId === undefined) || // Coordinators must belong to an institution
+        role === UserRole.GUEST || // Users cannot be created as guests
+        (curUser.id === userId && role) || // The user itself cannot change its role
+        (curUser.role === UserRole.ADMIN && curUser.id === userId && institutionId) // Admins cannot have institutions
+    )
+        throw new Error('The role or institution of the user is invalid.');
+};
+
+const checkAuthorization = async (curUser: User, usersIds: number[], action: string) => {
+    if (curUser.role === UserRole.ADMIN) return;
 
     switch (action) {
-        case 'create':
+        case 'create': {
             // Anyone (except users and guests) can perform create operations on users, respecting the hierarchy
-            if (
-                role === UserRole.ADMIN || // Admins cannot be created
-                (curUser.role === UserRole.COORDINATOR && // Coordinators can only manage publishers, appliers and users
-                    role !== UserRole.PUBLISHER &&
-                    role !== UserRole.APPLIER &&
-                    role !== UserRole.USER) ||
-                (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER) || // Publishers can only manage users
-                (curUser.role === UserRole.APPLIER && role !== UserRole.USER) || // Appliers can only manage users
-                curUser.role === UserRole.USER || // Users cannot perform create operations
-                curUser.role === UserRole.GUEST || // Guests cannot perform create operations
-                (institutionId && curUser.institutionId !== institutionId) || // Users cannot insert people in institutions to which they do not belong
-                (role === UserRole.COORDINATOR && institutionId === undefined) || // Coordinators must belong to an institution
-                role === UserRole.GUEST // Users cannot be created as guests
-            ) {
+            if (curUser.role === UserRole.USER || curUser.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
-            }
             break;
+        }
         case 'update': {
-            // Only the user itself, its creator and its institution coordinators can perform update operations on it, respecting the hierarchy
-            const user: User | null = await prismaClient.user.findUniqueOrThrow({ where: { id: userId } });
-            if (
-                (curUser.id !== userId &&
-                    curUser.id !== user.creatorId &&
-                    (curUser.role !== UserRole.COORDINATOR || curUser.institutionId !== user.institutionId)) ||
-                (curUser.id === userId && role) || // The user itself cannot change its role
-                (curUser.role === UserRole.COORDINATOR && // Coordinators can only manage publishers, appliers and users
-                    role !== UserRole.PUBLISHER &&
-                    role !== UserRole.APPLIER &&
-                    role !== UserRole.USER) ||
-                (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER) || // Publishers can only manage users
-                (curUser.role === UserRole.APPLIER && role !== UserRole.USER) || // Appliers can only manage users
-                curUser.role === UserRole.GUEST || // Guests cannot perform update operations
-                role === UserRole.GUEST || // Users cannot be updated to guests
-                (institutionId && curUser.institutionId !== institutionId) || // Users cannot insert people in institutions to which they do not belong
-                (user.role === UserRole.ADMIN && institutionId) // Admins cannot have institutions
-            ) {
+            if ((await getPeerUserActions(curUser, await getDetailedUsers(usersIds))).some(({ toUpdate }) => !toUpdate))
                 throw new Error('This user is not authorized to perform this action');
-            }
             break;
         }
         case 'getAll':
             // Only ADMINs can perform get all users operation
             throw new Error('This user is not authorized to perform this action');
-            break;
         case 'get': {
-            // Only the user itself (except guests), its creator and institution members (except users and guests) can perform get operations on it
-            const user: User | null = await prismaClient.user.findUniqueOrThrow({ where: { id: userId } });
-            if (
-                (userId !== curUser.id &&
-                    user.creatorId !== curUser.id &&
-                    ((user.institutionId && user.institutionId !== curUser.institutionId) || // Users cannot get information from users from other institutions
-                        curUser.role === UserRole.USER || // Users cannot get information from other users
-                        curUser.role === UserRole.GUEST || // Guests cannot get information from other users
-                        user.institutionId === undefined)) || // Users cannot get information from users without institutions
-                user.role === UserRole.GUEST // No one can get information from guests
-            )
+            if ((await getPeerUserActions(curUser, await getDetailedUsers(usersIds))).some(({ toGet }) => !toGet))
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
@@ -123,13 +142,7 @@ const checkAuthorization = async (
                 throw new Error('This user is not authorized to perform this action');
             break;
         case 'delete': {
-            // Only the user itself, its creator and its institution coordinators can perform delete operations on it
-            const user: User | null = await prismaClient.user.findUniqueOrThrow({ where: { id: userId } });
-            if (
-                curUser.id !== userId &&
-                curUser.id !== user.creatorId &&
-                (curUser.role !== UserRole.COORDINATOR || curUser.institutionId !== user.institutionId)
-            )
+            if ((await getPeerUserActions(curUser, await getDetailedUsers(usersIds))).some(({ toDelete }) => !toDelete))
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
@@ -143,28 +156,6 @@ const validateClassrooms = async (role: UserRole, institutionId: number | undefi
     if (invalidClassrooms.length > 0) throw new Error('Users cannot be placed in classrooms of institutions to which they do not belong.');
     if (classrooms.length > 0 && (role === UserRole.ADMIN || role === UserRole.GUEST))
         throw new Error('You cannot assign classrooms to this user.');
-};
-
-// Fields to be selected from the database to the response
-const fields = {
-    id: true,
-    name: true,
-    username: true,
-    role: true,
-    institution: { select: { id: true, name: true } },
-    classrooms: { select: { id: true, name: true } },
-    profileImage: { select: { id: true, path: true } },
-    acceptedTerms: true,
-    createdAt: true,
-    updatedAt: true,
-};
-
-const publicFields = {
-    id: true,
-    name: true,
-    username: true,
-    institution: { select: { id: true, name: true } },
-    classrooms: { select: { id: true, name: true } },
 };
 
 export const createUser = async (req: Request, res: Response) => {
@@ -187,7 +178,9 @@ export const createUser = async (req: Request, res: Response) => {
         // User from Passport-JWT
         const curUser = req.user as User;
         // Check if user is authorized to create a user
-        await checkAuthorization(curUser, undefined, user.role as UserRole, user.institutionId, 'create');
+        await checkAuthorization(curUser, [], 'create');
+        // Validate hierarchy
+        await validateHierarchy(curUser, user.role, user.institutionId, user.id);
         // Validate classrooms
         await validateClassrooms(curUser.role, user.institutionId, user.classrooms as number[]);
         // Multer single file
@@ -195,7 +188,7 @@ export const createUser = async (req: Request, res: Response) => {
         // Password encryption
         user.hash = hashSync(user.hash, 10);
         // Prisma operation
-        const createdUser = await prismaClient.user.create({
+        const detailedCreatedUser = await prismaClient.user.create({
             data: {
                 name: user.name,
                 username: user.username,
@@ -206,12 +199,18 @@ export const createUser = async (req: Request, res: Response) => {
                 institution: { connect: user.institutionId ? { id: user.institutionId } : undefined },
                 creator: { connect: { id: curUser.id } },
             },
-            select: fields,
+            include: detailedUserFields,
         });
-        // Embed user actions in the response
-        const processedUser = { ...createdUser, actions: await getPeerUserActions(curUser, createdUser, undefined) };
+        // Get user only with visible fields and with embedded actions
+        const visibleUser = {
+            ...(await prismaClient.user.findUnique({
+                where: { id: detailedCreatedUser.id },
+                select: (await getVisibleFields(curUser, [detailedCreatedUser]))[0],
+            })),
+            actions: (await getPeerUserActions(curUser, [detailedCreatedUser]))[0],
+        };
 
-        res.status(201).json({ message: 'User created.', data: processedUser });
+        res.status(201).json({ message: 'User created.', data: visibleUser });
     } catch (error: any) {
         const file = req.file as Express.Multer.File;
         if (file) if (existsSync(file.path)) unlinkSync(file.path);
@@ -241,7 +240,9 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         // User from Passport-JWT
         const curUser = req.user as User;
         // Check if user is authorized to update the user
-        await checkAuthorization(curUser, userId, user.role as UserRole, undefined, 'update');
+        await checkAuthorization(curUser, [userId], 'update');
+        // Validade hierarchy
+        await validateHierarchy(curUser, user.role, user.institutionId, userId);
         // Validate classrooms
         await validateClassrooms(curUser.role, user.institutionId, user.classrooms as number[]);
         // Multer single file
@@ -249,7 +250,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         // Password encryption
         if (user.hash) user.hash = hashSync(user.hash, 10);
         // Prisma transaction
-        const updatedUser = await prismaClient.$transaction(async (prisma) => {
+        const detailedUpdatedUser = await prismaClient.$transaction(async (prisma) => {
             const filesToDelete = await prisma.file.findMany({
                 where: { id: { not: user.profileImageId }, users: { some: { id: userId } } },
                 select: { id: true, path: true },
@@ -269,15 +270,21 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
                         create: !user.profileImageId && file ? { path: file.path } : undefined,
                     },
                 },
-                select: fields,
+                include: detailedUserFields,
             });
 
             return updatedUser;
         });
-        // Embed user actions in the response
-        const processedUser = { ...updatedUser, actions: await getPeerUserActions(curUser, updatedUser, userId) };
+        // Get user only with visible fields and with embedded actions
+        const visibleUser = {
+            ...(await prismaClient.user.findUnique({
+                where: { id: detailedUpdatedUser.id },
+                select: (await getVisibleFields(curUser, [detailedUpdatedUser]))[0],
+            })),
+            actions: (await getPeerUserActions(curUser, [detailedUpdatedUser]))[0],
+        };
 
-        res.status(200).json({ message: 'User updated.', data: processedUser });
+        res.status(200).json({ message: 'User updated.', data: visibleUser });
     } catch (error: any) {
         const file = req.file as Express.Multer.File;
         if (file) if (existsSync(file.path)) unlinkSync(file.path);
@@ -290,15 +297,20 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
         // User from Passport-JWT
         const curUser = req.user as User;
         // Check if user is authorized to get all users
-        await checkAuthorization(curUser, undefined, undefined, undefined, 'getAll');
+        await checkAuthorization(curUser, [], 'getAll');
         // Prisma operation
-        const users = await prismaClient.user.findMany({ select: fields });
-        // Embed user actions in the response
-        const processedUsers = await Promise.all(
-            users.map(async (user) => ({ ...user, actions: await getPeerUserActions(curUser, user, user.id) }))
+        const detailedUsers = await prismaClient.user.findMany({ include: detailedUserFields });
+        // Get users only with visible fields and with embedded actions
+        const actions = await getPeerUserActions(curUser, detailedUsers);
+        const fields = await getVisibleFields(curUser, detailedUsers);
+        const visibleUsers = await Promise.all(
+            detailedUsers.map(async (user, index) => ({
+                ...(await prismaClient.user.findUnique({ where: { id: user.id }, select: fields[index] })),
+                actions: actions[index],
+            }))
         );
 
-        res.status(200).json({ message: 'All users found.', data: processedUsers });
+        res.status(200).json({ message: 'All users found.', data: visibleUsers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -309,9 +321,9 @@ export const getManagedUsers = async (req: Request, res: Response): Promise<void
         // User from Passport-JWT
         const curUser = req.user as User;
         // Check if user is authorized to get managed users
-        await checkAuthorization(curUser, undefined, undefined, undefined, 'getManaged');
+        await checkAuthorization(curUser, [], 'getManaged');
         // Prisma operation
-        const users = await prismaClient.user.findMany({
+        const detailedUsers = await prismaClient.user.findMany({
             where: {
                 ...(curUser.role !== UserRole.ADMIN && {
                     // Admins can manage all users
@@ -323,14 +335,19 @@ export const getManagedUsers = async (req: Request, res: Response): Promise<void
                     ],
                 }),
             },
-            select: publicFields,
+            include: detailedUserFields,
         });
-        // Embed user actions in the response
-        const processedUsers = await Promise.all(
-            users.map(async (user) => ({ ...user, actions: await getPeerUserActions(curUser, user, user.id) }))
+        // Get users only with visible fields and with embedded actions
+        const actions = await getPeerUserActions(curUser, detailedUsers);
+        const fields = await getVisibleFields(curUser, detailedUsers);
+        const visibleUsers = await Promise.all(
+            detailedUsers.map(async (user, index) => ({
+                ...(await prismaClient.user.findUnique({ where: { id: user.id }, select: fields[index] })),
+                actions: actions[index],
+            }))
         );
 
-        res.status(200).json({ message: 'Managed users found.', data: processedUsers });
+        res.status(200).json({ message: 'Managed users found.', data: visibleUsers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -343,11 +360,17 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
         // User from Passport-JWT
         const curUser = req.user as User;
         // Check if user is authorized to get the user
-        await checkAuthorization(curUser, userId, undefined, undefined, 'get');
+        await checkAuthorization(curUser, [userId], 'get');
         // Prisma operation
-        const user = await prismaClient.user.findUniqueOrThrow({ where: { id: userId }, select: fields });
-        // Embed user actions in the response
-        const processedUser = { ...user, actions: await getPeerUserActions(curUser, user, userId) };
+        const detailedUser = await prismaClient.user.findUniqueOrThrow({ where: { id: userId }, include: detailedUserFields });
+        // Get user only with visible fields and with embedded actions
+        const processedUser = {
+            ...(await prismaClient.user.findUnique({
+                where: { id: userId },
+                select: (await getVisibleFields(curUser, [detailedUser]))[0],
+            })),
+            actions: (await getPeerUserActions(curUser, [detailedUser]))[0],
+        };
 
         res.status(200).json({ message: 'User found.', data: processedUser });
     } catch (error: any) {
@@ -360,7 +383,7 @@ export const searchUserByUsername = async (req: Request, res: Response): Promise
         // User from passport-jwt
         const curUser = req.user as User;
         // Check if user is authorized to search users
-        await checkAuthorization(curUser, undefined, undefined, undefined, 'search');
+        await checkAuthorization(curUser, [], 'search');
         // Yup schemas
         const searchUserSchema = yup
             .object()
@@ -369,7 +392,7 @@ export const searchUserByUsername = async (req: Request, res: Response): Promise
         // Yup parsing/validation
         const { term } = await searchUserSchema.validate(req.body);
         // Prisma operation
-        const users = await prismaClient.user.findMany({
+        const detailedUsers = await prismaClient.user.findMany({
             where: {
                 username: { startsWith: term },
                 role: { notIn: [UserRole.GUEST, UserRole.ADMIN] },
@@ -377,14 +400,19 @@ export const searchUserByUsername = async (req: Request, res: Response): Promise
                     OR: [{ institutionId: curUser.institutionId }, { institutionId: null }],
                 }),
             },
-            select: publicFields,
+            include: detailedUserFields,
         });
-        // Embed user actions in the response
-        const processedUsers = await Promise.all(
-            users.map(async (user) => ({ ...user, actions: await getPeerUserActions(curUser, user, user.id) }))
+        // Get users only with visible fields and with embedded actions
+        const actions = await getPeerUserActions(curUser, detailedUsers);
+        const fields = await getVisibleFields(curUser, detailedUsers);
+        const visibleUsers = await Promise.all(
+            detailedUsers.map(async (user, index) => ({
+                ...(await prismaClient.user.findUnique({ where: { id: user.id }, select: fields[index] })),
+                actions: actions[index],
+            }))
         );
 
-        res.status(200).json({ message: 'Searched users found.', data: processedUsers });
+        res.status(200).json({ message: 'Searched users found.', data: visibleUsers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -397,7 +425,7 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
         // User from Passport-JWT
         const curUser = req.user as User;
         // Check if user is authorized to delete the user
-        await checkAuthorization(curUser, userId, undefined, undefined, 'delete');
+        await checkAuthorization(curUser, [userId], 'delete');
         // Prisma operation
         const deletedUser = await prismaClient.user.delete({ where: { id: userId }, select: { id: true } });
 

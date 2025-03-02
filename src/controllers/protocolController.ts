@@ -14,78 +14,409 @@ import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
-import { getApplicationUserActions } from './applicationController';
 
-export const getDetailedProtocol = async (protocolId: number) => {
-    const protocol = await prismaClient.protocol.findUniqueOrThrow({
-        where: { id: protocolId },
-        include: {
-            creator: { select: { id: true, institution: { select: { id: true } } } },
-            managers: { select: { id: true, institution: { select: { id: true } } } },
-            appliers: { select: { id: true, institution: { select: { id: true } } } },
-            viewersUser: { select: { id: true, institution: { select: { id: true } } } },
-            viewersClassroom: { select: { id: true, users: { select: { id: true, institution: { select: { id: true } } } } } },
-            answersViewersUser: { select: { id: true, institution: { select: { id: true } } } },
-            answersViewersClassroom: { select: { users: { select: { id: true, institution: { select: { id: true } } } } } },
-            _count: { select: { applications: true } },
-        },
+export const getVisibleFields = async (
+    user: User,
+    protocols: Awaited<ReturnType<typeof getDetailedProtocols>>,
+    includeAnswers: boolean
+) => {
+    const protocolsRoles = await getProtocolsUserRoles(user, protocols);
+
+    const visibleFields = protocolsRoles.map((roles, i) => {
+        const fullAccess = roles.coordinator || roles.creator || roles.manager || user.role === UserRole.ADMIN;
+        const applierAccess = roles.applier || roles.coordinator || roles.creator || roles.manager || user.role === UserRole.ADMIN;
+        const baseAccess =
+            roles.answersViewer ||
+            roles.applier ||
+            roles.coordinator ||
+            roles.creator ||
+            roles.manager ||
+            roles.viewer ||
+            user.role === UserRole.ADMIN;
+        const answerAccess =
+            roles.answersViewer || roles.applier || roles.coordinator || roles.creator || roles.manager || user.role === UserRole.ADMIN;
+
+        const fields = {
+            id: baseAccess,
+            createdAt: baseAccess,
+            updatedAt: baseAccess,
+            title: baseAccess,
+            description: baseAccess,
+            enabled: fullAccess,
+            replicable: applierAccess,
+            creator: {
+                select: {
+                    id: baseAccess,
+                    username: baseAccess,
+                    institution: { select: { id: baseAccess, name: baseAccess } },
+                },
+            },
+            applicability: fullAccess,
+            visibility: applierAccess,
+            answersVisibility: applierAccess,
+            appliers: {
+                select: {
+                    id: fullAccess,
+                    username: fullAccess,
+                    institution: { select: { id: fullAccess, name: fullAccess } },
+                },
+            },
+            viewersUser: {
+                select: {
+                    id: applierAccess,
+                    username: applierAccess,
+                    institution: { select: { id: applierAccess, name: applierAccess } },
+                },
+            },
+            viewersClassroom: {
+                select: {
+                    id: applierAccess,
+                    name: applierAccess,
+                    users: {
+                        select: {
+                            id: applierAccess,
+                            username: applierAccess,
+                            institution: { select: { id: applierAccess, name: applierAccess } },
+                        },
+                    },
+                },
+            },
+            answersViewersUser: {
+                select: {
+                    id: applierAccess,
+                    username: applierAccess,
+                    institution: { select: { id: fullAccess, name: applierAccess } },
+                },
+            },
+            answersViewersClassroom: {
+                select: {
+                    id: applierAccess,
+                    name: applierAccess,
+                    users: {
+                        select: {
+                            id: applierAccess,
+                            username: applierAccess,
+                            institution: { select: { id: fullAccess, name: applierAccess } },
+                        },
+                    },
+                },
+            },
+            managers: {
+                select: {
+                    id: fullAccess,
+                    username: fullAccess,
+                    institution: { select: { id: fullAccess, name: fullAccess } },
+                },
+            },
+            applications: {
+                ...(!fullAccess ? [{ where: { enabled: true } }] : []),
+                select: {
+                    id: fullAccess,
+                    createdAt: fullAccess,
+                    startDate: fullAccess,
+                    endDate: fullAccess,
+                    applier: {
+                        select: {
+                            id: fullAccess,
+                            username: fullAccess,
+                            applier: {
+                                select: {
+                                    id: fullAccess,
+                                    username: fullAccess,
+                                    institution: { select: { id: fullAccess, name: fullAccess } },
+                                },
+                            },
+                        },
+                    },
+                    ...(includeAnswers
+                        ? [
+                              {
+                                  answers: {
+                                      ...(!fullAccess
+                                          ? [{ where: { group: { applicationAnswer: { application: { enabled: true } } } } }]
+                                          : []),
+                                      select: {
+                                          id: answerAccess,
+                                          user: {
+                                              select: {
+                                                  id: answerAccess,
+                                                  username: answerAccess,
+                                                  institution: {
+                                                      select: {
+                                                          id: answerAccess,
+                                                          name: answerAccess,
+                                                      },
+                                                  },
+                                              },
+                                          },
+                                          date: answerAccess,
+                                          approved: fullAccess,
+                                          coordinate: answerAccess,
+                                      },
+                                  },
+                              },
+                          ]
+                        : []),
+                },
+            },
+            pages: {
+                orderBy: { placement: 'asc' as any },
+                select: {
+                    id: baseAccess,
+                    type: baseAccess,
+                    placement: baseAccess,
+                    dependencies: {
+                        select: {
+                            id: baseAccess,
+                            type: baseAccess,
+                            argument: baseAccess,
+                            customMessage: baseAccess,
+                            itemId: baseAccess,
+                        },
+                    },
+                    itemGroups: {
+                        orderBy: { placement: 'asc' as any },
+                        select: {
+                            id: baseAccess,
+                            type: baseAccess,
+                            placement: baseAccess,
+                            isRepeatable: baseAccess,
+                            dependencies: {
+                                select: {
+                                    id: baseAccess,
+                                    type: baseAccess,
+                                    argument: baseAccess,
+                                    customMessage: baseAccess,
+                                    itemId: baseAccess,
+                                },
+                            },
+                            items: {
+                                select: {
+                                    id: baseAccess,
+                                    text: baseAccess,
+                                    description: baseAccess,
+                                    type: baseAccess,
+                                    placement: baseAccess,
+                                    enabled: baseAccess,
+                                    itemValidations: {
+                                        select: {
+                                            id: baseAccess,
+                                            type: baseAccess,
+                                            argument: baseAccess,
+                                            customMessage: baseAccess,
+                                        },
+                                    },
+                                    itemOptions: {
+                                        select: {
+                                            id: baseAccess,
+                                            text: baseAccess,
+                                            placement: baseAccess,
+                                            files: {
+                                                select: {
+                                                    id: baseAccess,
+                                                    path: baseAccess,
+                                                    description: baseAccess,
+                                                },
+                                            },
+                                        },
+                                        ...(includeAnswers
+                                            ? [
+                                                  {
+                                                      optionAnswers: {
+                                                          ...(!fullAccess
+                                                              ? [
+                                                                    {
+                                                                        where: {
+                                                                            group: {
+                                                                                applicationAnswer: { application: { enabled: true } },
+                                                                            },
+                                                                        },
+                                                                    },
+                                                                ]
+                                                              : []),
+                                                          select: {
+                                                              id: answerAccess,
+                                                              text: answerAccess,
+                                                              group: {
+                                                                  select: {
+                                                                      id: answerAccess,
+                                                                      applicationAnswer: {
+                                                                          select: {
+                                                                              id: answerAccess,
+                                                                              userId: answerAccess,
+                                                                          },
+                                                                      },
+                                                                  },
+                                                              },
+                                                          },
+                                                      },
+                                                  },
+                                              ]
+                                            : []),
+                                    },
+                                    files: {
+                                        select: {
+                                            id: baseAccess,
+                                            path: baseAccess,
+                                            description: baseAccess,
+                                        },
+                                    },
+                                    ...(includeAnswers
+                                        ? [
+                                              {
+                                                  itemAnswers: {
+                                                      ...(!fullAccess
+                                                          ? [
+                                                                {
+                                                                    where: {
+                                                                        group: { applicationAnswer: { application: { enabled: true } } },
+                                                                    },
+                                                                },
+                                                            ]
+                                                          : []),
+                                                      select: {
+                                                          id: answerAccess,
+                                                          text: answerAccess,
+                                                          files: {
+                                                              select: {
+                                                                  id: answerAccess,
+                                                                  path: answerAccess,
+                                                                  description: answerAccess,
+                                                              },
+                                                          },
+                                                          group: {
+                                                              select: {
+                                                                  id: answerAccess,
+                                                                  applicationAnswer: {
+                                                                      select: {
+                                                                          id: answerAccess,
+                                                                          userId: answerAccess,
+                                                                      },
+                                                                  },
+                                                              },
+                                                          },
+                                                      },
+                                                  },
+                                                  tableAnswers: {
+                                                      select: {
+                                                          id: answerAccess,
+                                                          text: answerAccess,
+                                                          columnId: answerAccess,
+                                                          group: {
+                                                              select: {
+                                                                  id: answerAccess,
+                                                                  applicationAnswer: {
+                                                                      select: {
+                                                                          id: answerAccess,
+                                                                          userId: answerAccess,
+                                                                      },
+                                                                  },
+                                                              },
+                                                          },
+                                                      },
+                                                  },
+                                              },
+                                          ]
+                                        : []),
+                                },
+                            },
+                            tableColumns: {
+                                select: {
+                                    id: baseAccess,
+                                    text: baseAccess,
+                                    placement: baseAccess,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        };
+
+        return fields;
     });
-    return protocol;
+
+    return visibleFields;
 };
 
-export const getProtocolUserRoles = async (user: User, protocol: Awaited<ReturnType<typeof getDetailedProtocol>>) => {
-    const coordinator =
-        user.role === UserRole.COORDINATOR && protocol.creator.institution && protocol.creator.institution?.id === user.institutionId;
-    const instituionMember = user.institutionId === protocol.creator.institution?.id;
-    const creator = protocol.creator.id === user.id;
-    const manager = protocol.managers.some(({ id }) => id === user.id);
-    const applier = protocol.appliers.some(({ id }) => id === user.id);
-    const viewer =
-        protocol.visibility === VisibilityMode.PUBLIC ||
-        (protocol.visibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
-        protocol.viewersUser.some(({ id }) => id === user.id) ||
-        protocol.viewersClassroom.some(({ users }) => users.some(({ id }) => id === user.id));
-    const answersViewer = !!(
-        protocol.answersVisibility === VisibilityMode.PUBLIC ||
-        (protocol.answersVisibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
-        protocol.answersViewersUser.some(({ id }) => id === user.id) ||
-        protocol.answersViewersClassroom.some(({ users }) => users.some(({ id }) => id === user.id))
-    );
-
-    return { answersViewer, applier, coordinator, creator, instituionMember, manager, viewer };
+const detailedProtocolFields = {
+    creator: { select: { id: true, institution: { select: { id: true } } } },
+    managers: { select: { id: true, institution: { select: { id: true } } } },
+    appliers: { select: { id: true, institution: { select: { id: true } } } },
+    viewersUser: { select: { id: true, institution: { select: { id: true } } } },
+    viewersClassroom: { select: { id: true, users: { select: { id: true, institution: { select: { id: true } } } } } },
+    answersViewersUser: { select: { id: true, institution: { select: { id: true } } } },
+    answersViewersClassroom: { select: { users: { select: { id: true, institution: { select: { id: true } } } } } },
+    _count: { select: { applications: true } },
 };
 
-const getProtocolUserActions = async (user: User, protocol: Awaited<ReturnType<typeof getDetailedProtocol>>) => {
-    const roles = await getProtocolUserRoles(user, protocol);
-    // Anyone except users, appliers and guests can create protocols
-    const toCreate = user.role === UserRole.ADMIN || user.role === UserRole.PUBLISHER || user.role === UserRole.COORDINATOR;
-    // Only managers/creator/institution coordinator can perform delete operations on protocols
-    const toUpdate = roles.manager || roles.coordinator || roles.creator || user.role === UserRole.ADMIN;
-    // Only managers/creator/institution coordinator can perform delete operations on protocols if there are no applications
-    const toDelete =
-        ((roles.manager || roles.coordinator || roles.creator) && protocol._count.applications === 0) || user.role === UserRole.ADMIN;
-    // Only viewers/creator/managers/appliers/institution coordinator can perform get operations on protocols
-    const toGet = roles.viewer || roles.coordinator || roles.creator || roles.manager || roles.applier || user.role === UserRole.ADMIN;
-    // No one can perform getAll operations on protocols
-    const toGetAll = user.role === UserRole.ADMIN;
-    // Anyone can perform getVisible and getMy operations on protocols (since the content is filtered according to the user)
-    const toGetVisible = true;
-    const toGetMy = true;
-    // Only answers viewers/creator/managers/institution coordinator can perform getWAnswers operations on protocols
-    const toGetWAnswers = roles.answersViewer || roles.coordinator || roles.creator || roles.manager || user.role === UserRole.ADMIN;
-    // Only appliers/managers/creator/institution coordinator can apply to protocols
-    const toApply = roles.applier || roles.manager || roles.coordinator || roles.creator || user.role === UserRole.ADMIN;
-
-    return {
-        toUpdate,
-        toDelete,
-        toGet,
-        toGetWAnswers,
-        toApply,
-    };
+export const getDetailedProtocols = async (protocolsIds: number[]) => {
+    const detailedProtocols = await prismaClient.protocol.findMany({
+        where: { id: { in: protocolsIds } },
+        include: detailedProtocolFields,
+    });
+    return detailedProtocols;
 };
 
-const checkAuthorization = async (user: User, protocolId: number, action: string) => {
+export const getProtocolsUserRoles = async (user: User, protocols: Awaited<ReturnType<typeof getDetailedProtocols>>) => {
+    const protocolsRoles = protocols.map((protocol) => {
+        const coordinator =
+            user.institutionId &&
+            user.role === UserRole.COORDINATOR &&
+            protocol.creator.institution &&
+            protocol.creator.institution?.id === user.institutionId;
+        const instituionMember = user.institutionId && user.institutionId === protocol.creator.institution?.id;
+        const creator = protocol.creator.id === user.id;
+        const manager = protocol.managers.some(({ id }) => id === user.id);
+        const applier = protocol.appliers.some(({ id }) => id === user.id);
+        const viewer =
+            protocol.visibility === VisibilityMode.PUBLIC ||
+            (protocol.visibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
+            protocol.viewersUser.some(({ id }) => id === user.id) ||
+            protocol.viewersClassroom.some(({ users }) => users.some(({ id }) => id === user.id));
+        const answersViewer = !!(
+            protocol.answersVisibility === VisibilityMode.PUBLIC ||
+            (protocol.answersVisibility === VisibilityMode.AUTHENTICATED && user.role !== UserRole.GUEST) ||
+            protocol.answersViewersUser.some(({ id }) => id === user.id) ||
+            protocol.answersViewersClassroom.some(({ users }) => users.some(({ id }) => id === user.id))
+        );
+        return { answersViewer, applier, coordinator, creator, instituionMember, manager, viewer };
+    });
+
+    return protocolsRoles;
+};
+
+export const getProtocolsUserActions = async (user: User, protocols: Awaited<ReturnType<typeof getDetailedProtocols>>) => {
+    const protocolsRoles = await getProtocolsUserRoles(user, protocols);
+
+    const protocolsActions = protocols.map((protocol, i) => {
+        const roles = protocolsRoles[i];
+        // Anyone except users, appliers and guests can create protocols
+        const toCreate = user.role === UserRole.ADMIN || user.role === UserRole.PUBLISHER || user.role === UserRole.COORDINATOR;
+        // Only managers/creator/institution coordinator can perform delete operations on protocols
+        const toUpdate = roles.manager || roles.coordinator || roles.creator || user.role === UserRole.ADMIN;
+        // Only managers/creator/institution coordinator can perform delete operations on protocols if there are no applications
+        const toDelete =
+            ((roles.manager || roles.coordinator || roles.creator) && protocol._count.applications === 0) || user.role === UserRole.ADMIN;
+        // Only viewers/creator/managers/appliers/institution coordinator can perform get operations on protocols
+        const toGet = roles.viewer || roles.coordinator || roles.creator || roles.manager || roles.applier || user.role === UserRole.ADMIN;
+        // No one can perform getAll operations on protocols
+        const toGetAll = user.role === UserRole.ADMIN;
+        // Anyone can perform getVisible and getMy operations on protocols (since the content is filtered according to the user)
+        const toGetVisible = true;
+        const toGetMy = true;
+        // Only answers viewers/creator/managers/institution coordinator can perform getWAnswers operations on protocols
+        const toGetWAnswers = roles.answersViewer || roles.coordinator || roles.creator || roles.manager || user.role === UserRole.ADMIN;
+        // Only appliers/managers/creator/institution coordinator can apply to protocols
+        const toApply = roles.applier || roles.manager || roles.coordinator || roles.creator || user.role === UserRole.ADMIN;
+
+        return { toApply, toDelete, toGet, toGetWAnswers, toUpdate };
+    });
+
+    return protocolsActions;
+};
+
+const checkAuthorization = async (user: User, protocolIds: number[], action: string) => {
     // Admins can perform any action
     if (user.role === UserRole.ADMIN) return;
 
@@ -97,21 +428,18 @@ const checkAuthorization = async (user: User, protocolId: number, action: string
             break;
         }
         case 'update': {
-            const detailedProtocol = await getDetailedProtocol(protocolId);
-            const actions = await getProtocolUserActions(user, detailedProtocol);
-            if (!actions.toUpdate) throw new Error('This user is not authorized to perform this action');
+            if ((await getProtocolsUserActions(user, await getDetailedProtocols(protocolIds))).some(({ toUpdate }) => !toUpdate))
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'delete': {
-            const detailedProtocol = await getDetailedProtocol(protocolId);
-            const actions = await getProtocolUserActions(user, detailedProtocol);
-            if (!actions.toDelete) throw new Error('This user is not authorized to perform this action');
+            if ((await getProtocolsUserActions(user, await getDetailedProtocols(protocolIds))).some(({ toDelete }) => !toDelete))
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'getAll': {
             // No one can perform getAll operations on protocols
             throw new Error('This user is not authorized to perform this action');
-            break;
         }
         case 'getVisible':
         case 'getMy': {
@@ -119,15 +447,13 @@ const checkAuthorization = async (user: User, protocolId: number, action: string
             break;
         }
         case 'get': {
-            const detailedProtocol = await getDetailedProtocol(protocolId);
-            const actions = await getProtocolUserActions(user, detailedProtocol);
-            if (!actions.toGet) throw new Error('This user is not authorized to perform this action');
+            if ((await getProtocolsUserActions(user, await getDetailedProtocols(protocolIds))).some(({ toGet }) => !toGet))
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'getWAnswers': {
-            const detailedProtocol = await getDetailedProtocol(protocolId);
-            const actions = await getProtocolUserActions(user, detailedProtocol);
-            if (!actions.toGetWAnswers) throw new Error('This user is not authorized to perform this action');
+            if ((await getProtocolsUserActions(user, await getDetailedProtocols(protocolIds))).some(({ toGetWAnswers }) => !toGetWAnswers))
+                throw new Error('This user is not authorized to perform this action');
             break;
         }
     }
@@ -353,182 +679,6 @@ const validatePlacements = async (placements: number[]) => {
     }
 };
 
-const dropSensitiveFields = (protocol: any) => {
-    const filteredProtocol = { ...protocol };
-    delete filteredProtocol.managers;
-    delete filteredProtocol.appliers;
-    delete filteredProtocol.viewersUser;
-    delete filteredProtocol.viewersClassroom;
-    delete filteredProtocol.answersViewersUser;
-    delete filteredProtocol.answersViewersClassroom;
-    return filteredProtocol;
-};
-
-const fields = {
-    id: true,
-    title: true,
-    description: true,
-    createdAt: true,
-    updatedAt: true,
-    enabled: true,
-    replicable: true,
-    creator: { select: { id: true, username: true, institutionId: true } },
-    applicability: true,
-    visibility: true,
-    answersVisibility: true,
-    managers: { select: { id: true } },
-    appliers: { select: { id: true } },
-    viewersUser: { select: { id: true } },
-    viewersClassroom: { select: { users: { select: { id: true } } } },
-    answersViewersUser: { select: { id: true } },
-    answersViewersClassroom: { select: { users: { select: { id: true } } } },
-    pages: {
-        orderBy: { placement: 'asc' as any },
-        select: {
-            id: true,
-            type: true,
-            placement: true,
-            itemGroups: {
-                orderBy: { placement: 'asc' as any },
-                select: {
-                    id: true,
-                    type: true,
-                    placement: true,
-                    isRepeatable: true,
-                    items: {
-                        orderBy: { placement: 'asc' as any },
-                        select: {
-                            id: true,
-                            text: true,
-                            description: true,
-                            type: true,
-                            placement: true,
-                            enabled: true,
-                            itemOptions: {
-                                orderBy: { placement: 'asc' as any },
-                                select: { id: true, text: true, placement: true, files: { select: { id: true, path: true } } },
-                            },
-                            files: { select: { id: true, path: true, description: true } },
-                            itemValidations: { select: { type: true, argument: true, customMessage: true } },
-                        },
-                    },
-                    tableColumns: { select: { id: true, text: true, placement: true } },
-                    dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
-                },
-            },
-            dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
-        },
-    },
-};
-
-const fieldsWViewers = {
-    ...fields,
-    managers: { select: { id: true, username: true } },
-    viewersUser: { select: { id: true, username: true, classrooms: { select: { id: true, name: true } } } },
-    viewersClassroom: { select: { id: true, name: true, users: { select: { id: true, username: true } } } },
-    answersViewersUser: { select: { id: true, username: true, classrooms: { select: { id: true, name: true } } } },
-    answersViewersClassroom: { select: { id: true, name: true, users: { select: { id: true, username: true } } } },
-    appliers: { select: { id: true, username: true } },
-};
-
-const fieldsWAnswers = {
-    id: true,
-    title: true,
-    description: true,
-    createdAt: true,
-    updatedAt: true,
-    enabled: true,
-    replicable: true,
-    creator: { select: { id: true, username: true, institutionId: true } },
-    applicability: true,
-    visibility: true,
-    answersVisibility: true,
-    managers: { select: { id: true, username: true, institutionId: true } },
-    pages: {
-        orderBy: { placement: 'asc' as any },
-        select: {
-            id: true,
-            type: true,
-            placement: true,
-            itemGroups: {
-                orderBy: { placement: 'asc' as any },
-                select: {
-                    id: true,
-                    type: true,
-                    placement: true,
-                    isRepeatable: true,
-                    items: {
-                        orderBy: { placement: 'asc' as any },
-                        select: {
-                            id: true,
-                            text: true,
-                            description: true,
-                            type: true,
-                            placement: true,
-                            enabled: true,
-                            itemOptions: {
-                                orderBy: { placement: 'asc' as any },
-                                select: {
-                                    id: true,
-                                    text: true,
-                                    placement: true,
-                                    files: { select: { id: true, path: true } },
-                                    optionAnswers: {
-                                        select: {
-                                            id: true,
-                                            text: true,
-                                            group: {
-                                                select: { id: true, applicationAnswer: { select: { id: true, userId: true } } },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                            files: { select: { id: true, path: true, description: true } },
-                            itemValidations: { select: { type: true, argument: true, customMessage: true } },
-                            itemAnswers: {
-                                select: {
-                                    id: true,
-                                    text: true,
-                                    files: { select: { id: true, path: true } },
-                                    group: { select: { id: true, applicationAnswer: { select: { id: true, userId: true } } } },
-                                },
-                            },
-                            tableAnswers: {
-                                select: {
-                                    id: true,
-                                    text: true,
-                                    columnId: true,
-                                    group: { select: { id: true, applicationAnswer: { select: { id: true, userId: true } } } },
-                                },
-                            },
-                        },
-                    },
-                    tableColumns: { select: { id: true, text: true, placement: true } },
-                    dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
-                },
-            },
-            dependencies: { select: { type: true, argument: true, customMessage: true, itemId: true } },
-        },
-    },
-    applications: {
-        select: {
-            id: true,
-            applier: { select: { id: true, username: true, institutionId: true } },
-            createdAt: true,
-            answers: {
-                select: {
-                    id: true,
-                    user: { select: { id: true, username: true } },
-                    date: true,
-                    approved: true,
-                    coordinate: { select: { latitude: true, longitude: true } },
-                },
-            },
-        },
-    },
-};
-
 export const createProtocol = async (req: Request, res: Response) => {
     try {
         // Yup schemas
@@ -644,7 +794,7 @@ export const createProtocol = async (req: Request, res: Response) => {
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is allowed to create a application
-        await checkAuthorization(user, 0, 'create');
+        await checkAuthorization(user, [], 'create');
         // Check if managers are publishers, coordinators or admins of the same institution
         await validateManagers(protocol.managers as number[], user.institutionId);
         // Check if viewers are not guests or admins
@@ -661,7 +811,7 @@ export const createProtocol = async (req: Request, res: Response) => {
         // Create map table for tempIds
         const tempIdMap = new Map<number, number>();
         // Prisma transaction
-        const createdProtocol = await prismaClient.$transaction(async (prisma) => {
+        const detailedCreatedProtocol = await prismaClient.$transaction(async (prisma) => {
             const createdProtocol = await prisma.protocol.create({
                 data: {
                     title: protocol.title,
@@ -795,16 +945,19 @@ export const createProtocol = async (req: Request, res: Response) => {
             }
 
             // Return the created application answer with nested content included
-            return await prisma.protocol.findUniqueOrThrow({ where: { id: createdProtocol.id }, select: fieldsWViewers });
+            return await prisma.protocol.findUniqueOrThrow({ where: { id: createdProtocol.id }, include: detailedProtocolFields });
         });
-        // Embed user actions in the response
-        const processedProtocol = {
-            ...createdProtocol,
-            actions: await getProtocolUserActions(user, await getDetailedProtocol(createdProtocol.id)),
+
+        // Get protocol only with visible fields and with embedded actions
+        const visibleProtocol = {
+            ...(await prismaClient.protocol.findUnique({
+                where: { id: detailedCreatedProtocol.id },
+                select: (await getVisibleFields(user, [detailedCreatedProtocol], false))[0],
+            })),
+            actions: (await getProtocolsUserActions(user, [detailedCreatedProtocol]))[0],
         };
-        // Filter sensitive fields
-        const filteredProtocol = dropSensitiveFields(processedProtocol);
-        res.status(201).json({ message: 'Protocol created.', data: filteredProtocol });
+
+        res.status(201).json({ message: 'Protocol created.', data: visibleProtocol });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
@@ -935,7 +1088,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is included in the managers, or if user is admin
-        await checkAuthorization(user, id, 'update');
+        await checkAuthorization(user, [id], 'update');
         // Check if managers are publishers, coordinators or admins of the same institution
         await validateManagers(protocol.managers as number[], user.institutionId);
         // Check if viewers are not guests or admins
@@ -952,7 +1105,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
         // Create map table for tempIds
         const tempIdMap = new Map<number, number>();
         // Prisma transaction
-        const upsertedProtocol = await prismaClient.$transaction(async (prisma) => {
+        const detailedUpsertedProtocol = await prismaClient.$transaction(async (prisma) => {
             // Update protocol
             await prisma.protocol.update({
                 where: { id: id },
@@ -1268,18 +1421,19 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             }
 
             // Return the updated application answer with nested content included
-            return await prisma.protocol.findUniqueOrThrow({ where: { id: id }, select: fieldsWViewers });
+            return await prisma.protocol.findUniqueOrThrow({ where: { id: id }, include: detailedProtocolFields });
         });
 
-        // Embed user actions in the response
-        const processedProtocol = {
-            ...upsertedProtocol,
-            actions: await getProtocolUserActions(user, await getDetailedProtocol(upsertedProtocol.id)),
+        // Get protocol only with visible fields and with embedded actions
+        const visibleProtocol = {
+            ...(await prismaClient.protocol.findUnique({
+                where: { id: detailedUpsertedProtocol.id },
+                select: (await getVisibleFields(user, [detailedUpsertedProtocol], false))[0],
+            })),
+            actions: (await getProtocolsUserActions(user, [detailedUpsertedProtocol]))[0],
         };
-        // Filter sensitive fields
-        const filteredProtocol = dropSensitiveFields(processedProtocol);
 
-        res.status(200).json({ message: 'Protocol updated.', data: filteredProtocol });
+        res.status(200).json({ message: 'Protocol updated.', data: visibleProtocol });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
@@ -1292,20 +1446,23 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is allowed to get all protocols
-        await checkAuthorization(user, 0, 'getAll');
+        await checkAuthorization(user, [], 'getAll');
         // Prisma operation
-        const protocol = await prismaClient.protocol.findMany({ select: fieldsWViewers });
-        // Embed user actions in the response
-        const processedProtocol = await Promise.all(
-            protocol.map(async (protocol) => ({
-                ...protocol,
-                actions: await getProtocolUserActions(user, await getDetailedProtocol(protocol.id)),
+        const detailedProtocols = await prismaClient.protocol.findMany({ orderBy: { id: 'asc' }, include: detailedProtocolFields });
+        // Get protocol only with visible fields and with embedded actions
+        const actions = await getProtocolsUserActions(user, detailedProtocols);
+        const fields = await getVisibleFields(user, detailedProtocols, false);
+        const visibleProtocols = await Promise.all(
+            detailedProtocols.map(async (protocol, index) => ({
+                ...(await prismaClient.protocol.findUnique({
+                    where: { id: protocol.id },
+                    select: fields[index],
+                })),
+                actions: actions[index],
             }))
         );
-        // Filter sensitive fields
-        const filteredProtocol = processedProtocol.map((protocol) => dropSensitiveFields(protocol));
 
-        res.status(200).json({ message: 'All protocols found.', data: filteredProtocol });
+        res.status(200).json({ message: 'All protocols found.', data: visibleProtocols });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -1316,38 +1473,40 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is allowed to get visible protocols
-        await checkAuthorization(user, 0, 'getVisible');
+        await checkAuthorization(user, [], 'getVisible');
         // Prisma operation
-        const protocols =
+        const detailedProtocols =
             user.role === UserRole.ADMIN
-                ? await prismaClient.protocol.findMany({ select: fieldsWViewers })
+                ? await prismaClient.protocol.findMany({ orderBy: { id: 'asc' }, include: detailedProtocolFields })
                 : await prismaClient.protocol.findMany({
+                      orderBy: { id: 'asc' },
                       where: {
                           OR: [
                               { managers: { some: { id: user.id } } },
                               { appliers: { some: { id: user.id } } },
-                              { viewersUser: { some: { id: user.id } } },
-                              { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                              { viewersUser: { some: { id: user.id } }, enabled: true },
+                              { viewersClassroom: { some: { users: { some: { id: user.id } } } }, enabled: true },
                               { creatorId: user.id },
-                              { visibility: VisibilityMode.PUBLIC },
+                              { visibility: VisibilityMode.PUBLIC, enabled: true },
                               ...(user.role === UserRole.COORDINATOR ? [{ creator: { institutionId: user.institutionId } }] : []),
+                              ...(user.role !== UserRole.GUEST ? [{ visibility: VisibilityMode.AUTHENTICATED, enabled: true }] : []),
                           ],
                           enabled: true,
                       },
-                      select: fields,
+                      include: detailedProtocolFields,
                   });
 
-        // Embed user actions in the response
-        const processedProtocols = await Promise.all(
-            protocols.map(async (protocol) => ({
-                ...protocol,
-                actions: await getProtocolUserActions(user, await getDetailedProtocol(protocol.id)),
+        // Get protocol only with visible fields and with embedded actions
+        const actions = await getProtocolsUserActions(user, detailedProtocols);
+        const fields = await getVisibleFields(user, detailedProtocols, false);
+        const visibleProtocols = await Promise.all(
+            detailedProtocols.map(async (protocol, index) => ({
+                ...(await prismaClient.protocol.findUnique({ where: { id: protocol.id }, select: fields[index] })),
+                actions: actions[index],
             }))
         );
-        // Filter sensitive fields
-        const filteredProtocols = processedProtocols.map((protocol) => dropSensitiveFields(protocol));
 
-        res.status(200).json({ message: 'Visible protocols found.', data: filteredProtocols });
+        res.status(200).json({ message: 'Visible protocols found.', data: visibleProtocols });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -1358,21 +1517,22 @@ export const getMyProtocols = async (req: Request, res: Response): Promise<void>
         // User from Passport-JWT
         const user = req.user as User;
         // Prisma operation
-        const protocols = await prismaClient.protocol.findMany({
+        const detailedProtocols = await prismaClient.protocol.findMany({
+            orderBy: { id: 'asc' },
             where: { OR: [{ managers: { some: { id: user.id } }, creatorId: user.id }] },
-            select: fieldsWViewers,
+            include: detailedProtocolFields,
         });
-        // Embed user actions in the response
-        const processedProtocols = await Promise.all(
-            protocols.map(async (protocol) => ({
-                ...protocol,
-                actions: await getProtocolUserActions(user, await getDetailedProtocol(protocol.id)),
+        // Get protocol only with visible fields and with embedded actions
+        const actions = await getProtocolsUserActions(user, detailedProtocols);
+        const fields = await getVisibleFields(user, detailedProtocols, false);
+        const visibleProtocols = await Promise.all(
+            detailedProtocols.map(async (protocol, index) => ({
+                ...(await prismaClient.protocol.findUnique({ where: { id: protocol.id }, select: fields[index] })),
+                actions: actions[index],
             }))
         );
-        // Filter sensitive fields
-        const filteredProtocols = processedProtocols.map((protocol) => dropSensitiveFields(protocol));
 
-        res.status(200).json({ message: 'My protocols found.', data: filteredProtocols });
+        res.status(200).json({ message: 'My protocols found.', data: visibleProtocols });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -1385,9 +1545,9 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is allowed to get the protocol
-        await checkAuthorization(user, protocolId, 'get');
+        await checkAuthorization(user, [protocolId], 'get');
         // Get protocol with nested content included
-        const protocol = await prismaClient.protocol.findUniqueOrThrow({
+        const detailedProtocol = await prismaClient.protocol.findUniqueOrThrow({
             where: {
                 id: protocolId,
                 OR: [
@@ -1398,33 +1558,22 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
                     { creatorId: user.id },
                     { visibility: VisibilityMode.PUBLIC, enabled: true },
                     ...(user.role === UserRole.COORDINATOR ? [{ creator: { institutionId: user.institutionId } }] : []),
+                    ...(user.role !== UserRole.GUEST ? [{ visibility: VisibilityMode.AUTHENTICATED, enabled: true }] : []),
                 ],
             },
-            select: fieldsWViewers,
+            include: detailedProtocolFields,
         });
 
-        const processedProtocol = { ...protocol, actions: await getProtocolUserActions(user, await getDetailedProtocol(protocol.id)) };
+        // Get protocol only with visible fields and with embedded actions
+        const visibleProtocol = {
+            ...(await prismaClient.protocol.findUnique({
+                where: { id: detailedProtocol.id },
+                select: (await getVisibleFields(user, [detailedProtocol], false))[0],
+            })),
+            actions: (await getProtocolsUserActions(user, [detailedProtocol]))[0],
+        };
 
-        const filteredProtocol =
-            (user.role !== UserRole.USER &&
-                (user.role === UserRole.ADMIN ||
-                    processedProtocol.creator.id === user.id ||
-                    processedProtocol.managers?.some((manager) => manager.id === user.id) ||
-                    processedProtocol.appliers?.some((applier) => applier.id === user.id) ||
-                    processedProtocol.applicability === VisibilityMode.PUBLIC)) ||
-            (user.role === UserRole.COORDINATOR && processedProtocol.creator.institutionId === user.id)
-                ? processedProtocol
-                : {
-                      ...processedProtocol,
-                      viewersUser: undefined,
-                      viewersClassroom: undefined,
-                      answersViewersUser: undefined,
-                      answersViewersClassroom: undefined,
-                      appliers: undefined,
-                      managers: undefined,
-                  };
-
-        res.status(200).json({ message: 'Protocol found.', data: filteredProtocol });
+        res.status(200).json({ message: 'Protocol found.', data: visibleProtocol });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -1437,9 +1586,9 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is allowed to get the protocol
-        await checkAuthorization(user, protocolId, 'getWAnswers');
+        await checkAuthorization(user, [protocolId], 'getWAnswers');
         // Get protocol with nested content included
-        const protocol = await prismaClient.protocol.findUniqueOrThrow({
+        const detailedProtocol = await prismaClient.protocol.findUniqueOrThrow({
             where: {
                 id: protocolId,
                 OR: [
@@ -1449,74 +1598,22 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
                     { creatorId: user.id },
                     { answersVisibility: VisibilityMode.PUBLIC, enabled: true },
                     ...(user.role === UserRole.COORDINATOR ? [{ creator: { institutionId: user.institutionId } }] : []),
+                    ...(user.role !== UserRole.GUEST ? [{ answersVisibility: VisibilityMode.AUTHENTICATED, enabled: true }] : []),
                 ],
             },
-            select: fieldsWAnswers,
+            include: detailedProtocolFields,
         });
 
-        // Filter unapproved answers if user is not allowed to see/approve them
-        for (const application of protocol.applications) {
-            if (
-                user.role !== UserRole.ADMIN &&
-                (user.id !== protocol.creator.id ||
-                    !protocol.managers?.some((manager) => manager.id === user.id) ||
-                    user.id !== application.applier.id ||
-                    user.institutionId !== application.applier.institutionId ||
-                    user.institutionId !== protocol.creator.institutionId ||
-                    user.role === UserRole.USER ||
-                    user.role === UserRole.GUEST)
-            ) {
-                application.answers = application.answers.filter((answer: any) => answer.approved);
-            }
-        }
-
-        // Filter answers that are not visible to the user (the ones associated with the applications filtered above)
-        for (const page of protocol.pages) {
-            for (const itemGroup of page.itemGroups) {
-                for (const item of itemGroup.items) {
-                    item.itemAnswers = item.itemAnswers.filter(
-                        (itemAnswer) =>
-                            protocol.applications?.some(
-                                (application) => application.answers?.some((answer) => answer.id === itemAnswer.group.applicationAnswer.id)
-                            )
-                    );
-                    item.tableAnswers = item.tableAnswers.filter(
-                        (tableAnswer) =>
-                            protocol.applications?.some(
-                                (application) => application.answers?.some((answer) => answer.id === tableAnswer.group.applicationAnswer.id)
-                            )
-                    );
-                    for (const itemOption of item.itemOptions) {
-                        itemOption.optionAnswers = itemOption.optionAnswers.filter(
-                            (optionAnswer) =>
-                                protocol.applications?.some(
-                                    (application) =>
-                                        application.answers?.some((answer) => answer.id === optionAnswer.group.applicationAnswer.id)
-                                )
-                        );
-                    }
-                }
-            }
-        }
-        // Embed user actions in the response
-        const processedProtocol = {
-            ...protocol,
-            actions: await getProtocolUserActions(user, await getDetailedProtocol(protocol.id)),
-            applications: await Promise.all(
-                protocol.applications.map((application) => ({
-                    ...application,
-                    actions: getApplicationUserActions(user, application, undefined),
-                }))
-            ),
+        // Get protocol only with visible fields and with embedded actions
+        const visibleProtocol = {
+            ...(await prismaClient.protocol.findUnique({
+                where: { id: detailedProtocol.id },
+                select: (await getVisibleFields(user, [detailedProtocol], true))[0],
+            })),
+            actions: (await getProtocolsUserActions(user, [detailedProtocol]))[0],
         };
-        // Filter other properties that are not visible to the user
-        processedProtocol.managers = [];
-        processedProtocol.creator.institutionId = null;
-        for (const application of processedProtocol.applications) {
-            application.applier.institutionId = null;
-        }
 
-        res.status(200).json({ message: 'Protocol with answers found.', data: processedProtocol });
+        res.status(200).json({ message: 'Protocol with answers found.', data: visibleProtocol });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -1529,7 +1626,7 @@ export const deleteProtocol = async (req: Request, res: Response): Promise<void>
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is allowed to delete the protocol
-        await checkAuthorization(user, id, 'delete');
+        await checkAuthorization(user, [id], 'delete');
         // Get current number of applications
         const applicationsCount = await prismaClient.application.count({ where: { protocolId: id } });
         // Check if there are any applications associated with the protocol
