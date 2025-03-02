@@ -13,9 +13,10 @@ import { User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
+import { getPeerUserActions, getVisibleFields as getUsersVisibleFields } from './userController';
 
 const detailedClassroomFields = {
-    users: { select: { id: true, institution: { select: { id: true } } } },
+    users: { include: { institution: { select: { id: true } }, creator: { select: { id: true } } } },
     institution: { select: { id: true } },
     creator: { select: { id: true } },
 };
@@ -24,7 +25,7 @@ const getDetailedClassrooms = async (classroomsIds: number[]) => {
     return await prismaClient.classroom.findMany({ where: { id: { in: classroomsIds } }, include: detailedClassroomFields });
 };
 
-const getVisibleFields = async (user: User, classrooms: Awaited<ReturnType<typeof getDetailedClassrooms>>) => {
+export const getVisibleFields = async (user: User, classrooms: Awaited<ReturnType<typeof getDetailedClassrooms>>) => {
     const classroomRoles = await getClassroomUserRoles(user, classrooms);
 
     const visibleFields = classroomRoles.map((roles) => {
@@ -40,24 +41,8 @@ const getVisibleFields = async (user: User, classrooms: Awaited<ReturnType<typeo
             createdAt: baseAccess,
             updatedAt: baseAccess,
             name: baseAccess,
-            users: {
-                select: {
-                    id: baseAccess,
-                    username: baseAccess,
-                    institution: {
-                        select: {
-                            id: baseAccess,
-                            name: baseAccess,
-                        },
-                    },
-                },
-            },
-            creator: {
-                select: {
-                    id: fullAccess,
-                    username: fullAccess,
-                },
-            },
+            users: { select: { id: baseAccess } },
+            creator: { select: { id: fullAccess, username: fullAccess } },
         };
 
         return fields;
@@ -206,8 +191,21 @@ export const createClassroom = async (req: Request, res: Response) => {
             })),
             actions: (await getClassroomUserActions(user, [detailedCreatedClassroom]))[0],
         };
+        // Get users only with visible fields and with embedded actions
+        const detailedUsers = detailedCreatedClassroom.users;
+        const userActions = await getPeerUserActions(user, detailedUsers);
+        const userFields = await getUsersVisibleFields(user, detailedUsers);
+        const visibleClassroomWUsers = {
+            ...visibleClassroom,
+            users: await Promise.all(
+                detailedUsers.map(async (user, i) => ({
+                    ...(await prismaClient.user.findUnique({ where: { id: user.id }, select: userFields[i] })),
+                    actions: userActions[i],
+                }))
+            ),
+        };
 
-        res.status(201).json({ message: 'Classroom created.', data: visibleClassroom });
+        res.status(201).json({ message: 'Classroom created.', data: visibleClassroomWUsers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -255,7 +253,20 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
             })),
             actions: (await getClassroomUserActions(user, [detailedUpdatedClassroom]))[0],
         };
-        res.status(200).json({ message: 'Classroom updated.', data: visibleClassroom });
+        // Get users only with visible fields and with embedded actions
+        const detailedUsers = detailedUpdatedClassroom.users;
+        const userActions = await getPeerUserActions(user, detailedUsers);
+        const userFields = await getUsersVisibleFields(user, detailedUsers);
+        const visibleClassroomWUsers = {
+            ...visibleClassroom,
+            users: await Promise.all(
+                detailedUsers.map(async (user, i) => ({
+                    ...(await prismaClient.user.findUnique({ where: { id: user.id }, select: userFields[i] })),
+                    actions: userActions[i],
+                }))
+            ),
+        };
+        res.status(200).json({ message: 'Classroom updated.', data: visibleClassroomWUsers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -273,10 +284,28 @@ export const getAllClassrooms = async (req: Request, res: Response): Promise<voi
         const actions = await getClassroomUserActions(user, classrooms);
         const fields = await getVisibleFields(user, classrooms);
         const visibleClassrooms = await Promise.all(
-            classrooms.map(async (classroom, i) => ({
-                ...(await prismaClient.classroom.findUnique({ where: { id: classroom.id }, select: fields[i] })),
-                actions: actions[i],
-            }))
+            classrooms.map(async (classroom, i) => {
+                const visibleClassroom = {
+                    ...(await prismaClient.classroom.findUnique({ where: { id: classroom.id }, select: fields[i] })),
+                    actions: actions[i],
+                };
+
+                // Get users only with visible fields and with embedded actions
+                const detailedUsers = classroom.users;
+                const userActions = await getPeerUserActions(user, detailedUsers);
+                const userFields = await getUsersVisibleFields(user, detailedUsers);
+                const visibleClassroomWUsers = {
+                    ...visibleClassroom,
+                    users: await Promise.all(
+                        detailedUsers.map(async (user, i) => ({
+                            ...(await prismaClient.user.findUnique({ where: { id: user.id }, select: userFields[i] })),
+                            actions: userActions[i],
+                        }))
+                    ),
+                };
+
+                return visibleClassroomWUsers;
+            })
         );
 
         res.status(200).json({ message: 'All classrooms found.', data: visibleClassrooms });
@@ -307,7 +336,21 @@ export const getClassroom = async (req: Request, res: Response): Promise<void> =
             actions: (await getClassroomUserActions(user, [detailedClassroom]))[0],
         };
 
-        res.status(200).json({ message: 'Classroom found.', data: visibleClassroom });
+        // Get users only with visible fields and with embedded actions
+        const detailedUsers = detailedClassroom.users;
+        const userActions = await getPeerUserActions(user, detailedUsers);
+        const userFields = await getUsersVisibleFields(user, detailedUsers);
+        const visibleClassroomWUsers = {
+            ...visibleClassroom,
+            users: await Promise.all(
+                detailedUsers.map(async (user, i) => ({
+                    ...(await prismaClient.user.findUnique({ where: { id: user.id }, select: userFields[i] })),
+                    actions: userActions[i],
+                }))
+            ),
+        };
+
+        res.status(200).json({ message: 'Classroom found.', data: visibleClassroomWUsers });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -328,10 +371,28 @@ export const getMyClassrooms = async (req: Request, res: Response): Promise<void
         const actions = await getClassroomUserActions(user, detailedClassrooms);
         const fields = await getVisibleFields(user, detailedClassrooms);
         const visibleClassrooms = await Promise.all(
-            detailedClassrooms.map(async (classroom, i) => ({
-                ...(await prismaClient.classroom.findUnique({ where: { id: classroom.id }, select: fields[i] })),
-                actions: actions[i],
-            }))
+            detailedClassrooms.map(async (classroom, i) => {
+                const visibleClassroom = {
+                    ...(await prismaClient.classroom.findUnique({ where: { id: classroom.id }, select: fields[i] })),
+                    actions: actions[i],
+                };
+
+                // Get users only with visible fields and with embedded actions
+                const detailedUsers = classroom.users;
+                const userActions = await getPeerUserActions(user, detailedUsers);
+                const userFields = await getUsersVisibleFields(user, detailedUsers);
+                const visibleClassroomWUsers = {
+                    ...visibleClassroom,
+                    users: await Promise.all(
+                        detailedUsers.map(async (user, i) => ({
+                            ...(await prismaClient.user.findUnique({ where: { id: user.id }, select: userFields[i] })),
+                            actions: userActions[i],
+                        }))
+                    ),
+                };
+
+                return visibleClassroomWUsers;
+            })
         );
 
         res.status(200).json({ message: 'My classrooms found.', data: visibleClassrooms });
@@ -363,10 +424,28 @@ export const getManagedClassrooms = async (req: Request, res: Response): Promise
         const actions = await getClassroomUserActions(user, detailedClassrooms);
         const fields = await getVisibleFields(user, detailedClassrooms);
         const visibleClassrooms = await Promise.all(
-            detailedClassrooms.map(async (classroom, i) => ({
-                ...(await prismaClient.classroom.findUnique({ where: { id: classroom.id }, select: fields[i] })),
-                actions: actions[i],
-            }))
+            detailedClassrooms.map(async (classroom, i) => {
+                const visibleClassroom = {
+                    ...(await prismaClient.classroom.findUnique({ where: { id: classroom.id }, select: fields[i] })),
+                    actions: actions[i],
+                };
+
+                // Get users only with visible fields and with embedded actions
+                const detailedUsers = classroom.users;
+                const userActions = await getPeerUserActions(user, detailedUsers);
+                const userFields = await getUsersVisibleFields(user, detailedUsers);
+                const visibleClassroomWUsers = {
+                    ...visibleClassroom,
+                    users: await Promise.all(
+                        detailedUsers.map(async (user, i) => ({
+                            ...(await prismaClient.user.findUnique({ where: { id: user.id }, select: userFields[i] })),
+                            actions: userActions[i],
+                        }))
+                    ),
+                };
+
+                return visibleClassroomWUsers;
+            })
         );
 
         res.status(200).json({ message: 'My managed classrooms found.', data: visibleClassrooms });
@@ -378,9 +457,9 @@ export const getManagedClassrooms = async (req: Request, res: Response): Promise
 export const searchClassroomByName = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from passport-jwt
-        const curUser = req.user as User;
+        const user = req.user as User;
         // Check if user is authorized to search users
-        await checkAuthorization(curUser, [], 'search');
+        await checkAuthorization(user, [], 'search');
         // Yup schemas
         const searchUserSchema = yup
             .object()
@@ -392,20 +471,38 @@ export const searchClassroomByName = async (req: Request, res: Response): Promis
         const detailedClassrooms = await prismaClient.classroom.findMany({
             where: {
                 name: { startsWith: term },
-                ...(curUser.role !== UserRole.ADMIN && {
-                    OR: [{ institutionId: curUser.institutionId }, { institutionId: null }],
+                ...(user.role !== UserRole.ADMIN && {
+                    OR: [{ institutionId: user.institutionId }, { institutionId: null }],
                 }),
             },
             include: detailedClassroomFields,
         });
         // Get classrooms only with visible fields and with embedded actions
-        const actions = await getClassroomUserActions(curUser, detailedClassrooms);
-        const fields = await getVisibleFields(curUser, detailedClassrooms);
+        const actions = await getClassroomUserActions(user, detailedClassrooms);
+        const fields = await getVisibleFields(user, detailedClassrooms);
         const visibleClassrooms = await Promise.all(
-            detailedClassrooms.map(async (classroom, i) => ({
-                ...(await prismaClient.classroom.findUnique({ where: { id: classroom.id }, select: fields[i] })),
-                actions: actions[i],
-            }))
+            detailedClassrooms.map(async (classroom, i) => {
+                const visibleClassroom = {
+                    ...(await prismaClient.classroom.findUnique({ where: { id: classroom.id }, select: fields[i] })),
+                    actions: actions[i],
+                };
+
+                // Get users only with visible fields and with embedded actions
+                const detailedUsers = classroom.users;
+                const userActions = await getPeerUserActions(user, detailedUsers);
+                const userFields = await getUsersVisibleFields(user, detailedUsers);
+                const visibleClassroomWUsers = {
+                    ...visibleClassroom,
+                    users: await Promise.all(
+                        detailedUsers.map(async (user, i) => ({
+                            ...(await prismaClient.user.findUnique({ where: { id: user.id }, select: userFields[i] })),
+                            actions: userActions[i],
+                        }))
+                    ),
+                };
+
+                return visibleClassroomWUsers;
+            })
         );
 
         res.status(200).json({ message: 'Searched classrooms found.', data: visibleClassrooms });

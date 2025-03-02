@@ -14,6 +14,11 @@ import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
+import {
+    getDetailedApplications,
+    getApplicationsUserActions,
+    getVisibleFields as getApplicationVisibleFields,
+} from './applicationController';
 
 export const getVisibleFields = async (
     user: User,
@@ -109,55 +114,7 @@ export const getVisibleFields = async (
                 },
             },
             applications: {
-                ...(!fullAccess ? [{ where: { enabled: true } }] : []),
-                select: {
-                    id: fullAccess,
-                    createdAt: fullAccess,
-                    startDate: fullAccess,
-                    endDate: fullAccess,
-                    applier: {
-                        select: {
-                            id: fullAccess,
-                            username: fullAccess,
-                            applier: {
-                                select: {
-                                    id: fullAccess,
-                                    username: fullAccess,
-                                    institution: { select: { id: fullAccess, name: fullAccess } },
-                                },
-                            },
-                        },
-                    },
-                    ...(includeAnswers
-                        ? [
-                              {
-                                  answers: {
-                                      ...(!fullAccess
-                                          ? [{ where: { group: { applicationAnswer: { application: { enabled: true } } } } }]
-                                          : []),
-                                      select: {
-                                          id: answerAccess,
-                                          user: {
-                                              select: {
-                                                  id: answerAccess,
-                                                  username: answerAccess,
-                                                  institution: {
-                                                      select: {
-                                                          id: answerAccess,
-                                                          name: answerAccess,
-                                                      },
-                                                  },
-                                              },
-                                          },
-                                          date: answerAccess,
-                                          approved: fullAccess,
-                                          coordinate: answerAccess,
-                                      },
-                                  },
-                              },
-                          ]
-                        : []),
-                },
+                select: { id: true },
             },
             pages: {
                 orderBy: { placement: 'asc' as any },
@@ -347,6 +304,15 @@ const detailedProtocolFields = {
     viewersClassroom: { select: { id: true, users: { select: { id: true, institution: { select: { id: true } } } } } },
     answersViewersUser: { select: { id: true, institution: { select: { id: true } } } },
     answersViewersClassroom: { select: { users: { select: { id: true, institution: { select: { id: true } } } } } },
+    applications: {
+        include: {
+            applier: { select: { id: true, institution: { select: { id: true } } } },
+            viewersUser: { select: { id: true, institution: { select: { id: true } } } },
+            viewersClassroom: { select: { users: { select: { id: true, institution: { select: { id: true } } } } } },
+            answersViewersUser: { select: { id: true, institution: { select: { id: true } } } },
+            answersViewersClassroom: { select: { users: { select: { id: true, institution: { select: { id: true } } } } } },
+        },
+    },
     _count: { select: { applications: true } },
 };
 
@@ -952,12 +918,30 @@ export const createProtocol = async (req: Request, res: Response) => {
         const visibleProtocol = {
             ...(await prismaClient.protocol.findUnique({
                 where: { id: detailedCreatedProtocol.id },
-                select: (await getVisibleFields(user, [detailedCreatedProtocol], false))[0],
+                select: (({ applications, ...visibleFields }) => visibleFields)(
+                    (await getVisibleFields(user, [detailedCreatedProtocol], false))[0]
+                ),
             })),
             actions: (await getProtocolsUserActions(user, [detailedCreatedProtocol]))[0],
         };
+        // Get applicattions only with visible fields and with embedded actions
+        const detailedApplications = detailedCreatedProtocol.applications.map((application) => ({
+            ...application,
+            protocol: (({ id, creator, managers }) => ({ id, creator, managers }))(detailedCreatedProtocol),
+        }));
+        const applicationActions = await getApplicationsUserActions(user, detailedApplications);
+        const applicationFields = await getApplicationVisibleFields(user, detailedApplications, false);
+        const visibleProtocolWApplications = {
+            ...visibleProtocol,
+            applications: await Promise.all(
+                detailedApplications.map(async (application, i) => ({
+                    ...(await prismaClient.application.findUnique({ where: { id: application.id }, select: applicationFields[i] })),
+                    actions: applicationActions[i],
+                }))
+            ),
+        };
 
-        res.status(201).json({ message: 'Protocol created.', data: visibleProtocol });
+        res.status(201).json({ message: 'Protocol created.', data: visibleProtocolWApplications });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
@@ -1428,12 +1412,30 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
         const visibleProtocol = {
             ...(await prismaClient.protocol.findUnique({
                 where: { id: detailedUpsertedProtocol.id },
-                select: (await getVisibleFields(user, [detailedUpsertedProtocol], false))[0],
+                select: (({ applications, ...visibleFields }) => visibleFields)(
+                    (await getVisibleFields(user, [detailedUpsertedProtocol], false))[0]
+                ),
             })),
             actions: (await getProtocolsUserActions(user, [detailedUpsertedProtocol]))[0],
         };
+        // Get applicattions only with visible fields and with embedded actions
+        const detailedApplications = detailedUpsertedProtocol.applications.map((application) => ({
+            ...application,
+            protocol: (({ id, creator, managers }) => ({ id, creator, managers }))(detailedUpsertedProtocol),
+        }));
+        const applicationActions = await getApplicationsUserActions(user, detailedApplications);
+        const applicationFields = await getApplicationVisibleFields(user, detailedApplications, false);
+        const visibleProtocolWApplications = {
+            ...visibleProtocol,
+            applications: await Promise.all(
+                detailedApplications.map(async (application, i) => ({
+                    ...(await prismaClient.application.findUnique({ where: { id: application.id }, select: applicationFields[i] })),
+                    actions: applicationActions[i],
+                }))
+            ),
+        };
 
-        res.status(200).json({ message: 'Protocol updated.', data: visibleProtocol });
+        res.status(200).json({ message: 'Protocol updated.', data: visibleProtocolWApplications });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
@@ -1453,13 +1455,34 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
         const actions = await getProtocolsUserActions(user, detailedProtocols);
         const fields = await getVisibleFields(user, detailedProtocols, false);
         const visibleProtocols = await Promise.all(
-            detailedProtocols.map(async (protocol, index) => ({
-                ...(await prismaClient.protocol.findUnique({
-                    where: { id: protocol.id },
-                    select: fields[index],
-                })),
-                actions: actions[index],
-            }))
+            detailedProtocols.map(async (protocol, index) => {
+                const visibleProtocol = {
+                    ...(await prismaClient.protocol.findUnique({
+                        where: { id: protocol.id },
+                        select: fields[index],
+                    })),
+                    actions: actions[index],
+                };
+
+                // Get applicattions only with visible fields and with embedded actions
+                const detailedApplications = protocol.applications.map((application) => ({
+                    ...application,
+                    protocol: (({ id, creator, managers }) => ({ id, creator, managers }))(protocol),
+                }));
+                const applicationActions = await getApplicationsUserActions(user, detailedApplications);
+                const applicationFields = await getApplicationVisibleFields(user, detailedApplications, false);
+                const visibleProtocolWApplications = {
+                    ...visibleProtocol,
+                    applications: await Promise.all(
+                        detailedApplications.map(async (application, i) => ({
+                            ...(await prismaClient.application.findUnique({ where: { id: application.id }, select: applicationFields[i] })),
+                            actions: applicationActions[i],
+                        }))
+                    ),
+                };
+
+                return visibleProtocolWApplications;
+            })
         );
 
         res.status(200).json({ message: 'All protocols found.', data: visibleProtocols });
@@ -1500,10 +1523,34 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
         const actions = await getProtocolsUserActions(user, detailedProtocols);
         const fields = await getVisibleFields(user, detailedProtocols, false);
         const visibleProtocols = await Promise.all(
-            detailedProtocols.map(async (protocol, index) => ({
-                ...(await prismaClient.protocol.findUnique({ where: { id: protocol.id }, select: fields[index] })),
-                actions: actions[index],
-            }))
+            detailedProtocols.map(async (protocol, index) => {
+                const visibleProtocol = {
+                    ...(await prismaClient.protocol.findUnique({
+                        where: { id: protocol.id },
+                        select: fields[index],
+                    })),
+                    actions: actions[index],
+                };
+
+                // Get applicattions only with visible fields and with embedded actions
+                const detailedApplications = protocol.applications.map((application) => ({
+                    ...application,
+                    protocol: (({ id, creator, managers }) => ({ id, creator, managers }))(protocol),
+                }));
+                const applicationActions = await getApplicationsUserActions(user, detailedApplications);
+                const applicationFields = await getApplicationVisibleFields(user, detailedApplications, false);
+                const visibleProtocolWApplications = {
+                    ...visibleProtocol,
+                    applications: await Promise.all(
+                        detailedApplications.map(async (application, i) => ({
+                            ...(await prismaClient.application.findUnique({ where: { id: application.id }, select: applicationFields[i] })),
+                            actions: applicationActions[i],
+                        }))
+                    ),
+                };
+
+                return visibleProtocolWApplications;
+            })
         );
 
         res.status(200).json({ message: 'Visible protocols found.', data: visibleProtocols });
@@ -1526,10 +1573,34 @@ export const getMyProtocols = async (req: Request, res: Response): Promise<void>
         const actions = await getProtocolsUserActions(user, detailedProtocols);
         const fields = await getVisibleFields(user, detailedProtocols, false);
         const visibleProtocols = await Promise.all(
-            detailedProtocols.map(async (protocol, index) => ({
-                ...(await prismaClient.protocol.findUnique({ where: { id: protocol.id }, select: fields[index] })),
-                actions: actions[index],
-            }))
+            detailedProtocols.map(async (protocol, index) => {
+                const visibleProtocol = {
+                    ...(await prismaClient.protocol.findUnique({
+                        where: { id: protocol.id },
+                        select: fields[index],
+                    })),
+                    actions: actions[index],
+                };
+
+                // Get applicattions only with visible fields and with embedded actions
+                const detailedApplications = protocol.applications.map((application) => ({
+                    ...application,
+                    protocol: (({ id, creator, managers }) => ({ id, creator, managers }))(protocol),
+                }));
+                const applicationActions = await getApplicationsUserActions(user, detailedApplications);
+                const applicationFields = await getApplicationVisibleFields(user, detailedApplications, false);
+                const visibleProtocolWApplications = {
+                    ...visibleProtocol,
+                    applications: await Promise.all(
+                        detailedApplications.map(async (application, i) => ({
+                            ...(await prismaClient.application.findUnique({ where: { id: application.id }, select: applicationFields[i] })),
+                            actions: applicationActions[i],
+                        }))
+                    ),
+                };
+
+                return visibleProtocolWApplications;
+            })
         );
 
         res.status(200).json({ message: 'My protocols found.', data: visibleProtocols });
@@ -1568,12 +1639,30 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
         const visibleProtocol = {
             ...(await prismaClient.protocol.findUnique({
                 where: { id: detailedProtocol.id },
-                select: (await getVisibleFields(user, [detailedProtocol], false))[0],
+                select: (({ applications, ...visibleFields }) => visibleFields)(
+                    (await getVisibleFields(user, [detailedProtocol], false))[0]
+                ),
             })),
             actions: (await getProtocolsUserActions(user, [detailedProtocol]))[0],
         };
+        // Get applicattions only with visible fields and with embedded actions
+        const detailedApplications = detailedProtocol.applications.map((application) => ({
+            ...application,
+            protocol: (({ id, creator, managers }) => ({ id, creator, managers }))(detailedProtocol),
+        }));
+        const applicationActions = await getApplicationsUserActions(user, detailedApplications);
+        const applicationFields = await getApplicationVisibleFields(user, detailedApplications, false);
+        const visibleProtocolWApplications = {
+            ...visibleProtocol,
+            applications: await Promise.all(
+                detailedApplications.map(async (application, i) => ({
+                    ...(await prismaClient.application.findUnique({ where: { id: application.id }, select: applicationFields[i] })),
+                    actions: applicationActions[i],
+                }))
+            ),
+        };
 
-        res.status(200).json({ message: 'Protocol found.', data: visibleProtocol });
+        res.status(200).json({ message: 'Protocol found.', data: visibleProtocolWApplications });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
@@ -1608,12 +1697,30 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
         const visibleProtocol = {
             ...(await prismaClient.protocol.findUnique({
                 where: { id: detailedProtocol.id },
-                select: (await getVisibleFields(user, [detailedProtocol], true))[0],
+                select: (({ applications, ...visibleFields }) => visibleFields)(
+                    (await getVisibleFields(user, [detailedProtocol], false))[0]
+                ),
             })),
             actions: (await getProtocolsUserActions(user, [detailedProtocol]))[0],
         };
+        // Get applicattions only with visible fields and with embedded actions
+        const detailedApplications = detailedProtocol.applications.map((application) => ({
+            ...application,
+            protocol: (({ id, creator, managers }) => ({ id, creator, managers }))(detailedProtocol),
+        }));
+        const applicationActions = await getApplicationsUserActions(user, detailedApplications);
+        const applicationFields = await getApplicationVisibleFields(user, detailedApplications, false);
+        const visibleProtocolWApplications = {
+            ...visibleProtocol,
+            applications: await Promise.all(
+                detailedApplications.map(async (application, i) => ({
+                    ...(await prismaClient.application.findUnique({ where: { id: application.id }, select: applicationFields[i] })),
+                    actions: applicationActions[i],
+                }))
+            ),
+        };
 
-        res.status(200).json({ message: 'Protocol with answers found.', data: visibleProtocol });
+        res.status(200).json({ message: 'Protocol with answers found.', data: visibleProtocolWApplications });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }

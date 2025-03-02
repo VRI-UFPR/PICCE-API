@@ -25,7 +25,7 @@ const getDetailedUsers = async (usersIds: number[]) => {
     return await prismaClient.user.findMany({ where: { id: { in: usersIds } }, include: detailedUserFields });
 };
 
-const getVisibleFields = async (curUser: User, users: Awaited<ReturnType<typeof getDetailedUsers>>) => {
+export const getVisibleFields = async (curUser: User, users: Awaited<ReturnType<typeof getDetailedUsers>>) => {
     const peerUsersRoles = await getPeerUsersRoles(curUser, users);
     const visibleFields = peerUsersRoles.map((roles, index) => {
         const fullAccess = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;

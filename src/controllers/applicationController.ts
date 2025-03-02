@@ -23,6 +23,7 @@ const detailedApplicationFields = {
     answersViewersClassroom: { select: { users: { select: { id: true, institution: { select: { id: true } } } } } },
     protocol: {
         select: {
+            id: true,
             creator: { select: { id: true, institution: { select: { id: true } } } },
             managers: { select: { id: true, institution: { select: { id: true } } } },
         },
@@ -139,7 +140,11 @@ const checkAuthorization = async (user: User, applicationsId: number[], protocol
     }
 };
 
-const getVisibleFields = async (user: User, applications: Awaited<ReturnType<typeof getDetailedApplications>>, includeAnswers: boolean) => {
+export const getVisibleFields = async (
+    user: User,
+    applications: Awaited<ReturnType<typeof getDetailedApplications>>,
+    includeAnswers: boolean
+) => {
     const applicationsRoles = await getApplicationsUserRoles(user, applications);
     const fields = applicationsRoles.map((roles, i) => {
         const fullAccess =
