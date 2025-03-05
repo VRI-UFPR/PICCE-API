@@ -15,6 +15,7 @@ import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
 import { getApplicationsUserActions, getDetailedApplications } from './applicationController';
+import fieldsFilter from '../services/fieldsFilter';
 
 const detailedApplicationAnswerFields = {
     application: {
@@ -285,50 +286,61 @@ const validateAnswers = async (itemAnswerGroups: any, applicationId: number) => 
     }
 };
 
-const getVisibleFields = async (user: User, applicationAnswers: Awaited<ReturnType<typeof getDetailedApplicationAnswers>>) => {
+const getVisibleFields = async (
+    user: User,
+    applicationAnswers: Awaited<ReturnType<typeof getDetailedApplicationAnswers>>,
+    ignoreFilters: boolean
+) => {
     const applicationAnswersRoles = await getApplicationAnswerUserRoles(user, applicationAnswers);
-    const fields = applicationAnswersRoles.map((roles, i) => {
-        const fullAccess =
-            roles.applicationApplier ||
-            roles.protocolCreator ||
-            roles.protocolManager ||
-            roles.protocolCoordinator ||
-            roles.applicationCoordinator ||
-            user.role === UserRole.ADMIN;
-        const baseAccess =
-            roles.answerer ||
-            roles.applicationApplier ||
-            roles.protocolCreator ||
-            roles.protocolManager ||
-            roles.protocolCoordinator ||
-            roles.applicationCoordinator ||
-            roles.protocolInstitutionMember ||
-            roles.applicationInstitutionMember ||
-            roles.viewer ||
-            user.role === UserRole.ADMIN;
+
+    const mapVisibleFields = (roles: (typeof applicationAnswersRoles)[0] | undefined) => {
+        const fullAccess = roles
+            ? roles.applicationApplier ||
+              roles.protocolCreator ||
+              roles.protocolManager ||
+              roles.protocolCoordinator ||
+              roles.applicationCoordinator ||
+              user.role === UserRole.ADMIN
+            : ignoreFilters;
+        const baseAccess = roles
+            ? roles.answerer ||
+              roles.applicationApplier ||
+              roles.protocolCreator ||
+              roles.protocolManager ||
+              roles.protocolCoordinator ||
+              roles.applicationCoordinator ||
+              roles.protocolInstitutionMember ||
+              roles.applicationInstitutionMember ||
+              roles.viewer ||
+              user.role === UserRole.ADMIN
+            : ignoreFilters;
 
         const visibleFields = {
-            id: baseAccess,
-            createdAt: baseAccess,
-            updatedAt: baseAccess,
-            date: baseAccess,
-            approved: fullAccess,
-            user: { select: { id: baseAccess, username: baseAccess, institution: { select: { id: baseAccess, name: baseAccess } } } },
-            coordinate: { select: { latitude: baseAccess, longitude: baseAccess } },
-            itemAnswerGroups: {
-                select: {
-                    id: baseAccess,
-                    itemAnswers: { select: { id: baseAccess, text: baseAccess, itemId: baseAccess } },
-                    optionAnswers: { select: { id: baseAccess, text: baseAccess, itemId: baseAccess, optionId: baseAccess } },
-                    tableAnswers: { select: { id: baseAccess, text: baseAccess, itemId: baseAccess, columnId: baseAccess } },
+            select: {
+                id: baseAccess,
+                createdAt: baseAccess,
+                updatedAt: baseAccess,
+                date: baseAccess,
+                approved: fullAccess,
+                user: { select: { id: baseAccess, username: baseAccess, institution: { select: { id: baseAccess, name: baseAccess } } } },
+                coordinate: { select: { latitude: baseAccess, longitude: baseAccess } },
+                itemAnswerGroups: {
+                    select: {
+                        id: baseAccess,
+                        itemAnswers: { select: { id: baseAccess, text: baseAccess, itemId: baseAccess } },
+                        optionAnswers: { select: { id: baseAccess, text: baseAccess, itemId: baseAccess, optionId: baseAccess } },
+                        tableAnswers: { select: { id: baseAccess, text: baseAccess, itemId: baseAccess, columnId: baseAccess } },
+                    },
                 },
             },
         };
 
         return visibleFields;
-    });
+    };
 
-    return fields;
+    const visibleFields = ignoreFilters ? [mapVisibleFields(undefined)] : applicationAnswersRoles.map(mapVisibleFields);
+
+    return visibleFields;
 };
 
 export const createApplicationAnswer = async (req: Request, res: Response) => {
@@ -480,7 +492,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
         const visibleApplicationAnswer = {
             ...(await prismaClient.applicationAnswer.findUnique({
                 where: { id: detailedCreatedApplicationAnswer.id },
-                select: (await getVisibleFields(user, [detailedCreatedApplicationAnswer]))[0],
+                ...(await getVisibleFields(user, [detailedCreatedApplicationAnswer], false))[0],
             })),
             actions: (await getApplicationAnswerActions(user, [detailedCreatedApplicationAnswer]))[0],
         };
@@ -709,7 +721,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
         const visibleApplicationAnswer = {
             ...(await prismaClient.applicationAnswer.findUnique({
                 where: { id: detailedUpsertedApplicationAnswer.id },
-                select: (await getVisibleFields(user, [detailedUpsertedApplicationAnswer]))[0],
+                ...(await getVisibleFields(user, [detailedUpsertedApplicationAnswer], false))[0],
             })),
             actions: (await getApplicationAnswerActions(user, [detailedUpsertedApplicationAnswer]))[0],
         };
@@ -731,17 +743,17 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
         // Prisma operation
         const detailedApplicationAnswers = await prismaClient.applicationAnswer.findMany({ include: detailedApplicationAnswerFields });
         // Get application answers only with visible fields and with embedded actions
-        const visibleApplicationAnswers = await Promise.all(
-            detailedApplicationAnswers.map(async (detailedApplicationAnswer) => {
-                return {
-                    ...(await prismaClient.applicationAnswer.findUnique({
-                        where: { id: detailedApplicationAnswer.id },
-                        select: (await getVisibleFields(user, [detailedApplicationAnswer]))[0],
-                    })),
-                    actions: (await getApplicationAnswerActions(user, [detailedApplicationAnswer]))[0],
-                };
-            })
-        );
+        const actions = await getApplicationAnswerActions(user, detailedApplicationAnswers);
+        const filteredFields = await getVisibleFields(user, detailedApplicationAnswers, false);
+        const unfilteredFields = (await getVisibleFields(user, [], true))[0];
+        const unfilteredApplicationAnswers = await prismaClient.applicationAnswer.findMany({
+            where: { id: { in: detailedApplicationAnswers.map(({ id }) => id) } },
+            ...unfilteredFields,
+        });
+        const visibleApplicationAnswers = unfilteredApplicationAnswers.map((applicationAnswer, i) => ({
+            ...fieldsFilter(applicationAnswer, filteredFields[i]),
+            actions: actions[i],
+        }));
 
         res.status(200).json({ message: 'All application answers found.', data: visibleApplicationAnswers });
     } catch (error: any) {
@@ -761,17 +773,18 @@ export const getMyApplicationAnswers = async (req: Request, res: Response): Prom
             include: detailedApplicationAnswerFields,
         });
         // Get application answers only with visible fields and with embedded actions
-        const visibleApplicationAnswers = await Promise.all(
-            detailedApplicationAnswers.map(async (detailedApplicationAnswer) => {
-                return {
-                    ...(await prismaClient.applicationAnswer.findUnique({
-                        where: { id: detailedApplicationAnswer.id },
-                        select: (await getVisibleFields(user, [detailedApplicationAnswer]))[0],
-                    })),
-                    actions: (await getApplicationAnswerActions(user, [detailedApplicationAnswer]))[0],
-                };
-            })
-        );
+        // Get application answers only with visible fields and with embedded actions
+        const actions = await getApplicationAnswerActions(user, detailedApplicationAnswers);
+        const filteredFields = await getVisibleFields(user, detailedApplicationAnswers, false);
+        const unfilteredFields = (await getVisibleFields(user, [], true))[0];
+        const unfilteredApplicationAnswers = await prismaClient.applicationAnswer.findMany({
+            where: { id: { in: detailedApplicationAnswers.map(({ id }) => id) } },
+            ...unfilteredFields,
+        });
+        const visibleApplicationAnswers = unfilteredApplicationAnswers.map((applicationAnswer, i) => ({
+            ...fieldsFilter(applicationAnswer, filteredFields[i]),
+            actions: actions[i],
+        }));
 
         res.status(200).json({ message: 'My application answers found.', data: visibleApplicationAnswers });
     } catch (error: any) {
@@ -796,7 +809,7 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
         const visibleApplicationAnswer = {
             ...(await prismaClient.applicationAnswer.findUnique({
                 where: { id: detailedApplicationAnswer.id },
-                select: (await getVisibleFields(user, [detailedApplicationAnswer]))[0],
+                ...(await getVisibleFields(user, [detailedApplicationAnswer], false))[0],
             })),
             actions: (await getApplicationAnswerActions(user, [detailedApplicationAnswer]))[0],
         };
@@ -825,7 +838,7 @@ export const approveApplicationAnswer = async (req: Request, res: Response): Pro
         const visibleApplicationAnswer = {
             ...(await prismaClient.applicationAnswer.findUnique({
                 where: { id: detailedApprovedApplicationAnswer.id },
-                select: (await getVisibleFields(user, [detailedApprovedApplicationAnswer]))[0],
+                ...(await getVisibleFields(user, [detailedApprovedApplicationAnswer], false))[0],
             })),
             actions: (await getApplicationAnswerActions(user, [detailedApprovedApplicationAnswer]))[0],
         };

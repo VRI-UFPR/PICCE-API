@@ -14,8 +14,9 @@ import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { getDetailedProtocols, getProtocolsUserActions } from './protocolController';
+import fieldsFilter from '../services/fieldsFilter';
 
-const detailedApplicationFields = {
+export const detailedApplicationFields = {
     applier: { select: { id: true, institution: { select: { id: true } } } },
     viewersUser: { select: { id: true, institution: { select: { id: true } } } },
     viewersClassroom: { select: { users: { select: { id: true, institution: { select: { id: true } } } } } },
@@ -140,176 +141,244 @@ const checkAuthorization = async (user: User, applicationsId: number[], protocol
     }
 };
 
-export const getVisibleFields = async (
+export const getApplicationsVisibleFields = async (
     user: User,
     applications: Awaited<ReturnType<typeof getDetailedApplications>>,
-    includeAnswers: boolean
+    includeAnswers: boolean,
+    ignoreFilters: boolean
 ) => {
     const applicationsRoles = await getApplicationsUserRoles(user, applications);
-    const fields = applicationsRoles.map((roles, i) => {
-        const fullAccess =
-            roles.applier || roles.coordinator || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
-        const answersAccess =
-            roles.answersViewer ||
-            roles.applier ||
-            roles.coordinator ||
-            roles.protocolCreator ||
-            roles.protocolManager ||
-            user.role === UserRole.ADMIN;
-        const baseAccess =
-            roles.answersViewer ||
-            roles.applier ||
-            roles.coordinator ||
-            roles.protocolCreator ||
-            roles.protocolManager ||
-            roles.viewer ||
-            user.role === UserRole.ADMIN;
+
+    const mapVisibleFields = (roles: (typeof applicationsRoles)[0] | undefined) => {
+        const fullAccess = roles
+            ? roles.applier || roles.coordinator || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN
+            : ignoreFilters;
+        const answersAccess = roles
+            ? roles.answersViewer ||
+              roles.applier ||
+              roles.coordinator ||
+              roles.protocolCreator ||
+              roles.protocolManager ||
+              user.role === UserRole.ADMIN
+            : ignoreFilters;
+        const baseAccess = roles
+            ? roles.answersViewer ||
+              roles.applier ||
+              roles.coordinator ||
+              roles.protocolCreator ||
+              roles.protocolManager ||
+              roles.viewer ||
+              user.role === UserRole.ADMIN
+            : ignoreFilters;
 
         const visibleFields = {
-            id: baseAccess,
-            createdAt: baseAccess,
-            updatedAt: baseAccess,
-            visibility: fullAccess,
-            answersVisibility: fullAccess,
-            keepLocation: baseAccess,
-            startDate: baseAccess,
-            endDate: baseAccess,
-            enabled: fullAccess,
-            applier: {
-                select: {
-                    id: baseAccess,
-                    username: baseAccess,
-                    institution: { select: { id: baseAccess, name: baseAccess } },
-                },
-            },
-            viewersUser: {
-                select: {
-                    id: fullAccess,
-                    username: fullAccess,
-                    institution: { select: { id: fullAccess, name: fullAccess } },
-                },
-            },
-            viewersClassroom: {
-                select: {
-                    id: fullAccess,
-                    name: fullAccess,
-                    users: {
-                        select: {
-                            id: fullAccess,
-                            username: fullAccess,
-                            institution: { select: { id: fullAccess, name: fullAccess } },
-                        },
+            select: {
+                id: baseAccess,
+                createdAt: baseAccess,
+                updatedAt: baseAccess,
+                visibility: fullAccess,
+                answersVisibility: fullAccess,
+                keepLocation: baseAccess,
+                startDate: baseAccess,
+                endDate: baseAccess,
+                enabled: fullAccess,
+                applier: {
+                    select: {
+                        id: baseAccess,
+                        username: baseAccess,
+                        institution: { select: { id: baseAccess, name: baseAccess } },
                     },
                 },
-            },
-            answersViewersUser: {
-                select: {
-                    id: fullAccess,
-                    username: fullAccess,
-                    institution: { select: { id: fullAccess, name: fullAccess } },
-                },
-            },
-            answersViewersClassroom: {
-                select: {
-                    id: fullAccess,
-                    name: fullAccess,
-                    users: {
-                        select: {
-                            id: fullAccess,
-                            username: fullAccess,
-                            institution: { select: { id: fullAccess, name: fullAccess } },
-                        },
+                viewersUser: {
+                    select: {
+                        id: fullAccess,
+                        username: fullAccess,
+                        institution: { select: { id: fullAccess, name: fullAccess } },
                     },
                 },
-            },
-            protocol: {
-                select: {
-                    id: baseAccess,
-                    createdAt: baseAccess,
-                    updatedAt: baseAccess,
-                    title: baseAccess,
-                    description: baseAccess,
-                    creator: {
-                        select: {
-                            id: baseAccess,
-                            username: baseAccess,
-                            institution: { select: { id: baseAccess, name: baseAccess } },
-                        },
-                    },
-                    pages: {
-                        orderBy: { placement: 'asc' as any },
-                        select: {
-                            id: baseAccess,
-                            type: baseAccess,
-                            placement: baseAccess,
-                            dependencies: {
-                                select: {
-                                    id: baseAccess,
-                                    type: baseAccess,
-                                    argument: baseAccess,
-                                    customMessage: baseAccess,
-                                    itemId: baseAccess,
-                                },
+                viewersClassroom: {
+                    select: {
+                        id: fullAccess,
+                        name: fullAccess,
+                        users: {
+                            select: {
+                                id: fullAccess,
+                                username: fullAccess,
+                                institution: { select: { id: fullAccess, name: fullAccess } },
                             },
-                            itemGroups: {
-                                orderBy: { placement: 'asc' as any },
-                                select: {
-                                    id: baseAccess,
-                                    type: baseAccess,
-                                    placement: baseAccess,
-                                    isRepeatable: baseAccess,
-                                    dependencies: {
-                                        select: {
-                                            id: baseAccess,
-                                            type: baseAccess,
-                                            argument: baseAccess,
-                                            customMessage: baseAccess,
-                                            itemId: baseAccess,
-                                        },
+                        },
+                    },
+                },
+                answersViewersUser: {
+                    select: {
+                        id: fullAccess,
+                        username: fullAccess,
+                        institution: { select: { id: fullAccess, name: fullAccess } },
+                    },
+                },
+                answersViewersClassroom: {
+                    select: {
+                        id: fullAccess,
+                        name: fullAccess,
+                        users: {
+                            select: {
+                                id: fullAccess,
+                                username: fullAccess,
+                                institution: { select: { id: fullAccess, name: fullAccess } },
+                            },
+                        },
+                    },
+                },
+                protocol: {
+                    select: {
+                        id: baseAccess,
+                        createdAt: baseAccess,
+                        updatedAt: baseAccess,
+                        title: baseAccess,
+                        description: baseAccess,
+                        creator: {
+                            select: {
+                                id: baseAccess,
+                                username: baseAccess,
+                                institution: { select: { id: baseAccess, name: baseAccess } },
+                            },
+                        },
+                        pages: {
+                            orderBy: { placement: 'asc' as any },
+                            select: {
+                                id: baseAccess,
+                                type: baseAccess,
+                                placement: baseAccess,
+                                dependencies: {
+                                    select: {
+                                        id: baseAccess,
+                                        type: baseAccess,
+                                        argument: baseAccess,
+                                        customMessage: baseAccess,
+                                        itemId: baseAccess,
                                     },
-                                    items: {
-                                        select: {
-                                            id: baseAccess,
-                                            text: baseAccess,
-                                            description: baseAccess,
-                                            type: baseAccess,
-                                            placement: baseAccess,
-                                            enabled: baseAccess,
-                                            itemValidations: {
-                                                select: {
-                                                    id: baseAccess,
-                                                    type: baseAccess,
-                                                    argument: baseAccess,
-                                                    customMessage: baseAccess,
-                                                },
+                                },
+                                itemGroups: {
+                                    orderBy: { placement: 'asc' as any },
+                                    select: {
+                                        id: baseAccess,
+                                        type: baseAccess,
+                                        placement: baseAccess,
+                                        isRepeatable: baseAccess,
+                                        dependencies: {
+                                            select: {
+                                                id: baseAccess,
+                                                type: baseAccess,
+                                                argument: baseAccess,
+                                                customMessage: baseAccess,
+                                                itemId: baseAccess,
                                             },
-                                            itemOptions: {
-                                                select: {
-                                                    id: baseAccess,
-                                                    text: baseAccess,
-                                                    placement: baseAccess,
-                                                    files: {
-                                                        select: {
-                                                            id: baseAccess,
-                                                            path: baseAccess,
-                                                            description: baseAccess,
+                                        },
+                                        items: {
+                                            select: {
+                                                id: baseAccess,
+                                                text: baseAccess,
+                                                description: baseAccess,
+                                                type: baseAccess,
+                                                placement: baseAccess,
+                                                enabled: baseAccess,
+                                                itemValidations: {
+                                                    select: {
+                                                        id: baseAccess,
+                                                        type: baseAccess,
+                                                        argument: baseAccess,
+                                                        customMessage: baseAccess,
+                                                    },
+                                                },
+                                                itemOptions: {
+                                                    select: {
+                                                        id: baseAccess,
+                                                        text: baseAccess,
+                                                        placement: baseAccess,
+                                                        files: {
+                                                            select: {
+                                                                id: baseAccess,
+                                                                path: baseAccess,
+                                                                description: baseAccess,
+                                                            },
                                                         },
+                                                    },
+                                                    ...(includeAnswers
+                                                        ? [
+                                                              {
+                                                                  optionAnswers: {
+                                                                      where: {
+                                                                          group: {
+                                                                              applicationAnswer: {
+                                                                                  application: { id: answersAccess },
+                                                                              },
+                                                                          },
+                                                                      },
+                                                                      select: {
+                                                                          id: answersAccess,
+                                                                          text: answersAccess,
+                                                                          group: {
+                                                                              select: {
+                                                                                  id: answersAccess,
+                                                                                  applicationAnswer: {
+                                                                                      select: {
+                                                                                          id: answersAccess,
+                                                                                          userId: answersAccess,
+                                                                                      },
+                                                                                  },
+                                                                              },
+                                                                          },
+                                                                      },
+                                                                  },
+                                                              },
+                                                          ]
+                                                        : []),
+                                                },
+                                                files: {
+                                                    select: {
+                                                        id: baseAccess,
+                                                        path: baseAccess,
+                                                        description: baseAccess,
                                                     },
                                                 },
                                                 ...(includeAnswers
                                                     ? [
                                                           {
-                                                              optionAnswers: {
+                                                              itemAnswers: {
                                                                   where: {
                                                                       group: {
-                                                                          applicationAnswer: {
-                                                                              application: { id: applications[i].id },
-                                                                          },
+                                                                          applicationAnswer: { application: { id: answersAccess } },
                                                                       },
                                                                   },
+
                                                                   select: {
                                                                       id: answersAccess,
                                                                       text: answersAccess,
+                                                                      files: {
+                                                                          select: {
+                                                                              id: answersAccess,
+                                                                              path: answersAccess,
+                                                                              description: answersAccess,
+                                                                          },
+                                                                      },
+                                                                      group: {
+                                                                          select: {
+                                                                              id: answersAccess,
+                                                                              applicationAnswer: {
+                                                                                  select: {
+                                                                                      id: answersAccess,
+                                                                                      userId: answersAccess,
+                                                                                  },
+                                                                              },
+                                                                          },
+                                                                      },
+                                                                  },
+                                                              },
+                                                              tableAnswers: {
+                                                                  select: {
+                                                                      id: answersAccess,
+                                                                      text: answersAccess,
+                                                                      columnId: answersAccess,
                                                                       group: {
                                                                           select: {
                                                                               id: answersAccess,
@@ -327,74 +396,13 @@ export const getVisibleFields = async (
                                                       ]
                                                     : []),
                                             },
-                                            files: {
-                                                select: {
-                                                    id: baseAccess,
-                                                    path: baseAccess,
-                                                    description: baseAccess,
-                                                },
-                                            },
-                                            ...(includeAnswers
-                                                ? [
-                                                      {
-                                                          itemAnswers: {
-                                                              where: {
-                                                                  group: {
-                                                                      applicationAnswer: { application: { id: applications[i].id } },
-                                                                  },
-                                                              },
-
-                                                              select: {
-                                                                  id: answersAccess,
-                                                                  text: answersAccess,
-                                                                  files: {
-                                                                      select: {
-                                                                          id: answersAccess,
-                                                                          path: answersAccess,
-                                                                          description: answersAccess,
-                                                                      },
-                                                                  },
-                                                                  group: {
-                                                                      select: {
-                                                                          id: answersAccess,
-                                                                          applicationAnswer: {
-                                                                              select: {
-                                                                                  id: answersAccess,
-                                                                                  userId: answersAccess,
-                                                                              },
-                                                                          },
-                                                                      },
-                                                                  },
-                                                              },
-                                                          },
-                                                          tableAnswers: {
-                                                              select: {
-                                                                  id: answersAccess,
-                                                                  text: answersAccess,
-                                                                  columnId: answersAccess,
-                                                                  group: {
-                                                                      select: {
-                                                                          id: answersAccess,
-                                                                          applicationAnswer: {
-                                                                              select: {
-                                                                                  id: answersAccess,
-                                                                                  userId: answersAccess,
-                                                                              },
-                                                                          },
-                                                                      },
-                                                                  },
-                                                              },
-                                                          },
-                                                      },
-                                                  ]
-                                                : []),
                                         },
-                                    },
-                                    tableColumns: {
-                                        select: {
-                                            id: baseAccess,
-                                            text: baseAccess,
-                                            placement: baseAccess,
+                                        tableColumns: {
+                                            select: {
+                                                id: baseAccess,
+                                                text: baseAccess,
+                                                placement: baseAccess,
+                                            },
                                         },
                                     },
                                 },
@@ -406,9 +414,11 @@ export const getVisibleFields = async (
         };
 
         return visibleFields;
-    });
+    };
 
-    return fields;
+    const visibleFields = ignoreFilters ? [mapVisibleFields(undefined)] : applicationsRoles.map(mapVisibleFields);
+
+    return visibleFields;
 };
 
 const validateVisibility = async (
@@ -511,7 +521,7 @@ export const createApplication = async (req: Request, res: Response) => {
         const visibleApplication = {
             ...(await prismaClient.application.findUnique({
                 where: { id: detailedCreatedApplication.id },
-                select: (await getVisibleFields(user, [detailedCreatedApplication], false))[0],
+                ...(await getApplicationsVisibleFields(user, [detailedCreatedApplication], false, false))[0],
             })),
             actions: (await getApplicationsUserActions(user, [detailedCreatedApplication]))[0],
         };
@@ -580,7 +590,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
         const visibleApplication = {
             ...(await prismaClient.application.findUnique({
                 where: { id: detailedUpdatedApplication.id },
-                select: (await getVisibleFields(user, [detailedUpdatedApplication], false))[0],
+                ...(await getApplicationsVisibleFields(user, [detailedUpdatedApplication], false, false))[0],
             })),
             actions: (await getApplicationsUserActions(user, [detailedUpdatedApplication]))[0],
         };
@@ -606,16 +616,15 @@ export const getMyApplications = async (req: Request, res: Response): Promise<vo
 
         // Get application only with visible fields and with embedded actions
         const actions = await getApplicationsUserActions(user, detailedApplications);
-        const fields = await getVisibleFields(user, detailedApplications, false);
-        const visibleApplications = await Promise.all(
-            detailedApplications.map(async (application, index) => ({
-                ...(await prismaClient.application.findUnique({
-                    where: { id: application.id },
-                    select: fields[index],
-                })),
-                actions: actions[index],
-            }))
-        );
+        const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, false);
+        const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true))[0];
+        const unfilteredApplications = await prismaClient.application.findMany({
+            where: { id: { in: detailedApplications.map(({ id }) => id) }, ...unfilteredFields },
+        });
+        const visibleApplications = unfilteredApplications.map((application, i) => ({
+            ...fieldsFilter(application, filteredFields[i]),
+            actions: actions[i],
+        }));
 
         res.status(200).json({ message: 'All your applications found.', data: visibleApplications });
     } catch (error: any) {
@@ -665,13 +674,15 @@ export const getVisibleApplications = async (req: Request, res: Response): Promi
 
         // Get application only with visible fields and with embedded actions
         const actions = await getApplicationsUserActions(user, detailedApplications);
-        const fields = await getVisibleFields(user, detailedApplications, false);
-        const visibleApplications = await Promise.all(
-            detailedApplications.map(async (application, index) => ({
-                ...(await prismaClient.application.findUnique({ where: { id: application.id }, select: fields[index] })),
-                actions: actions[index],
-            }))
-        );
+        const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, false);
+        const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true))[0];
+        const unfilteredApplications = await prismaClient.application.findMany({
+            where: { id: { in: detailedApplications.map(({ id }) => id) }, ...unfilteredFields },
+        });
+        const visibleApplications = unfilteredApplications.map((application, i) => ({
+            ...fieldsFilter(application, filteredFields[i]),
+            actions: actions[i],
+        }));
 
         res.status(200).json({ message: 'All visible applications found.', data: visibleApplications });
     } catch (error: any) {
@@ -693,16 +704,15 @@ export const getAllApplications = async (req: Request, res: Response): Promise<v
 
         // Get application only with visible fields and with embedded actions
         const actions = await getApplicationsUserActions(user, detailedApplications);
-        const fields = await getVisibleFields(user, detailedApplications, false);
-        const visibleApplications = await Promise.all(
-            detailedApplications.map(async (application, index) => ({
-                ...(await prismaClient.application.findUnique({
-                    where: { id: application.id },
-                    select: fields[index],
-                })),
-                actions: actions[index],
-            }))
-        );
+        const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, false);
+        const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true))[0];
+        const unfilteredApplications = await prismaClient.application.findMany({
+            where: { id: { in: detailedApplications.map(({ id }) => id) }, ...unfilteredFields },
+        });
+        const visibleApplications = unfilteredApplications.map((application, i) => ({
+            ...fieldsFilter(application, filteredFields[i]),
+            actions: actions[i],
+        }));
 
         res.status(200).json({ message: 'All applications found.', data: visibleApplications });
     } catch (error: any) {
@@ -759,7 +769,7 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
         const visibleApplication = {
             ...(await prismaClient.application.findUnique({
                 where: { id: applicationId },
-                select: (await getVisibleFields(user, [detailedApplication], false))[0],
+                ...(await getApplicationsVisibleFields(user, [detailedApplication], false, false))[0],
             })),
             actions: (await getApplicationsUserActions(user, [detailedApplication]))[0],
         };
@@ -788,7 +798,7 @@ export const getApplicationWithProtocol = async (req: Request, res: Response): P
         const visibleApplication = {
             ...(await prismaClient.application.findUnique({
                 where: { id: applicationId },
-                select: (await getVisibleFields(user, [detailedApplication], false))[0],
+                ...(await getApplicationsVisibleFields(user, [detailedApplication], false, false))[0],
             })),
             actions: (await getApplicationsUserActions(user, [detailedApplication]))[0],
         };
@@ -817,7 +827,7 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
         const visibleApplication: any = {
             ...(await prismaClient.application.findUnique({
                 where: { id: applicationId },
-                select: (await getVisibleFields(user, [detailedApplication], true))[0],
+                ...(await getApplicationsVisibleFields(user, [detailedApplication], true, false))[0],
             })),
             actions: (await getApplicationsUserActions(user, [detailedApplication]))[0],
         };
@@ -829,28 +839,13 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
                     // For each item in the application, get all itemAnswers associated with some applicationAnswer in the application
                     const itemAnswers = await prismaClient.itemAnswer.findMany({
                         where: {
-                            group: {
-                                applicationAnswerId: {
-                                    in: visibleApplication.answers.map((answer: any) => answer.id),
-                                },
-                            },
+                            group: { applicationAnswerId: { in: visibleApplication.answers.map((answer: any) => answer.id) } },
                             itemId: item.id,
                         },
                         select: {
                             text: true,
-                            group: {
-                                select: {
-                                    id: true,
-                                    applicationAnswerId: true,
-                                },
-                            },
-                            files: {
-                                select: {
-                                    id: true,
-                                    path: true,
-                                    description: true,
-                                },
-                            },
+                            group: { select: { id: true, applicationAnswerId: true } },
+                            files: { select: { id: true, path: true, description: true } },
                         },
                     });
                     // For each itemAnswer, group them by applicationAnswerId and answerGroupId

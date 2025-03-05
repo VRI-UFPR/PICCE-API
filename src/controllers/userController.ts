@@ -15,38 +15,47 @@ import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
 import { hashSync } from 'bcrypt';
+import fieldsFilter from '../services/fieldsFilter';
 
-const detailedUserFields = {
-    institution: { select: { id: true } },
-    creator: { select: { id: true } },
-};
+export const detailedUserFields = { institution: { select: { id: true } }, creator: { select: { id: true } } };
 
 const getDetailedUsers = async (usersIds: number[]) => {
     return await prismaClient.user.findMany({ where: { id: { in: usersIds } }, include: detailedUserFields });
 };
 
-export const getVisibleFields = async (curUser: User, users: Awaited<ReturnType<typeof getDetailedUsers>>) => {
+export const getVisibleFields = async (curUser: User, users: Awaited<ReturnType<typeof getDetailedUsers>>, ignoreFilters: boolean) => {
     const peerUsersRoles = await getPeerUsersRoles(curUser, users);
-    const visibleFields = peerUsersRoles.map((roles, index) => {
-        const fullAccess = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
-        const baseAccess =
-            roles.viewer || roles.coordinator || roles.itself || roles.creator || roles.instituionMember || curUser.role === UserRole.ADMIN;
+
+    const mapVisibleFields = (roles: (typeof peerUsersRoles)[0] | undefined) => {
+        const fullAccess = roles ? roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN : ignoreFilters;
+        const baseAccess = roles
+            ? roles.viewer ||
+              roles.coordinator ||
+              roles.itself ||
+              roles.creator ||
+              roles.instituionMember ||
+              curUser.role === UserRole.ADMIN
+            : ignoreFilters;
 
         const fields = {
-            id: baseAccess,
-            createdAt: fullAccess,
-            updatedAt: fullAccess,
-            name: fullAccess,
-            username: baseAccess,
-            role: fullAccess,
-            acceptTerms: fullAccess,
-            profileImage: { select: { id: fullAccess, path: fullAccess } },
-            institution: { select: { id: baseAccess, name: baseAccess } },
-            classrooms: { select: { id: baseAccess, name: baseAccess } },
+            select: {
+                id: baseAccess,
+                createdAt: fullAccess,
+                updatedAt: fullAccess,
+                name: fullAccess,
+                username: baseAccess,
+                role: fullAccess,
+                acceptTerms: fullAccess,
+                profileImage: { select: { id: fullAccess, path: fullAccess } },
+                institution: { select: { id: baseAccess, name: baseAccess } },
+                classrooms: { select: { id: baseAccess, name: baseAccess } },
+            },
         };
 
         return fields;
-    });
+    };
+
+    const visibleFields = ignoreFilters ? [mapVisibleFields(undefined)] : peerUsersRoles.map(mapVisibleFields);
 
     return visibleFields;
 };
@@ -205,7 +214,7 @@ export const createUser = async (req: Request, res: Response) => {
         const visibleUser = {
             ...(await prismaClient.user.findUnique({
                 where: { id: detailedCreatedUser.id },
-                select: (await getVisibleFields(curUser, [detailedCreatedUser]))[0],
+                ...(await getVisibleFields(curUser, [detailedCreatedUser], false))[0],
             })),
             actions: (await getPeerUserActions(curUser, [detailedCreatedUser]))[0],
         };
@@ -279,7 +288,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         const visibleUser = {
             ...(await prismaClient.user.findUnique({
                 where: { id: detailedUpdatedUser.id },
-                select: (await getVisibleFields(curUser, [detailedUpdatedUser]))[0],
+                ...(await getVisibleFields(curUser, [detailedUpdatedUser], false))[0],
             })),
             actions: (await getPeerUserActions(curUser, [detailedUpdatedUser]))[0],
         };
@@ -302,13 +311,16 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
         const detailedUsers = await prismaClient.user.findMany({ include: detailedUserFields });
         // Get users only with visible fields and with embedded actions
         const actions = await getPeerUserActions(curUser, detailedUsers);
-        const fields = await getVisibleFields(curUser, detailedUsers);
-        const visibleUsers = await Promise.all(
-            detailedUsers.map(async (user, index) => ({
-                ...(await prismaClient.user.findUnique({ where: { id: user.id }, select: fields[index] })),
-                actions: actions[index],
-            }))
-        );
+        const filteredFIelds = await getVisibleFields(curUser, detailedUsers, false);
+        const unfilteredFields = (await getVisibleFields(curUser, [detailedUsers[0]], true))[0];
+        const unfilteredVisibleUsers = await prismaClient.user.findMany({
+            where: { id: { in: detailedUsers.map((user) => user.id) } },
+            ...unfilteredFields,
+        });
+        const visibleUsers = unfilteredVisibleUsers.map((user, i) => ({
+            ...fieldsFilter(user, filteredFIelds[i]),
+            actions: actions[i],
+        }));
 
         res.status(200).json({ message: 'All users found.', data: visibleUsers });
     } catch (error: any) {
@@ -339,13 +351,16 @@ export const getManagedUsers = async (req: Request, res: Response): Promise<void
         });
         // Get users only with visible fields and with embedded actions
         const actions = await getPeerUserActions(curUser, detailedUsers);
-        const fields = await getVisibleFields(curUser, detailedUsers);
-        const visibleUsers = await Promise.all(
-            detailedUsers.map(async (user, index) => ({
-                ...(await prismaClient.user.findUnique({ where: { id: user.id }, select: fields[index] })),
-                actions: actions[index],
-            }))
-        );
+        const filteredFIelds = await getVisibleFields(curUser, detailedUsers, false);
+        const unfilteredFields = (await getVisibleFields(curUser, [detailedUsers[0]], true))[0];
+        const unfilteredVisibleUsers = await prismaClient.user.findMany({
+            where: { id: { in: detailedUsers.map((user) => user.id) } },
+            ...unfilteredFields,
+        });
+        const visibleUsers = unfilteredVisibleUsers.map((user, i) => ({
+            ...fieldsFilter(user, filteredFIelds[i]),
+            actions: actions[i],
+        }));
 
         res.status(200).json({ message: 'Managed users found.', data: visibleUsers });
     } catch (error: any) {
@@ -367,7 +382,7 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
         const processedUser = {
             ...(await prismaClient.user.findUnique({
                 where: { id: userId },
-                select: (await getVisibleFields(curUser, [detailedUser]))[0],
+                ...(await getVisibleFields(curUser, [detailedUser], false))[0],
             })),
             actions: (await getPeerUserActions(curUser, [detailedUser]))[0],
         };
@@ -404,13 +419,16 @@ export const searchUserByUsername = async (req: Request, res: Response): Promise
         });
         // Get users only with visible fields and with embedded actions
         const actions = await getPeerUserActions(curUser, detailedUsers);
-        const fields = await getVisibleFields(curUser, detailedUsers);
-        const visibleUsers = await Promise.all(
-            detailedUsers.map(async (user, index) => ({
-                ...(await prismaClient.user.findUnique({ where: { id: user.id }, select: fields[index] })),
-                actions: actions[index],
-            }))
-        );
+        const filteredFIelds = await getVisibleFields(curUser, detailedUsers, false);
+        const unfilteredFields = (await getVisibleFields(curUser, [detailedUsers[0]], true))[0];
+        const unfilteredVisibleUsers = await prismaClient.user.findMany({
+            where: { id: { in: detailedUsers.map((user) => user.id) } },
+            ...unfilteredFields,
+        });
+        const visibleUsers = unfilteredVisibleUsers.map((user, i) => ({
+            ...fieldsFilter(user, filteredFIelds[i]),
+            actions: actions[i],
+        }));
 
         res.status(200).json({ message: 'Searched users found.', data: visibleUsers });
     } catch (error: any) {
