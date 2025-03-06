@@ -8,30 +8,33 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 of the GNU General Public License along with PICCE-API.  If not, see <https://www.gnu.org/licenses/>
 */
 
-export const fieldsFilter = (obj: any, filter: any) => {
+export const fieldsFilter = (obj: any, filter: any): any => {
     if (typeof obj !== 'object' || obj === null) return obj;
     if (!filter || Object.keys(filter).length === 0) return obj;
 
-    let result: any = {};
+    let result: any = Array.isArray(obj) ? [] : {};
+
+    const applyFilter = (value: any, filterRule: any) =>
+        Array.isArray(value) ? value.map((item) => fieldsFilter(item, filterRule)) : fieldsFilter(value, filterRule);
 
     if (filter.select) {
         for (const key in filter.select) {
             if (filter.select[key] === true && obj.hasOwnProperty(key)) {
-                result[key] = fieldsFilter(obj[key], filter.select[key]);
+                result[key] = obj[key];
             } else if (typeof filter.select[key] === 'object' && obj.hasOwnProperty(key)) {
-                result[key] = fieldsFilter(obj[key], filter.select[key]);
+                result[key] = applyFilter(obj[key], filter.select[key]);
             }
         }
     } else {
-        result = { ...obj };
+        result = Array.isArray(obj) ? [...obj] : { ...obj };
     }
 
     if (filter.include) {
         for (const key in filter.include) {
             if (filter.include[key] === true && obj.hasOwnProperty(key)) {
-                result[key] = fieldsFilter(obj[key], filter.include[key]);
+                result[key] = obj[key];
             } else if (typeof filter.include[key] === 'object' && obj.hasOwnProperty(key)) {
-                result[key] = fieldsFilter(obj[key], filter.include[key]);
+                result[key] = applyFilter(obj[key], filter.include[key]);
             }
         }
     }
@@ -41,7 +44,7 @@ export const fieldsFilter = (obj: any, filter: any) => {
             if (filter.omit[key] === true && result.hasOwnProperty(key)) {
                 delete result[key];
             } else if (typeof filter.omit[key] === 'object' && result.hasOwnProperty(key)) {
-                result[key] = fieldsFilter(obj[key], filter.omit[key]);
+                result[key] = applyFilter(obj[key], filter.omit[key]);
             }
         }
     }
