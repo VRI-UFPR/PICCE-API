@@ -17,10 +17,10 @@ import { unlinkSync, existsSync } from 'fs';
 import { hashSync } from 'bcrypt';
 import fieldsFilter from '../services/fieldsFilter';
 
-export const detailedUserFields = { institution: { select: { id: true } }, creator: { select: { id: true } } };
+export const detailedUserFields = () => ({ institution: { select: { id: true } }, creator: { select: { id: true } } });
 
 const getDetailedUsers = async (usersIds: number[]) => {
-    return await prismaClient.user.findMany({ where: { id: { in: usersIds } }, include: detailedUserFields });
+    return await prismaClient.user.findMany({ where: { id: { in: usersIds } }, include: detailedUserFields() });
 };
 
 export const getVisibleFields = async (curUser: User, users: Awaited<ReturnType<typeof getDetailedUsers>>, ignoreFilters: boolean) => {
@@ -45,7 +45,7 @@ export const getVisibleFields = async (curUser: User, users: Awaited<ReturnType<
                 name: fullAccess,
                 username: baseAccess,
                 role: fullAccess,
-                acceptTerms: fullAccess,
+                acceptedTerms: fullAccess,
                 profileImage: { select: { id: fullAccess, path: fullAccess } },
                 institution: { select: { id: baseAccess, name: baseAccess } },
                 classrooms: { select: { id: baseAccess, name: baseAccess } },
@@ -208,7 +208,7 @@ export const createUser = async (req: Request, res: Response) => {
                 institution: { connect: user.institutionId ? { id: user.institutionId } : undefined },
                 creator: { connect: { id: curUser.id } },
             },
-            include: detailedUserFields,
+            include: detailedUserFields(),
         });
         // Get user only with visible fields and with embedded actions
         const visibleUser = {
@@ -279,7 +279,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
                         create: !user.profileImageId && file ? { path: file.path } : undefined,
                     },
                 },
-                include: detailedUserFields,
+                include: detailedUserFields(),
             });
 
             return updatedUser;
@@ -308,7 +308,7 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
         // Check if user is authorized to get all users
         await checkAuthorization(curUser, [], 'getAll');
         // Prisma operation
-        const detailedUsers = await prismaClient.user.findMany({ include: detailedUserFields });
+        const detailedUsers = await prismaClient.user.findMany({ include: detailedUserFields() });
         // Get users only with visible fields and with embedded actions
         const actions = await getPeerUserActions(curUser, detailedUsers);
         const filteredFIelds = await getVisibleFields(curUser, detailedUsers, false);
@@ -347,7 +347,7 @@ export const getManagedUsers = async (req: Request, res: Response): Promise<void
                     ],
                 }),
             },
-            include: detailedUserFields,
+            include: detailedUserFields(),
         });
         // Get users only with visible fields and with embedded actions
         const actions = await getPeerUserActions(curUser, detailedUsers);
@@ -377,7 +377,7 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
         // Check if user is authorized to get the user
         await checkAuthorization(curUser, [userId], 'get');
         // Prisma operation
-        const detailedUser = await prismaClient.user.findUniqueOrThrow({ where: { id: userId }, include: detailedUserFields });
+        const detailedUser = await prismaClient.user.findUniqueOrThrow({ where: { id: userId }, include: detailedUserFields() });
         // Get user only with visible fields and with embedded actions
         const processedUser = {
             ...(await prismaClient.user.findUnique({
@@ -415,7 +415,7 @@ export const searchUserByUsername = async (req: Request, res: Response): Promise
                     OR: [{ institutionId: curUser.institutionId }, { institutionId: null }],
                 }),
             },
-            include: detailedUserFields,
+            include: detailedUserFields(),
         });
         // Get users only with visible fields and with embedded actions
         const actions = await getPeerUserActions(curUser, detailedUsers);

@@ -16,14 +16,14 @@ import errorFormatter from '../services/errorFormatter';
 import { detailedUserFields, getPeerUserActions, getVisibleFields as getUsersVisibleFields } from './userController';
 import fieldsFilter from '../services/fieldsFilter';
 
-export const detailedClassroomFields = {
-    users: { include: detailedUserFields },
+export const detailedClassroomFields = () => ({
+    users: { include: detailedUserFields() },
     institution: { select: { id: true } },
     creator: { select: { id: true } },
-};
+});
 
 const getDetailedClassrooms = async (classroomsIds: number[]) => {
-    return await prismaClient.classroom.findMany({ where: { id: { in: classroomsIds } }, include: detailedClassroomFields });
+    return await prismaClient.classroom.findMany({ where: { id: { in: classroomsIds } }, include: detailedClassroomFields() });
 };
 
 export const getVisibleFields = async (
@@ -191,7 +191,7 @@ export const createClassroom = async (req: Request, res: Response) => {
                 users: { connect: classroom.users.map((id) => ({ id: id })) },
                 creator: { connect: { id: user.id } },
             },
-            include: detailedClassroomFields,
+            include: detailedClassroomFields(),
         });
         // Get classroom only with visible fields, with embedded actions and with unfiltered users
         const fieldsWUnfilteredUsers = (await getVisibleFields(user, [detailedCreatedClassroom], false))[0];
@@ -249,7 +249,7 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
                 institution: classroom.institutionId ? { connect: { id: classroom.institutionId } } : { disconnect: true },
                 users: { set: [], connect: classroom.users?.map((id) => ({ id: id })) },
             },
-            include: detailedClassroomFields,
+            include: detailedClassroomFields(),
         });
 
         // Get classroom only with visible fields and with embedded actions
@@ -284,7 +284,7 @@ export const getAllClassrooms = async (req: Request, res: Response): Promise<voi
         // Check if user is authorized to get all classrooms (only roles above USER)
         await checkAuthorization(user, [], 'getAll');
         // Prisma operation
-        const detailedClassrooms = await prismaClient.classroom.findMany({ include: detailedClassroomFields });
+        const detailedClassrooms = await prismaClient.classroom.findMany({ include: detailedClassroomFields() });
         // Get classrooms only with visible fields and with embedded actions
         const actions = await getClassroomUserActions(user, detailedClassrooms);
         const filteredFields = await getVisibleFields(user, detailedClassrooms, false);
@@ -326,7 +326,7 @@ export const getClassroom = async (req: Request, res: Response): Promise<void> =
         // Prisma operation
         const detailedClassroom = await prismaClient.classroom.findUniqueOrThrow({
             where: { id: classroomId },
-            include: detailedClassroomFields,
+            include: detailedClassroomFields(),
         });
         // Get classroom only with visible fields and with embedded actions
         const fieldsWUnfilteredUsers = (await getVisibleFields(user, [detailedClassroom], false))[0];
@@ -362,7 +362,7 @@ export const getMyClassrooms = async (req: Request, res: Response): Promise<void
         // Prisma operation
         const detailedClassrooms = await prismaClient.classroom.findMany({
             where: { users: { some: { id: user.id } } },
-            include: detailedClassroomFields,
+            include: detailedClassroomFields(),
         });
         // Get classrooms only with visible fields and with embedded actions
         const actions = await getClassroomUserActions(user, detailedClassrooms);
@@ -411,7 +411,7 @@ export const getManagedClassrooms = async (req: Request, res: Response): Promise
                     ],
                 }),
             },
-            include: detailedClassroomFields,
+            include: detailedClassroomFields(),
         });
         // Get classrooms only with visible fields and with embedded actions
         const actions = await getClassroomUserActions(user, detailedClassrooms);
@@ -464,7 +464,7 @@ export const searchClassroomByName = async (req: Request, res: Response): Promis
                     OR: [{ institutionId: user.institutionId }, { institutionId: null }],
                 }),
             },
-            include: detailedClassroomFields,
+            include: detailedClassroomFields(),
         });
         // Get classrooms only with visible fields and with embedded actions
         const actions = await getClassroomUserActions(user, detailedClassrooms);

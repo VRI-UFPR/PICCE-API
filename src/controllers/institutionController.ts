@@ -17,15 +17,15 @@ import { detailedUserFields, getPeerUserActions, getVisibleFields as getUsersVis
 import { detailedClassroomFields, getClassroomUserActions, getVisibleFields as getClassroomVisibleFields } from './classroomController';
 import fieldsFilter from '../services/fieldsFilter';
 
-const detailedInstitutionFields = {
-    users: { include: detailedUserFields },
-    classrooms: { include: detailedClassroomFields },
-};
+const detailedInstitutionFields = () => ({
+    users: { include: detailedUserFields() },
+    classrooms: { include: detailedClassroomFields() },
+});
 
 const getDetailedInstitutions = async (institutionsIds: number[]) => {
     return await prismaClient.institution.findMany({
         where: { id: { in: institutionsIds } },
-        include: detailedInstitutionFields,
+        include: detailedInstitutionFields(),
     });
 };
 
@@ -170,7 +170,7 @@ export const createInstitution = async (req: Request, res: Response) => {
         // Prisma operation
         const detailedCreatedInstitution = await prismaClient.institution.create({
             data: { id: institution.id, name: institution.name, type: institution.type, addressId: institution.addressId },
-            include: detailedInstitutionFields,
+            include: detailedInstitutionFields(),
         });
         // Get institution only with visible fields and with embedded actions
         const fieldsWUnfilteredUsers = (await getVisibleFields(user, [detailedCreatedInstitution], false))[0];
@@ -239,7 +239,7 @@ export const updateInstitution = async (req: Request, res: Response): Promise<vo
         const detailedUpdatedInstitution = await prismaClient.institution.update({
             where: { id: institutionId },
             data: { name: institution.name, type: institution.type, addressId: institution.addressId },
-            include: detailedInstitutionFields,
+            include: detailedInstitutionFields(),
         });
         // Get institution only with visible fields and with embedded actions
         const fieldsWUnfilteredUsers = (await getVisibleFields(user, [detailedUpdatedInstitution], false))[0];
@@ -292,7 +292,7 @@ export const getAllInstitutions = async (req: Request, res: Response): Promise<v
         // Check if user is authorized to get all institutions (only admins)
         await checkAuthorization(user, [], 'getAll');
         // Prisma operation
-        const detailedInstitutions = await prismaClient.institution.findMany({ include: detailedInstitutionFields });
+        const detailedInstitutions = await prismaClient.institution.findMany({ include: detailedInstitutionFields() });
         // Get institutions only with visible fields and with embedded actions
         const actions = await getInstitutionUserActions(user, detailedInstitutions);
         const filteredFields = await getVisibleFields(user, detailedInstitutions, false);
@@ -353,11 +353,11 @@ export const getVisibleInstitutions = async (req: Request, res: Response): Promi
         const detailedInstitutions =
             user.role === UserRole.ADMIN
                 ? // Admins can see all institutions
-                  await prismaClient.institution.findMany({ include: detailedInstitutionFields })
+                  await prismaClient.institution.findMany({ include: detailedInstitutionFields() })
                 : // Other users can see only their institutions
                   await prismaClient.institution.findMany({
                       where: { users: { some: { id: user.id } } },
-                      include: detailedInstitutionFields,
+                      include: detailedInstitutionFields(),
                   });
         // Get institutions only with visible fields and with embedded actions
         const actions = await getInstitutionUserActions(user, detailedInstitutions);
@@ -420,7 +420,7 @@ export const getInstitution = async (req: Request, res: Response): Promise<void>
         // Prisma operation
         const detailedInstitution = await prismaClient.institution.findUniqueOrThrow({
             where: { id: institutionId },
-            include: detailedInstitutionFields,
+            include: detailedInstitutionFields(),
         });
         // Get institution only with visible fields and with embedded actions
         const fieldsWUnfilteredUsers = (await getVisibleFields(user, [detailedInstitution], false))[0];

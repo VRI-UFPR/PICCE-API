@@ -14,11 +14,7 @@ import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
-import {
-    detailedApplicationFields,
-    getApplicationsUserActions,
-    getApplicationsVisibleFields as getApplicationsVisibleFields,
-} from './applicationController';
+import { detailedApplicationFields, getApplicationsUserActions, getApplicationsVisibleFields } from './applicationController';
 import fieldsFilter from '../services/fieldsFilter';
 
 export const getVisibleFields = async (
@@ -182,41 +178,35 @@ export const getVisibleFields = async (
                                                         description: baseAccess,
                                                     },
                                                 },
-                                            },
-                                            ...(includeAnswers
-                                                ? [
-                                                      {
-                                                          optionAnswers: {
-                                                              ...(!fullAccess
-                                                                  ? [
-                                                                        {
-                                                                            where: {
-                                                                                group: {
-                                                                                    applicationAnswer: { application: { enabled: true } },
-                                                                                },
-                                                                            },
-                                                                        },
-                                                                    ]
-                                                                  : []),
-                                                              select: {
-                                                                  id: answerAccess,
-                                                                  text: answerAccess,
-                                                                  group: {
-                                                                      select: {
-                                                                          id: answerAccess,
-                                                                          applicationAnswer: {
-                                                                              select: {
-                                                                                  id: answerAccess,
-                                                                                  userId: answerAccess,
-                                                                              },
-                                                                          },
+                                                optionAnswers: includeAnswers && {
+                                                    ...(!fullAccess
+                                                        ? [
+                                                              {
+                                                                  where: {
+                                                                      group: {
+                                                                          applicationAnswer: { application: { enabled: true } },
                                                                       },
                                                                   },
                                                               },
-                                                          },
-                                                      },
-                                                  ]
-                                                : []),
+                                                          ]
+                                                        : []),
+                                                    select: {
+                                                        id: answerAccess,
+                                                        text: answerAccess,
+                                                        group: {
+                                                            select: {
+                                                                id: answerAccess,
+                                                                applicationAnswer: {
+                                                                    select: {
+                                                                        id: answerAccess,
+                                                                        userId: answerAccess,
+                                                                    },
+                                                                },
+                                                            },
+                                                        },
+                                                    },
+                                                },
+                                            },
                                         },
                                         files: {
                                             select: {
@@ -225,65 +215,59 @@ export const getVisibleFields = async (
                                                 description: baseAccess,
                                             },
                                         },
-                                        ...(includeAnswers
-                                            ? [
-                                                  {
-                                                      itemAnswers: {
-                                                          ...(!fullAccess
-                                                              ? [
-                                                                    {
-                                                                        where: {
-                                                                            group: {
-                                                                                applicationAnswer: { application: { enabled: true } },
-                                                                            },
-                                                                        },
-                                                                    },
-                                                                ]
-                                                              : []),
-                                                          select: {
-                                                              id: answerAccess,
-                                                              text: answerAccess,
-                                                              files: {
-                                                                  select: {
-                                                                      id: answerAccess,
-                                                                      path: answerAccess,
-                                                                      description: answerAccess,
-                                                                  },
-                                                              },
+                                        itemAnswers: includeAnswers && {
+                                            ...(!fullAccess
+                                                ? [
+                                                      {
+                                                          where: {
                                                               group: {
-                                                                  select: {
-                                                                      id: answerAccess,
-                                                                      applicationAnswer: {
-                                                                          select: {
-                                                                              id: answerAccess,
-                                                                              userId: answerAccess,
-                                                                          },
-                                                                      },
-                                                                  },
+                                                                  applicationAnswer: { application: { enabled: true } },
                                                               },
                                                           },
                                                       },
-                                                      tableAnswers: {
-                                                          select: {
-                                                              id: answerAccess,
-                                                              text: answerAccess,
-                                                              columnId: answerAccess,
-                                                              group: {
-                                                                  select: {
-                                                                      id: answerAccess,
-                                                                      applicationAnswer: {
-                                                                          select: {
-                                                                              id: answerAccess,
-                                                                              userId: answerAccess,
-                                                                          },
-                                                                      },
-                                                                  },
-                                                              },
-                                                          },
-                                                      },
-                                                  },
-                                              ]
-                                            : []),
+                                                  ]
+                                                : []),
+                                            select: {
+                                                id: answerAccess,
+                                                text: answerAccess,
+                                                files: {
+                                                    select: {
+                                                        id: answerAccess,
+                                                        path: answerAccess,
+                                                        description: answerAccess,
+                                                    },
+                                                },
+                                                group: {
+                                                    select: {
+                                                        id: answerAccess,
+                                                        applicationAnswer: {
+                                                            select: {
+                                                                id: answerAccess,
+                                                                userId: answerAccess,
+                                                            },
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        },
+                                        tableAnswers: {
+                                            select: {
+                                                id: answerAccess,
+                                                text: answerAccess,
+                                                columnId: answerAccess,
+                                                group: {
+                                                    select: {
+                                                        id: answerAccess,
+                                                        applicationAnswer: {
+                                                            select: {
+                                                                id: answerAccess,
+                                                                userId: answerAccess,
+                                                            },
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        },
                                     },
                                 },
                                 tableColumns: {
@@ -308,7 +292,7 @@ export const getVisibleFields = async (
     return visibleFields;
 };
 
-const detailedProtocolFields = {
+const detailedProtocolFields = () => ({
     creator: { select: { id: true, institution: { select: { id: true } } } },
     managers: { select: { id: true, institution: { select: { id: true } } } },
     appliers: { select: { id: true, institution: { select: { id: true } } } },
@@ -316,14 +300,15 @@ const detailedProtocolFields = {
     viewersClassroom: { select: { id: true, users: { select: { id: true, institution: { select: { id: true } } } } } },
     answersViewersUser: { select: { id: true, institution: { select: { id: true } } } },
     answersViewersClassroom: { select: { users: { select: { id: true, institution: { select: { id: true } } } } } },
-    applications: { include: detailedApplicationFields },
-    _count: { select: { applications: true } },
-};
+    applications: {
+        include: detailedApplicationFields(),
+    },
+});
 
 export const getDetailedProtocols = async (protocolsIds: number[]) => {
     const detailedProtocols = await prismaClient.protocol.findMany({
         where: { id: { in: protocolsIds } },
-        include: detailedProtocolFields,
+        include: detailedProtocolFields(),
     });
     return detailedProtocols;
 };
@@ -367,7 +352,7 @@ export const getProtocolsUserActions = async (user: User, protocols: Awaited<Ret
         const toUpdate = roles.manager || roles.coordinator || roles.creator || user.role === UserRole.ADMIN;
         // Only managers/creator/institution coordinator can perform delete operations on protocols if there are no applications
         const toDelete =
-            ((roles.manager || roles.coordinator || roles.creator) && protocol._count.applications === 0) || user.role === UserRole.ADMIN;
+            ((roles.manager || roles.coordinator || roles.creator) && protocol.applications.length === 0) || user.role === UserRole.ADMIN;
         // Only viewers/creator/managers/appliers/institution coordinator can perform get operations on protocols
         const toGet = roles.viewer || roles.coordinator || roles.creator || roles.manager || roles.applier || user.role === UserRole.ADMIN;
         // No one can perform getAll operations on protocols
@@ -915,7 +900,7 @@ export const createProtocol = async (req: Request, res: Response) => {
             }
 
             // Return the created application answer with nested content included
-            return await prisma.protocol.findUniqueOrThrow({ where: { id: createdProtocol.id }, include: detailedProtocolFields });
+            return await prisma.protocol.findUniqueOrThrow({ where: { id: createdProtocol.id }, include: detailedProtocolFields() });
         });
 
         // Get protocol only with visible fields and with embedded actions
@@ -926,6 +911,7 @@ export const createProtocol = async (req: Request, res: Response) => {
                 where: { id: detailedCreatedProtocol.id },
                 ...fieldsWUnfilteredApplications,
             })),
+            actions: (await getProtocolsUserActions(user, [detailedCreatedProtocol]))[0],
         };
         // Get applicattions only with visible fields and with embedded actions
         const detailedApplications = detailedCreatedProtocol.applications;
@@ -1403,7 +1389,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             }
 
             // Return the updated application answer with nested content included
-            return await prisma.protocol.findUniqueOrThrow({ where: { id: id }, include: detailedProtocolFields });
+            return await prisma.protocol.findUniqueOrThrow({ where: { id: id }, include: detailedProtocolFields() });
         });
 
         // Get protocol only with visible fields and with embedded actions
@@ -1414,6 +1400,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 where: { id: detailedUpsertedProtocol.id },
                 ...fieldsWUnfilteredApplications,
             })),
+            actions: (await getProtocolsUserActions(user, [detailedUpsertedProtocol]))[0],
         };
         // Get applicattions only with visible fields and with embedded actions
         const detailedApplications = detailedUpsertedProtocol.applications;
@@ -1442,7 +1429,7 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
         // Check if user is allowed to get all protocols
         await checkAuthorization(user, [], 'getAll');
         // Prisma operation
-        const detailedProtocols = await prismaClient.protocol.findMany({ orderBy: { id: 'asc' }, include: detailedProtocolFields });
+        const detailedProtocols = await prismaClient.protocol.findMany({ orderBy: { id: 'asc' }, include: detailedProtocolFields() });
         // Get protocol only with visible fields and with embedded actions
         const actions = await getProtocolsUserActions(user, detailedProtocols);
         const filteredFields = await getVisibleFields(user, detailedProtocols, false, false);
@@ -1482,7 +1469,7 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
         // Prisma operation
         const detailedProtocols =
             user.role === UserRole.ADMIN
-                ? await prismaClient.protocol.findMany({ orderBy: { id: 'asc' }, include: detailedProtocolFields })
+                ? await prismaClient.protocol.findMany({ orderBy: { id: 'asc' }, include: detailedProtocolFields() })
                 : await prismaClient.protocol.findMany({
                       orderBy: { id: 'asc' },
                       where: {
@@ -1498,7 +1485,7 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
                           ],
                           enabled: true,
                       },
-                      include: detailedProtocolFields,
+                      include: detailedProtocolFields(),
                   });
 
         // Get protocol only with visible fields and with embedded actions
@@ -1539,7 +1526,7 @@ export const getMyProtocols = async (req: Request, res: Response): Promise<void>
         const detailedProtocols = await prismaClient.protocol.findMany({
             orderBy: { id: 'asc' },
             where: { OR: [{ managers: { some: { id: user.id } }, creatorId: user.id }] },
-            include: detailedProtocolFields,
+            include: detailedProtocolFields(),
         });
         // Get protocol only with visible fields and with embedded actions
         const actions = await getProtocolsUserActions(user, detailedProtocols);
@@ -1594,7 +1581,7 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
                     ...(user.role !== UserRole.GUEST ? [{ visibility: VisibilityMode.AUTHENTICATED, enabled: true }] : []),
                 ],
             },
-            include: detailedProtocolFields,
+            include: detailedProtocolFields(),
         });
 
         // Get protocol only with visible fields and with embedded actions
@@ -1605,6 +1592,7 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
                 where: { id: detailedProtocol.id },
                 ...fieldsWUnfilteredApplications,
             })),
+            actions: (await getProtocolsUserActions(user, [detailedProtocol]))[0],
         };
         // Get applicattions only with visible fields and with embedded actions
         const detailedApplications = detailedProtocol.applications;
@@ -1646,22 +1634,23 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
                     ...(user.role !== UserRole.GUEST ? [{ answersVisibility: VisibilityMode.AUTHENTICATED, enabled: true }] : []),
                 ],
             },
-            include: detailedProtocolFields,
+            include: detailedProtocolFields(),
         });
 
         // Get protocol only with visible fields and with embedded actions
-        const fieldsWUnfilteredApplications = (await getVisibleFields(user, [detailedProtocol], false, false))[0];
-        fieldsWUnfilteredApplications.select.applications = (await getApplicationsVisibleFields(user, [], false, true))[0];
+        const fieldsWUnfilteredApplications = (await getVisibleFields(user, [detailedProtocol], true, false))[0];
+        fieldsWUnfilteredApplications.select.applications = (await getApplicationsVisibleFields(user, [], true, true))[0];
         const visibleProtocolWUnfilteredApplications = {
             ...(await prismaClient.protocol.findUnique({
                 where: { id: detailedProtocol.id },
                 ...fieldsWUnfilteredApplications,
             })),
+            actions: (await getProtocolsUserActions(user, [detailedProtocol]))[0],
         };
         // Get applicattions only with visible fields and with embedded actions
         const detailedApplications = detailedProtocol.applications;
         const applicationActions = await getApplicationsUserActions(user, detailedApplications);
-        const applicationFields = await getApplicationsVisibleFields(user, detailedApplications, false, false);
+        const applicationFields = await getApplicationsVisibleFields(user, detailedApplications, true, false);
         const visibleProtocolWApplications = {
             ...visibleProtocolWUnfilteredApplications,
             applications: visibleProtocolWUnfilteredApplications.applications?.map((application, i) => ({

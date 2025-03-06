@@ -17,7 +17,7 @@ import { unlinkSync, existsSync } from 'fs';
 import { getApplicationsUserActions, getDetailedApplications } from './applicationController';
 import fieldsFilter from '../services/fieldsFilter';
 
-const detailedApplicationAnswerFields = {
+const detailedApplicationAnswerFields = () => ({
     application: {
         select: {
             applier: { select: { id: true, institution: { select: { id: true } } } },
@@ -32,12 +32,12 @@ const detailedApplicationAnswerFields = {
             visibility: true,
         },
     },
-};
+});
 
 const getDetailedApplicationAnswers = async (applicationAnswersIds: number[]) => {
     return await prismaClient.applicationAnswer.findMany({
         where: { id: { in: applicationAnswersIds } },
-        include: detailedApplicationAnswerFields,
+        include: detailedApplicationAnswerFields(),
     });
 };
 
@@ -484,7 +484,7 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
             // Return the created application answer with nested content included
             return await prisma.applicationAnswer.findUniqueOrThrow({
                 where: { id: createdApplicationAnswer.id },
-                include: detailedApplicationAnswerFields,
+                include: detailedApplicationAnswerFields(),
             });
         });
 
@@ -713,7 +713,7 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
             // Return the updated application answer with nested content included
             return await prisma.applicationAnswer.findUniqueOrThrow({
                 where: { id: applicationAnswerId },
-                include: detailedApplicationAnswerFields,
+                include: detailedApplicationAnswerFields(),
             });
         });
 
@@ -741,7 +741,7 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
         // Check if user is allowed to get all application answers
         await checkAuthorization(user, [], [], 'getAll');
         // Prisma operation
-        const detailedApplicationAnswers = await prismaClient.applicationAnswer.findMany({ include: detailedApplicationAnswerFields });
+        const detailedApplicationAnswers = await prismaClient.applicationAnswer.findMany({ include: detailedApplicationAnswerFields() });
         // Get application answers only with visible fields and with embedded actions
         const actions = await getApplicationAnswerActions(user, detailedApplicationAnswers);
         const filteredFields = await getVisibleFields(user, detailedApplicationAnswers, false);
@@ -770,7 +770,7 @@ export const getMyApplicationAnswers = async (req: Request, res: Response): Prom
         // Prisma operation
         const detailedApplicationAnswers = await prismaClient.applicationAnswer.findMany({
             where: { userId: user.id },
-            include: detailedApplicationAnswerFields,
+            include: detailedApplicationAnswerFields(),
         });
         // Get application answers only with visible fields and with embedded actions
         // Get application answers only with visible fields and with embedded actions
@@ -803,7 +803,7 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
         // Prisma operation
         const detailedApplicationAnswer = await prismaClient.applicationAnswer.findUniqueOrThrow({
             where: { id: applicationAnswerId },
-            include: detailedApplicationAnswerFields,
+            include: detailedApplicationAnswerFields(),
         });
         // Get application answer only with visible fields and with embedded actions
         const visibleApplicationAnswer = {
@@ -832,7 +832,7 @@ export const approveApplicationAnswer = async (req: Request, res: Response): Pro
         const detailedApprovedApplicationAnswer = await prismaClient.applicationAnswer.update({
             where: { id: applicationAnswerId },
             data: { approved: true },
-            include: detailedApplicationAnswerFields,
+            include: detailedApplicationAnswerFields(),
         });
         // Get application answer only with visible fields and with embedded actions
         const visibleApplicationAnswer = {

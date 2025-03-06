@@ -16,7 +16,7 @@ import errorFormatter from '../services/errorFormatter';
 import { getDetailedProtocols, getProtocolsUserActions } from './protocolController';
 import fieldsFilter from '../services/fieldsFilter';
 
-export const detailedApplicationFields = {
+export const detailedApplicationFields = () => ({
     applier: { select: { id: true, institution: { select: { id: true } } } },
     viewersUser: { select: { id: true, institution: { select: { id: true } } } },
     viewersClassroom: { select: { users: { select: { id: true, institution: { select: { id: true } } } } } },
@@ -29,12 +29,12 @@ export const detailedApplicationFields = {
             managers: { select: { id: true, institution: { select: { id: true } } } },
         },
     },
-};
+});
 
 export const getDetailedApplications = async (applicationsIds: number[]) => {
     const detailedApplications = await prismaClient.application.findMany({
         where: { id: { in: applicationsIds } },
-        include: detailedApplicationFields,
+        include: detailedApplicationFields(),
     });
     return detailedApplications;
 };
@@ -229,6 +229,19 @@ export const getApplicationsVisibleFields = async (
                         },
                     },
                 },
+                answers: includeAnswers && {
+                    select: {
+                        id: answersAccess,
+                        date: answersAccess,
+                        userId: answersAccess,
+                        coordinate: {
+                            select: {
+                                latitude: answersAccess,
+                                longitude: answersAccess,
+                            },
+                        },
+                    },
+                },
                 protocol: {
                     select: {
                         id: baseAccess,
@@ -302,37 +315,24 @@ export const getApplicationsVisibleFields = async (
                                                                 description: baseAccess,
                                                             },
                                                         },
+                                                        optionAnswers: includeAnswers && {
+                                                            select: {
+                                                                id: answersAccess,
+                                                                text: answersAccess,
+                                                                group: {
+                                                                    select: {
+                                                                        id: answersAccess,
+                                                                        applicationAnswer: {
+                                                                            select: {
+                                                                                id: answersAccess,
+                                                                                userId: answersAccess,
+                                                                            },
+                                                                        },
+                                                                    },
+                                                                },
+                                                            },
+                                                        },
                                                     },
-                                                    ...(includeAnswers
-                                                        ? [
-                                                              {
-                                                                  optionAnswers: {
-                                                                      where: {
-                                                                          group: {
-                                                                              applicationAnswer: {
-                                                                                  application: { id: answersAccess },
-                                                                              },
-                                                                          },
-                                                                      },
-                                                                      select: {
-                                                                          id: answersAccess,
-                                                                          text: answersAccess,
-                                                                          group: {
-                                                                              select: {
-                                                                                  id: answersAccess,
-                                                                                  applicationAnswer: {
-                                                                                      select: {
-                                                                                          id: answersAccess,
-                                                                                          userId: answersAccess,
-                                                                                      },
-                                                                                  },
-                                                                              },
-                                                                          },
-                                                                      },
-                                                                  },
-                                                              },
-                                                          ]
-                                                        : []),
                                                 },
                                                 files: {
                                                     select: {
@@ -341,60 +341,48 @@ export const getApplicationsVisibleFields = async (
                                                         description: baseAccess,
                                                     },
                                                 },
-                                                ...(includeAnswers
-                                                    ? [
-                                                          {
-                                                              itemAnswers: {
-                                                                  where: {
-                                                                      group: {
-                                                                          applicationAnswer: { application: { id: answersAccess } },
-                                                                      },
-                                                                  },
-
-                                                                  select: {
-                                                                      id: answersAccess,
-                                                                      text: answersAccess,
-                                                                      files: {
-                                                                          select: {
-                                                                              id: answersAccess,
-                                                                              path: answersAccess,
-                                                                              description: answersAccess,
-                                                                          },
-                                                                      },
-                                                                      group: {
-                                                                          select: {
-                                                                              id: answersAccess,
-                                                                              applicationAnswer: {
-                                                                                  select: {
-                                                                                      id: answersAccess,
-                                                                                      userId: answersAccess,
-                                                                                  },
-                                                                              },
-                                                                          },
-                                                                      },
-                                                                  },
-                                                              },
-                                                              tableAnswers: {
-                                                                  select: {
-                                                                      id: answersAccess,
-                                                                      text: answersAccess,
-                                                                      columnId: answersAccess,
-                                                                      group: {
-                                                                          select: {
-                                                                              id: answersAccess,
-                                                                              applicationAnswer: {
-                                                                                  select: {
-                                                                                      id: answersAccess,
-                                                                                      userId: answersAccess,
-                                                                                  },
-                                                                              },
-                                                                          },
-                                                                      },
-                                                                  },
-                                                              },
-                                                          },
-                                                      ]
-                                                    : []),
+                                                itemAnswers: includeAnswers && {
+                                                    select: {
+                                                        id: answersAccess,
+                                                        text: answersAccess,
+                                                        files: {
+                                                            select: {
+                                                                id: answersAccess,
+                                                                path: answersAccess,
+                                                                description: answersAccess,
+                                                            },
+                                                        },
+                                                        group: {
+                                                            select: {
+                                                                id: answersAccess,
+                                                                applicationAnswer: {
+                                                                    select: {
+                                                                        id: answersAccess,
+                                                                        userId: answersAccess,
+                                                                    },
+                                                                },
+                                                            },
+                                                        },
+                                                    },
+                                                },
+                                                tableAnswers: includeAnswers && {
+                                                    select: {
+                                                        id: answersAccess,
+                                                        text: answersAccess,
+                                                        columnId: answersAccess,
+                                                        group: {
+                                                            select: {
+                                                                id: answersAccess,
+                                                                applicationAnswer: {
+                                                                    select: {
+                                                                        id: answersAccess,
+                                                                        userId: answersAccess,
+                                                                    },
+                                                                },
+                                                            },
+                                                        },
+                                                    },
+                                                },
                                             },
                                         },
                                         tableColumns: {
@@ -514,7 +502,7 @@ export const createApplication = async (req: Request, res: Response) => {
                 endDate: application.endDate,
                 enabled: application.enabled,
             },
-            include: detailedApplicationFields,
+            include: detailedApplicationFields(),
         });
 
         // Get application only with visible fields and with embedded actions
@@ -583,7 +571,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
                 endDate: application.endDate,
                 enabled: application.enabled,
             },
-            include: detailedApplicationFields,
+            include: detailedApplicationFields(),
         });
 
         // Get application only with visible fields and with embedded actions
@@ -611,7 +599,7 @@ export const getMyApplications = async (req: Request, res: Response): Promise<vo
         const detailedApplications = await prismaClient.application.findMany({
             orderBy: { id: 'asc' },
             where: { applierId: user.id },
-            include: detailedApplicationFields,
+            include: detailedApplicationFields(),
         });
 
         // Get application only with visible fields and with embedded actions
@@ -619,7 +607,8 @@ export const getMyApplications = async (req: Request, res: Response): Promise<vo
         const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, false);
         const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true))[0];
         const unfilteredApplications = await prismaClient.application.findMany({
-            where: { id: { in: detailedApplications.map(({ id }) => id) }, ...unfilteredFields },
+            where: { id: { in: detailedApplications.map(({ id }) => id) } },
+            ...unfilteredFields,
         });
         const visibleApplications = unfilteredApplications.map((application, i) => ({
             ...fieldsFilter(application, filteredFields[i]),
@@ -669,7 +658,7 @@ export const getVisibleApplications = async (req: Request, res: Response): Promi
                               ...(user.role === UserRole.COORDINATOR ? [{ applier: { institutionId: user.institutionId } }] : []),
                           ],
                       },
-            include: detailedApplicationFields,
+            include: detailedApplicationFields(),
         });
 
         // Get application only with visible fields and with embedded actions
@@ -677,7 +666,8 @@ export const getVisibleApplications = async (req: Request, res: Response): Promi
         const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, false);
         const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true))[0];
         const unfilteredApplications = await prismaClient.application.findMany({
-            where: { id: { in: detailedApplications.map(({ id }) => id) }, ...unfilteredFields },
+            where: { id: { in: detailedApplications.map(({ id }) => id) } },
+            ...unfilteredFields,
         });
         const visibleApplications = unfilteredApplications.map((application, i) => ({
             ...fieldsFilter(application, filteredFields[i]),
@@ -699,7 +689,7 @@ export const getAllApplications = async (req: Request, res: Response): Promise<v
         // Prisma operation
         const detailedApplications = await prismaClient.application.findMany({
             orderBy: { id: 'asc' },
-            include: detailedApplicationFields,
+            include: detailedApplicationFields(),
         });
 
         // Get application only with visible fields and with embedded actions
@@ -707,7 +697,8 @@ export const getAllApplications = async (req: Request, res: Response): Promise<v
         const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, false);
         const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true))[0];
         const unfilteredApplications = await prismaClient.application.findMany({
-            where: { id: { in: detailedApplications.map(({ id }) => id) }, ...unfilteredFields },
+            where: { id: { in: detailedApplications.map(({ id }) => id) } },
+            ...unfilteredFields,
         });
         const visibleApplications = unfilteredApplications.map((application, i) => ({
             ...fieldsFilter(application, filteredFields[i]),
@@ -762,7 +753,7 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
                           },
                       ]),
             },
-            include: detailedApplicationFields,
+            include: detailedApplicationFields(),
         });
 
         // Get application only with visible fields and with embedded actions
@@ -791,7 +782,7 @@ export const getApplicationWithProtocol = async (req: Request, res: Response): P
         // Prisma operation
         const detailedApplication = await prismaClient.application.findUniqueOrThrow({
             where: { id: applicationId },
-            include: detailedApplicationFields,
+            include: detailedApplicationFields(),
         });
 
         // Get application only with visible fields and with embedded actions
@@ -820,11 +811,11 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
         // Prisma operation
         const detailedApplication: any = await prismaClient.application.findUniqueOrThrow({
             where: { id: applicationId },
-            include: detailedApplicationFields,
+            include: detailedApplicationFields(),
         });
 
         // Get application only with visible fields and with embedded actions
-        const visibleApplication: any = {
+        const visibleApplication = {
             ...(await prismaClient.application.findUnique({
                 where: { id: applicationId },
                 ...(await getApplicationsVisibleFields(user, [detailedApplication], true, false))[0],
@@ -832,14 +823,16 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
             actions: (await getApplicationsUserActions(user, [detailedApplication]))[0],
         };
 
-        for (const page of visibleApplication.protocol.pages) {
+        const processedApplication: any = { ...visibleApplication };
+
+        for (const page of processedApplication.protocol.pages) {
             for (const itemGroup of page.itemGroups) {
                 for (const item of itemGroup.items) {
                     item.itemAnswers = {};
                     // For each item in the application, get all itemAnswers associated with some applicationAnswer in the application
                     const itemAnswers = await prismaClient.itemAnswer.findMany({
                         where: {
-                            group: { applicationAnswerId: { in: visibleApplication.answers.map((answer: any) => answer.id) } },
+                            group: { applicationAnswerId: { in: processedApplication.answers?.map((answer: any) => answer.id) } },
                             itemId: item.id,
                         },
                         select: {
@@ -870,7 +863,7 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
                         where: {
                             group: {
                                 applicationAnswerId: {
-                                    in: visibleApplication.answers.map((answer: any) => answer.id),
+                                    in: processedApplication.answers.map((answer: any) => answer.id),
                                 },
                             },
                             itemId: item.id,
@@ -906,7 +899,7 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
                             where: {
                                 group: {
                                     applicationAnswerId: {
-                                        in: visibleApplication.answers.map((answer: any) => answer.id),
+                                        in: processedApplication.answers.map((answer: any) => answer.id),
                                     },
                                 },
                                 optionId: option.id,
@@ -939,14 +932,14 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
                 }
             }
         }
-        visibleApplication.answers = Object.fromEntries(
-            visibleApplication.answers.map((answer: any) => [
+        processedApplication.answers = Object.fromEntries(
+            processedApplication.answers.map((answer: any) => [
                 answer.id,
                 { date: answer.date, user: answer.user, coordinate: answer.coordinate, approved: answer.approved },
             ])
         );
 
-        res.status(200).json({ message: 'Application with answers found.', data: visibleApplication });
+        res.status(200).json({ message: 'Application with answers found.', data: processedApplication });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
