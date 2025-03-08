@@ -145,6 +145,8 @@ export const getApplicationsVisibleFields = async (
     user: User,
     applications: Awaited<ReturnType<typeof getDetailedApplications>>,
     includeAnswers: boolean,
+    includeViewers: boolean,
+    includeProtocol: boolean,
     ignoreFilters: boolean
 ) => {
     const applicationsRoles = await getApplicationsUserRoles(user, applications);
@@ -189,14 +191,14 @@ export const getApplicationsVisibleFields = async (
                         institution: { select: { id: baseAccess, name: baseAccess } },
                     },
                 },
-                viewersUser: {
+                viewersUser: includeViewers && {
                     select: {
                         id: fullAccess,
                         username: fullAccess,
                         institution: { select: { id: fullAccess, name: fullAccess } },
                     },
                 },
-                viewersClassroom: {
+                viewersClassroom: includeViewers && {
                     select: {
                         id: fullAccess,
                         name: fullAccess,
@@ -209,14 +211,14 @@ export const getApplicationsVisibleFields = async (
                         },
                     },
                 },
-                answersViewersUser: {
+                answersViewersUser: includeViewers && {
                     select: {
                         id: fullAccess,
                         username: fullAccess,
                         institution: { select: { id: fullAccess, name: fullAccess } },
                     },
                 },
-                answersViewersClassroom: {
+                answersViewersClassroom: includeViewers && {
                     select: {
                         id: fullAccess,
                         name: fullAccess,
@@ -242,7 +244,7 @@ export const getApplicationsVisibleFields = async (
                         },
                     },
                 },
-                protocol: {
+                protocol: includeProtocol && {
                     select: {
                         id: baseAccess,
                         createdAt: baseAccess,
@@ -509,7 +511,7 @@ export const createApplication = async (req: Request, res: Response) => {
         const visibleApplication = {
             ...(await prismaClient.application.findUnique({
                 where: { id: detailedCreatedApplication.id },
-                ...(await getApplicationsVisibleFields(user, [detailedCreatedApplication], false, false))[0],
+                ...(await getApplicationsVisibleFields(user, [detailedCreatedApplication], false, true, true, false))[0],
             })),
             actions: (await getApplicationsUserActions(user, [detailedCreatedApplication]))[0],
         };
@@ -578,7 +580,7 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
         const visibleApplication = {
             ...(await prismaClient.application.findUnique({
                 where: { id: detailedUpdatedApplication.id },
-                ...(await getApplicationsVisibleFields(user, [detailedUpdatedApplication], false, false))[0],
+                ...(await getApplicationsVisibleFields(user, [detailedUpdatedApplication], false, true, true, false))[0],
             })),
             actions: (await getApplicationsUserActions(user, [detailedUpdatedApplication]))[0],
         };
@@ -604,8 +606,8 @@ export const getMyApplications = async (req: Request, res: Response): Promise<vo
 
         // Get application only with visible fields and with embedded actions
         const actions = await getApplicationsUserActions(user, detailedApplications);
-        const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, false);
-        const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true))[0];
+        const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, true, true, false);
+        const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true, true, true))[0];
         const unfilteredApplications = await prismaClient.application.findMany({
             where: { id: { in: detailedApplications.map(({ id }) => id) } },
             ...unfilteredFields,
@@ -663,8 +665,8 @@ export const getVisibleApplications = async (req: Request, res: Response): Promi
 
         // Get application only with visible fields and with embedded actions
         const actions = await getApplicationsUserActions(user, detailedApplications);
-        const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, false);
-        const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true))[0];
+        const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, true, true, false);
+        const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true, true, true))[0];
         const unfilteredApplications = await prismaClient.application.findMany({
             where: { id: { in: detailedApplications.map(({ id }) => id) } },
             ...unfilteredFields,
@@ -694,8 +696,8 @@ export const getAllApplications = async (req: Request, res: Response): Promise<v
 
         // Get application only with visible fields and with embedded actions
         const actions = await getApplicationsUserActions(user, detailedApplications);
-        const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, false);
-        const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true))[0];
+        const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, true, true, false);
+        const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true, true, true))[0];
         const unfilteredApplications = await prismaClient.application.findMany({
             where: { id: { in: detailedApplications.map(({ id }) => id) } },
             ...unfilteredFields,
@@ -760,7 +762,7 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
         const visibleApplication = {
             ...(await prismaClient.application.findUnique({
                 where: { id: applicationId },
-                ...(await getApplicationsVisibleFields(user, [detailedApplication], false, false))[0],
+                ...(await getApplicationsVisibleFields(user, [detailedApplication], false, true, true, false))[0],
             })),
             actions: (await getApplicationsUserActions(user, [detailedApplication]))[0],
         };
@@ -789,7 +791,7 @@ export const getApplicationWithProtocol = async (req: Request, res: Response): P
         const visibleApplication = {
             ...(await prismaClient.application.findUnique({
                 where: { id: applicationId },
-                ...(await getApplicationsVisibleFields(user, [detailedApplication], false, false))[0],
+                ...(await getApplicationsVisibleFields(user, [detailedApplication], false, true, true, false))[0],
             })),
             actions: (await getApplicationsUserActions(user, [detailedApplication]))[0],
         };
@@ -818,7 +820,7 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
         const visibleApplication = {
             ...(await prismaClient.application.findUnique({
                 where: { id: applicationId },
-                ...(await getApplicationsVisibleFields(user, [detailedApplication], true, false))[0],
+                ...(await getApplicationsVisibleFields(user, [detailedApplication], true, true, true, false))[0],
             })),
             actions: (await getApplicationsUserActions(user, [detailedApplication]))[0],
         };
