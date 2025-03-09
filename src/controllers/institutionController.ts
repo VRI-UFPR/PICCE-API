@@ -108,7 +108,7 @@ export const createInstitution = async (req: Request, res: Response) => {
             })
             .noUnknown();
         // Yup parsing/validation
-        const institution = await createInstitutionSchema.validate(req.body);
+        const institution = await createInstitutionSchema.validate(req.body, { stripUnknown: false });
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is authorized to create an institution
@@ -156,7 +156,7 @@ export const updateInstitution = async (req: Request, res: Response): Promise<vo
             })
             .noUnknown();
         // Yup parsing/validation
-        const institution = await updateInstitutionSchema.validate(req.body);
+        const institution = await updateInstitutionSchema.validate(req.body, { stripUnknown: false });
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is authorized to update an institution
