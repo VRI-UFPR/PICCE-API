@@ -110,7 +110,8 @@ export const getAddressesByState = async (req: Request, res: Response): Promise<
         // Yup schemas
         const getAddressesByStateSchema = yup
             .object()
-            .shape({ state: yup.string().min(1).required(), country: yup.string().min(1).required() });
+            .shape({ state: yup.string().min(1).required(), country: yup.string().min(1).required() })
+            .noUnknown();
         // Yup parsing/validation
         const searchParams = await getAddressesByStateSchema.validate(req.body, { stripUnknown: false });
         // User from Passport-JWT
@@ -132,11 +133,14 @@ export const getAddressesByState = async (req: Request, res: Response): Promise<
 export const getAddressId = async (req: Request, res: Response): Promise<void> => {
     try {
         // Yup schemas
-        const getCityIdSchema = yup.object().shape({
-            city: yup.string().min(1).required(),
-            state: yup.string().min(1).required(),
-            country: yup.string().min(1).required(),
-        });
+        const getCityIdSchema = yup
+            .object()
+            .shape({
+                city: yup.string().min(1).required(),
+                state: yup.string().min(1).required(),
+                country: yup.string().min(1).required(),
+            })
+            .noUnknown();
         // Yup parsing/validation
         const searchParams = await getCityIdSchema.validate(req.body, { stripUnknown: false });
         // User from Passport-JWT

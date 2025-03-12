@@ -142,7 +142,7 @@ export const createClassroom = async (req: Request, res: Response) => {
             })
             .noUnknown();
         // Yup parsing/validation
-        const classroom = await createClassroomSchema.validate(req.body);
+        const classroom = await createClassroomSchema.validate(req.body, { stripUnknown: false });
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is authorized to create a classroom
@@ -177,11 +177,11 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
             .shape({
                 name: yup.string().min(3).max(20),
                 institutionId: yup.number(),
-                users: yup.array().of(yup.number()).min(2),
+                users: yup.array().of(yup.number()).min(2).required(),
             })
             .noUnknown();
         // Yup parsing/validation
-        const classroom = await updateClassroomSchema.validate(req.body);
+        const classroom = await updateClassroomSchema.validate(req.body, { stripUnknown: false });
         // User from Passport-JWT
         const user = req.user as User;
         // Check if user is authorized to update this classroom
@@ -316,7 +316,7 @@ export const searchClassroomByName = async (req: Request, res: Response): Promis
             .shape({ term: yup.string().min(3).max(20).required() })
             .noUnknown();
         // Yup parsing/validation
-        const { term } = await searchUserSchema.validate(req.body);
+        const { term } = await searchUserSchema.validate(req.body, { stripUnknown: false });
         // Prisma operation
         const classrooms = await prismaClient.classroom.findMany({
             where: {

@@ -619,7 +619,7 @@ export const createProtocol = async (req: Request, res: Response) => {
             })
             .noUnknown();
         // Yup parsing/validation
-        const protocol = await createProtocolSchema.validate(req.body, { stripUnknown: true });
+        const protocol = await createProtocolSchema.validate(req.body, { stripUnknown: false });
         // Sort elements by placement
         for (const page of protocol.pages) {
             page.itemGroups.sort((a, b) => a.placement - b.placement);
@@ -907,7 +907,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             })
             .noUnknown();
         // Yup parsing/validation
-        const protocol = await updateProtocolSchema.validate(req.body, { stripUnknown: true });
+        const protocol = await updateProtocolSchema.validate(req.body, { stripUnknown: false });
         // Sort elements by placement
         for (const page of protocol.pages) {
             page.itemGroups.sort((a, b) => a.placement - b.placement);
