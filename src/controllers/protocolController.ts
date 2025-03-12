@@ -1227,7 +1227,12 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             // Remove itemGroups that are not in the updated page
             await prisma.itemGroup.deleteMany({
                 where: {
-                    id: { notIn: protocol.pages.flatMap((page) => page.itemGroups).map((itemGroup) => itemGroup.id as number) },
+                    id: {
+                        notIn: protocol.pages
+                            .flatMap((page) => page.itemGroups)
+                            .filter((itemGroup) => itemGroup.id)
+                            .map(({ id }) => id as number),
+                    },
                     page: { protocolId: id },
                 },
             });
@@ -1238,7 +1243,8 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                         notIn: protocol.pages
                             .flatMap((page) => page.itemGroups)
                             .flatMap((itemGroup) => itemGroup.tableColumns)
-                            .map((tableColumn) => tableColumn.id as number),
+                            .filter((tableColumn) => tableColumn.id)
+                            .map(({ id }) => id as number),
                     },
                     itemGroup: { page: { protocolId: id } },
                 },
@@ -1250,7 +1256,8 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                         notIn: protocol.pages
                             .flatMap((page) => page.itemGroups)
                             .flatMap((itemGroup) => itemGroup.items)
-                            .map((item) => item.id as number),
+                            .filter((item) => item.id)
+                            .map(({ id }) => id as number),
                     },
                     itemGroup: { page: { protocolId: id } },
                 },
