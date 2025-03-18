@@ -67,7 +67,7 @@ const getDetailedApplicationAnswers = async (applicationAnswersIds: number[]) =>
  *
  * Each role object contains the following properties:
  * - `answerer`: Whether the user is the one who answered the application.
- * - `applicationApplier`: Whether the user is the applier of the application.
+ * - `applicationApplier`: Whether the user is the creator of the application.
  * - `applicationCoordinator`: Whether the user is the coordinator of the application applier's institution.
  * - `applicationInstitutionMember`: Whether the user is a member of the application applier's institution.
  * - `protocolCoordinator`: Whether the user is the coordinator of the protocol creator's institution.
@@ -228,6 +228,8 @@ const checkAuthorization = async (requester: User, applicationAnswersIds: number
  * - Validates numerical answers against minimum and maximum values.
  * - Validates text answers against minimum and maximum length.
  * - Validates the number of selected items for checkbox answers against minimum and maximum limits.
+ *
+ * @returns A promise that resolves if all answers meet the validation criteria.
  */
 const validateAnswers = async (itemAnswerGroups: any, applicationId: number) => {
     const application = await prismaClient.application.findUnique({
@@ -271,32 +273,25 @@ const validateAnswers = async (itemAnswerGroups: any, applicationId: number) => 
             )
         ) || [];
 
+    // Create a map of answers
     const answers: any = {};
 
     for (const itemAnswerGroup of itemAnswerGroups) {
         for (const itemAnswer of itemAnswerGroup.itemAnswers) {
-            if (answers[itemAnswer.itemId]) {
-                answers[itemAnswer.itemId].push(itemAnswer);
-            } else {
-                answers[itemAnswer.itemId] = [itemAnswer];
-            }
+            if (answers[itemAnswer.itemId]) answers[itemAnswer.itemId].push(itemAnswer);
+            else answers[itemAnswer.itemId] = [itemAnswer];
         }
         for (const optionAnswer of itemAnswerGroup.optionAnswers) {
-            if (answers[optionAnswer.itemId]) {
-                answers[optionAnswer.itemId].push(optionAnswer);
-            } else {
-                answers[optionAnswer.itemId] = [optionAnswer];
-            }
+            if (answers[optionAnswer.itemId]) answers[optionAnswer.itemId].push(optionAnswer);
+            else answers[optionAnswer.itemId] = [optionAnswer];
         }
         for (const tableAnswer of itemAnswerGroup.tableAnswers) {
-            if (answers[tableAnswer.itemId]) {
-                answers[tableAnswer.itemId].push(tableAnswer);
-            } else {
-                answers[tableAnswer.itemId] = [tableAnswer];
-            }
+            if (answers[tableAnswer.itemId]) answers[tableAnswer.itemId].push(tableAnswer);
+            else answers[tableAnswer.itemId] = [tableAnswer];
         }
     }
 
+    // Check all validations
     for (const itemValidation of itemValidations) {
         if (itemValidation.mandatory) {
             if (!answers[itemValidation.id]) throw new Error('Mandatory item is missing: ' + itemValidation.text);
@@ -304,6 +299,7 @@ const validateAnswers = async (itemAnswerGroups: any, applicationId: number) => 
                 if (answer.text === '') throw new Error('Mandatory item is missing: ' + itemValidation.text);
             }
         }
+        // Min validation
         if (itemValidation.min && answers[itemValidation.id]) {
             if (itemValidation.type === 'NUMBERBOX') {
                 for (const answer of answers[itemValidation.id]) {
@@ -329,6 +325,7 @@ const validateAnswers = async (itemAnswerGroups: any, applicationId: number) => 
                 }
             }
         }
+        // Max validation
         if (itemValidation.max && answers[itemValidation.id]) {
             if (itemValidation.type === 'NUMBERBOX') {
                 for (const answer of answers[itemValidation.id]) {

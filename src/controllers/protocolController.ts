@@ -17,6 +17,15 @@ import { unlinkSync, existsSync } from 'fs';
 import { detailedApplicationFields, getApplicationsUserActions, getApplicationsVisibleFields } from './applicationController';
 import fieldsFilter from '../services/fieldsFilter';
 
+/**
+ * Retrieves the visible fields for protocols based on the user's roles and permissions.
+ *
+ * @param user - The user for whom the visible fields are being determined.
+ * @param protocols - The detailed protocols for which the visible fields are being determined.
+ * @param includeAnswers - A boolean indicating whether to include protocol answers in the visible fields.
+ * @param ignoreFilters - A boolean indicating whether to ignore role-based filters and grant full access.
+ * @returns A promise that resolves to an array of objects representing the visible fields for each protocol.
+ */
 export const getVisibleFields = async (
     user: User,
     protocols: Awaited<ReturnType<typeof getDetailedProtocols>>,
@@ -292,6 +301,14 @@ export const getVisibleFields = async (
     return visibleFields;
 };
 
+/**
+ * Retrieve the detailed protocols fields required for internal endpoint validations.
+ *
+ * This function handles the creation of a custom select filter that serves as a parameter for Prisma Client to return an
+ * protocol with all the fields required for internal endpoint validations.
+ *
+ * @returns A Prisma select filter object
+ */
 const detailedProtocolFields = () => ({
     creator: { select: { id: true, institution: { select: { id: true } } } },
     managers: { select: { id: true, institution: { select: { id: true } } } },
@@ -305,14 +322,34 @@ const detailedProtocolFields = () => ({
     },
 });
 
-export const getDetailedProtocols = async (protocolsIds: number[]) => {
-    const detailedProtocols = await prismaClient.protocol.findMany({
-        where: { id: { in: protocolsIds } },
-        include: detailedProtocolFields(),
-    });
-    return detailedProtocols;
-};
+/**
+ * Gets a set of detailed protocols from a set of IDs
+ *
+ * This function handles the retrieval of a set of detailed protocols, with all the fields required for internal
+ * endpoint validations, from a set of protocols IDs using Prisma.
+ *
+ * @param protocolsIds An array of protocols IDs
+ * @returns A set of detailed protocols
+ */
+export const getDetailedProtocols = async (protocolsIds: number[]) =>
+    await prismaClient.protocol.findMany({ where: { id: { in: protocolsIds } }, include: detailedProtocolFields() });
 
+/**
+ * Retrieves a user's roles against a given set of protocols.
+ *
+ * @param user - The user whose roles are being determined.
+ * @param protocols - The detailed protocols for which the roles are being determined.
+ * @returns A promise that resolves to an array of objects representing the roles of the user for each protocol.
+ *
+ * Each role object contains the following properties:
+ * - `answersViewer`: Whether the user can view the answers of the protocol.
+ * - `applier`: Whether the user can create an application for the protocol.
+ * - `coordinator`: Whether the user is the coordinator of the protocol creator's institution.
+ * - `creator`: Whether the user is the creator of the protocol.
+ * - `instituionMember`: Whether the user is a member of the protocol creator's institution.
+ * - `manager`: Whether the user is a manager of the protocol.
+ * - `viewer`: Whether the user can view the protocol.
+ */
 export const getProtocolsUserRoles = async (user: User, protocols: Awaited<ReturnType<typeof getDetailedProtocols>>) => {
     const protocolsRoles = protocols.map((protocol) => {
         const coordinator =
@@ -341,6 +378,20 @@ export const getProtocolsUserRoles = async (user: User, protocols: Awaited<Retur
     return protocolsRoles;
 };
 
+/**
+ * Retrieves the actions that a user can perform on a set of protocols.
+ *
+ * @param user - The user whose actions are being determined.
+ * @param protocols - The detailed protocols for which the actions are being determined.
+ * @returns A promise that resolves to an array of objects representing the actions that the user can perform on each protocol.
+ *
+ * The returned action object contains the following properties:
+ * - `toApply`: Indicates if the user can create an application for the protocol.
+ * - `toDelete`: Indicates if the user can delete the protocol.
+ * - `toGet`: Indicates if the user can retrieve the protocol.
+ * - `toGetWAnswers`: Indicates if the user can retrieve the protocol with answers.
+ * - `toUpdate`: Indicates if the user can update the protocol.
+ */
 export const getProtocolsUserActions = async (user: User, protocols: Awaited<ReturnType<typeof getDetailedProtocols>>) => {
     const protocolsRoles = await getProtocolsUserRoles(user, protocols);
 
@@ -371,6 +422,15 @@ export const getProtocolsUserActions = async (user: User, protocols: Awaited<Ret
     return protocolsActions;
 };
 
+/**
+ * Checks if the user is authorized to perform a specific action on a set of protocols.
+ *
+ * @param requester - The user object containing requester user details.
+ * @param action - The action the user wants to perform (e.g., 'create', 'update', 'get', 'delete', 'approve', 'getAll', 'getMy').
+ *
+ * @throws Will throw an error if the user is not authorized to perform the action.
+ * @returns A promise that resolves if the user is authorized to perform the action.
+ */
 const checkAuthorization = async (user: User, protocolIds: number[], action: string) => {
     // Admins can perform any action
     if (user.role === UserRole.ADMIN) return;
@@ -414,12 +474,40 @@ const checkAuthorization = async (user: User, protocolIds: number[], action: str
     }
 };
 
+/**
+ * Validates an item based on its type and options length.
+ *
+ * @param type - The item type.
+ * @param itemOptionsLength - The length of the item options.
+ * @throws Will throw an error if the item is invalid.
+ *
+ * The function performs the following validations:
+ * - For checkbox, radio and select items, the options length must be at least 2.
+ * - For other item types, the options length must be 0.
+ *
+ * @returns A promise that resolves if the item is valid.
+ */
 const validateItem = async (type: ItemType, itemOptionsLength: number) => {
     if (type === ItemType.CHECKBOX || type === ItemType.RADIO || type === ItemType.SELECT) {
         if (itemOptionsLength < 2) throw new Error('Not enough options.');
     } else if (itemOptionsLength !== 0) throw new Error('Options not allowed.');
 };
 
+/**
+ * Validates an item group based on its type and items length.
+ *
+ * @param type - The item group type.
+ * @param itemsLength - The length of the items.
+ * @param tableColumnsLength - The length of the table columns.
+ * @throws Will throw an error if the item group is invalid.
+ *
+ * The function performs the following validations:
+ * - For checkbox table, radio table and textbox table item groups, the table columns length must be at least 1.
+ * - For one-dimensional item groups, the table columns length must be 0.
+ * - Items length must be at least 1 for all item group types.
+ *
+ * @returns A promise that resolves if the item group is valid.
+ */
 const validateItemGroup = async (type: ItemGroupType, itemsLength: number, tableColumnsLength: number) => {
     if (
         itemsLength === 0 ||
@@ -430,6 +518,22 @@ const validateItemGroup = async (type: ItemGroupType, itemsLength: number, table
         throw new Error('ItemGroup type does not match the amount of items or tableColumns.');
 };
 
+/**
+ * Validates the protocol page dependencies and item group dependencies.
+ *
+ * @param protocol - The protocol object to which the dependencies belong.
+ *
+ * @throws Will throw an error if the dependencies are invalid.
+ *
+ * The function performs the following validations:
+ * - The dependency item must reference a previous item.
+ * - The dependency type must match the item type.
+ * - The min argument must be a valid integer.
+ * - The max argument must be a valid integer.
+ * - The min argument must be less than the max argument.
+ *
+ * @returns A promise that resolves if the dependencies are valid.
+ */
 const validateDependencies = async (protocol: any) => {
     const previousItemsTempIds = new Map<number, ItemType>();
     for (const page of protocol.pages) {
@@ -439,7 +543,7 @@ const validateDependencies = async (protocol: any) => {
             switch (dependency.type) {
                 case DependencyType.EXACT_ANSWER:
                     if (itemType !== ItemType.TEXTBOX && itemType !== ItemType.NUMBERBOX && itemType !== ItemType.RANGE)
-                        throw new Error('Exact answer dependency not allowed for this item type.');
+                        throw new Error('Exact answer dependencies can only be used with textbox, numberbox and range items.');
                     break;
                 case DependencyType.MIN:
                     if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
@@ -457,7 +561,7 @@ const validateDependencies = async (protocol: any) => {
                         itemType !== ItemType.RANGE &&
                         itemType !== ItemType.TEXTBOX
                     )
-                        throw new Error('Min dependency only allowed for checkbox, numberbox, range and textbox items.');
+                        throw new Error('Min dependencies can only be used with checkbox, numberbox, range and textbox items.');
                     break;
                 case DependencyType.MAX:
                     if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
@@ -475,11 +579,11 @@ const validateDependencies = async (protocol: any) => {
                         itemType !== ItemType.RANGE &&
                         itemType !== ItemType.TEXTBOX
                     )
-                        throw new Error('Max dependency only allowed for checkbox, numberbox, range and textbox items.');
+                        throw new Error('Max dependencies can only be used with checkbox, numberbox, range and textbox items.');
                     break;
                 case DependencyType.OPTION_SELECTED:
                     if (itemType !== ItemType.RADIO && itemType !== ItemType.SELECT && itemType !== ItemType.CHECKBOX)
-                        throw new Error('Option selected dependency only allowed for radio, select and checkbox items.');
+                        throw new Error('Option selected dependencies can only be used with radio, select and checkbox items.');
                     break;
             }
         }
@@ -490,7 +594,7 @@ const validateDependencies = async (protocol: any) => {
                 switch (dependency.type) {
                     case DependencyType.EXACT_ANSWER:
                         if (itemType !== ItemType.TEXTBOX && itemType !== ItemType.NUMBERBOX && itemType !== ItemType.RANGE)
-                            throw new Error('Exact answer dependency not allowed for this item type.');
+                            throw new Error('Exact answer dependencies can only be used with textbox, numberbox and range items.');
                         break;
                     case DependencyType.MIN:
                         if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
@@ -510,7 +614,7 @@ const validateDependencies = async (protocol: any) => {
                             itemType !== ItemType.RANGE &&
                             itemType !== ItemType.TEXTBOX
                         )
-                            throw new Error('Min dependency only allowed for checkbox, numberbox, range and textbox items.');
+                            throw new Error('Min dependencies can only be used with checkbox, numberbox, range and textbox items.');
                         break;
                     case DependencyType.MAX:
                         if (dependency.argument.includes('.') || isNaN(parseFloat(dependency.argument)))
@@ -530,11 +634,11 @@ const validateDependencies = async (protocol: any) => {
                             itemType !== ItemType.RANGE &&
                             itemType !== ItemType.TEXTBOX
                         )
-                            throw new Error('Max dependency only allowed for checkbox, numberbox, range and textbox items.');
+                            throw new Error('Max dependencies can only be used with checkbox, numberbox, range and textbox items.');
                         break;
                     case DependencyType.OPTION_SELECTED:
                         if (itemType !== ItemType.RADIO && itemType !== ItemType.SELECT && itemType !== ItemType.CHECKBOX)
-                            throw new Error('Option selected dependency only allowed for radio, select and checkbox items.');
+                            throw new Error('Option selected dependencies can only be used with radio, select and checkbox items.');
                         break;
                 }
             }
@@ -545,6 +649,24 @@ const validateDependencies = async (protocol: any) => {
     }
 };
 
+/**
+ * Validates the item validations.
+ *
+ * @param itemType - The item type.
+ * @param validations - An array of item validations to be validated.
+ * @throws Will throw an error if the item validations are invalid.
+ *
+ * The function performs the following validations:
+ * - Min, max and step arguments must be valid integers.
+ * - Mandatory argument must be a valid boolean.
+ * - Min argument must be less than max argument.
+ * - Step argument must be less than the difference between min and max arguments and divide it.
+ * - Range items must have min, max and step.
+ * - Step validation only allowed for range items.
+ * - Min and max validations only allowed for numberbox, textbox, range and checkbox items.
+ *
+ * @returns A promise that resolves if the item validations are valid.
+ */
 const validateItemValidations = async (itemType: ItemType, validations: any[]) => {
     const minValidation = validations.find((v) => v.type === ItemValidationType.MIN);
     const maxValidation = validations.find((v) => v.type === ItemValidationType.MAX);
@@ -561,8 +683,14 @@ const validateItemValidations = async (itemType: ItemType, validations: any[]) =
         throw new Error('Mandatory argument must be a valid boolean.');
     if (minValidation && maxValidation && minValidation.argument >= maxValidation.argument)
         throw new Error('Min argument must be less than max argument.');
-    if (minValidation && maxValidation && stepValidation && maxValidation.argument - minValidation.argument <= stepValidation.argument)
-        throw new Error('Step argument must be less than the difference between min and max arguments.');
+    if (
+        minValidation &&
+        maxValidation &&
+        stepValidation &&
+        maxValidation.argument - minValidation.argument <= stepValidation.argument &&
+        (maxValidation.argument - minValidation.argument) % stepValidation.argument === 0
+    )
+        throw new Error('Step argument must be less than the difference between min and max arguments and divide it.');
     if (itemType === ItemType.RANGE && (!minValidation || !maxValidation || !stepValidation))
         throw new Error('Range items must have min, max and step.');
     if (stepValidation && itemType !== ItemType.RANGE) throw new Error('Step validation only allowed for range items.');
@@ -576,6 +704,19 @@ const validateItemValidations = async (itemType: ItemType, validations: any[]) =
         throw new Error('Min and max validations only allowed for numberbox, textbox, range and checkbox items.');
 };
 
+/**
+ * Validates the protocol managers
+ *
+ * @param managers - An array of user IDs representing the managers of the protocol.
+ * @param institutionId - The ID of the institution to which the protocol creator belongs.
+ *
+ * @throws Will throw an error if the managers are invalid.
+ *
+ * The function performs the following validations:
+ * - Managers must be publishers or coordinators of the same institution of the protocol creator.
+ *
+ * @returns A promise that resolves if the managers are valid.
+ */
 const validateManagers = async (managers: number[], institutionId: number | null) => {
     const invalidManagers = await prismaClient.user.findMany({
         where: {
@@ -587,6 +728,17 @@ const validateManagers = async (managers: number[], institutionId: number | null
     if (invalidManagers.length > 0) throw new Error('Managers must be publishers or coordinators of the same institution.');
 };
 
+/**
+ * Validates the protocol viewers
+ *
+ * @param viewers - An array of user IDs representing the viewers of the protocol.
+ * @throws Will throw an error if the viewers are invalid.
+ *
+ * The function performs the following validations:
+ * - Viewers cannot be guests or admins.
+ *
+ * @returns A promise that resolves if the viewers are valid.
+ */
 const validadeViewers = async (viewers: number[]) => {
     const invalidViewers = await prismaClient.user.findMany({
         where: { id: { in: viewers }, role: { in: [UserRole.ADMIN, UserRole.GUEST] } },
@@ -594,6 +746,17 @@ const validadeViewers = async (viewers: number[]) => {
     if (invalidViewers.length > 0) throw new Error('You cannot add guests or admins as viewers.');
 };
 
+/**
+ * Validates the protocol appliers
+ *
+ * @param appliers - An array of user IDs representing the appliers of the protocol.
+ * @throws Will throw an error if the appliers are invalid.
+ *
+ * The function performs the following validations:
+ * - Appliers must be publishers, coordinators or appliers.
+ *
+ * @returns A promise that resolves if the appliers are valid.
+ */
 const validateAppliers = async (appliers: number[]) => {
     const invalidAppliers = await prismaClient.user.findMany({
         where: { id: { in: appliers }, role: { notIn: [UserRole.APPLIER, UserRole.PUBLISHER, UserRole.COORDINATOR] } },
@@ -601,6 +764,17 @@ const validateAppliers = async (appliers: number[]) => {
     if (invalidAppliers.length > 0) throw new Error('Appliers must be publishers, coordinators or appliers.');
 };
 
+/**
+ * Validates the placements of the protocol pages, item groups, items, item options and table columns.
+ *
+ * @param protocol - The protocol object to which the placements belong.
+ * @throws Will throw an error if the placements are invalid
+ *
+ * The function performs the following validations:
+ * - Placement values must be unique, consecutive and start from 1.
+ *
+ * @returns A promise that resolves if the placements are valid.
+ */
 const validateProtocolPlacements = async (protocol: any) => {
     const pagesPlacements = [];
     for (const page of protocol.pages) {
@@ -634,6 +808,17 @@ const validatePlacements = async (placements: number[]) => {
     }
 };
 
+/**
+ * Creates a new protocol in the database.
+ *
+ * This function handles the creation of a new protocol, validating the body of the request and
+ * the user performing the action to then persist the object in the database using Prisma.
+ *
+ * @param req - The request object, containing the protocol data in the body and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const createProtocol = async (req: Request, res: Response) => {
     try {
         // Yup schemas
@@ -899,13 +1084,13 @@ export const createProtocol = async (req: Request, res: Response) => {
                 throw new Error('Files not associated with any item or option detected.');
             }
 
-            // Return the created application answer with nested content included
+            // Return the created protocol with nested content included
             return await prisma.protocol.findUniqueOrThrow({ where: { id: createdProtocol.id }, include: detailedProtocolFields() });
         });
 
         // Get protocol only with visible fields and with embedded actions
         const fieldsWUnfilteredApplications = (await getVisibleFields(user, [detailedCreatedProtocol], false, false))[0];
-        fieldsWUnfilteredApplications.select.applications = (await getApplicationsVisibleFields(user, [], false, true))[0];
+        fieldsWUnfilteredApplications.select.applications = (await getApplicationsVisibleFields(user, [], false, false, false, true))[0];
         const visibleProtocolWUnfilteredApplications = {
             ...(await prismaClient.protocol.findUnique({
                 where: { id: detailedCreatedProtocol.id },
@@ -916,7 +1101,7 @@ export const createProtocol = async (req: Request, res: Response) => {
         // Get applicattions only with visible fields and with embedded actions
         const detailedApplications = detailedCreatedProtocol.applications;
         const applicationActions = await getApplicationsUserActions(user, detailedApplications);
-        const applicationFields = await getApplicationsVisibleFields(user, detailedApplications, false, false);
+        const applicationFields = await getApplicationsVisibleFields(user, detailedApplications, false, false, false, false);
         const visibleProtocolWApplications = {
             ...visibleProtocolWUnfilteredApplications,
             applications: visibleProtocolWUnfilteredApplications.applications?.map((application, i) => ({
@@ -933,6 +1118,17 @@ export const createProtocol = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * Updates an existing protocol in the database.
+ *
+ * This function handles the update of a existing protocol, validating the body of the request and
+ * the user performing the action to then persist the object in the database using Prisma.
+ *
+ * @param req - The request object, containing the protocol data in the body, the user object from Passport-JWT and the address ID in the params.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const updateProtocol = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
@@ -1388,13 +1584,13 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 throw new Error('Files not associated with any item or option detected.');
             }
 
-            // Return the updated application answer with nested content included
+            // Return the updated protocol with nested content included
             return await prisma.protocol.findUniqueOrThrow({ where: { id: id }, include: detailedProtocolFields() });
         });
 
         // Get protocol only with visible fields and with embedded actions
         const fieldsWUnfilteredApplications = (await getVisibleFields(user, [detailedUpsertedProtocol], false, false))[0];
-        fieldsWUnfilteredApplications.select.applications = (await getApplicationsVisibleFields(user, [], false, true))[0];
+        fieldsWUnfilteredApplications.select.applications = (await getApplicationsVisibleFields(user, [], false, false, false, true))[0];
         const visibleProtocolWUnfilteredApplications = {
             ...(await prismaClient.protocol.findUnique({
                 where: { id: detailedUpsertedProtocol.id },
@@ -1405,7 +1601,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
         // Get applicattions only with visible fields and with embedded actions
         const detailedApplications = detailedUpsertedProtocol.applications;
         const applicationActions = await getApplicationsUserActions(user, detailedApplications);
-        const applicationFields = await getApplicationsVisibleFields(user, detailedApplications, false, false);
+        const applicationFields = await getApplicationsVisibleFields(user, detailedApplications, false, false, false, false);
         const visibleProtocolWApplications = {
             ...visibleProtocolWUnfilteredApplications,
             applications: visibleProtocolWUnfilteredApplications.applications?.map((application, i) => ({
@@ -1422,6 +1618,17 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
     }
 };
 
+/**
+ * Gets all protocols from the database.
+ *
+ * This function handles the retrieval of all protocols in the database, validating the user
+ * performing the action to then retrieve all protocols using Prisma.
+ *
+ * @param req - The request object, containing the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getAllProtocols = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
@@ -1434,7 +1641,7 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
         const actions = await getProtocolsUserActions(user, detailedProtocols);
         const filteredFields = await getVisibleFields(user, detailedProtocols, false, false);
         const unfilteredFields = (await getVisibleFields(user, detailedProtocols, false, true))[0];
-        unfilteredFields.select.applications = (await getApplicationsVisibleFields(user, [], false, true))[0];
+        unfilteredFields.select.applications = (await getApplicationsVisibleFields(user, [], false, false, false, true))[0];
         const unfilteredProtocolsWApplications = await prismaClient.protocol.findMany({
             where: { id: { in: detailedProtocols.map((protocol) => protocol.id) } },
             ...unfilteredFields,
@@ -1442,7 +1649,14 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
         const visibleProtocols = await Promise.all(
             unfilteredProtocolsWApplications.map(async (protocol, i) => {
                 const applicationsActions = await getApplicationsUserActions(user, detailedProtocols[i].applications);
-                const applicationsFields = await getApplicationsVisibleFields(user, detailedProtocols[i].applications, false, false);
+                const applicationsFields = await getApplicationsVisibleFields(
+                    user,
+                    detailedProtocols[i].applications,
+                    false,
+                    false,
+                    false,
+                    false
+                );
                 return {
                     ...fieldsFilter(protocol, filteredFields[i]),
                     applications: protocol.applications.map((application, j) => ({
@@ -1460,6 +1674,17 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
     }
 };
 
+/**
+ * Gets all visible protocols from the database.
+ *
+ * This function handles the retrieval of all visible protocols in the database, validating the user
+ * performing the action to then retrieve all visible protocols using Prisma.
+ *
+ * @param req - The request object, containing the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getVisibleProtocols = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
@@ -1492,7 +1717,7 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
         const actions = await getProtocolsUserActions(user, detailedProtocols);
         const filteredFields = await getVisibleFields(user, detailedProtocols, false, false);
         const unfilteredFields = (await getVisibleFields(user, detailedProtocols, false, true))[0];
-        unfilteredFields.select.applications = (await getApplicationsVisibleFields(user, [], false, true))[0];
+        unfilteredFields.select.applications = (await getApplicationsVisibleFields(user, [], false, false, false, true))[0];
         const unfilteredProtocolsWApplications = await prismaClient.protocol.findMany({
             where: { id: { in: detailedProtocols.map((protocol) => protocol.id) } },
             ...unfilteredFields,
@@ -1500,7 +1725,14 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
         const visibleProtocols = await Promise.all(
             unfilteredProtocolsWApplications.map(async (protocol, i) => {
                 const applicationsActions = await getApplicationsUserActions(user, detailedProtocols[i].applications);
-                const applicationsFields = await getApplicationsVisibleFields(user, detailedProtocols[i].applications, false, false);
+                const applicationsFields = await getApplicationsVisibleFields(
+                    user,
+                    detailedProtocols[i].applications,
+                    false,
+                    false,
+                    false,
+                    false
+                );
                 return {
                     ...fieldsFilter(protocol, filteredFields[i]),
                     applications: protocol.applications.map((application, j) => ({
@@ -1518,6 +1750,17 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
     }
 };
 
+/**
+ * Gets all protocols associated with the user from the database.
+ *
+ * This function handles the retrieval of all protocols associated with the user in the database,
+ * validating the user performing the action to then retrieve all protocols using Prisma.
+ *
+ * @param req - The request object, containing the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getMyProtocols = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
@@ -1532,7 +1775,7 @@ export const getMyProtocols = async (req: Request, res: Response): Promise<void>
         const actions = await getProtocolsUserActions(user, detailedProtocols);
         const filteredFields = await getVisibleFields(user, detailedProtocols, false, false);
         const unfilteredFields = (await getVisibleFields(user, detailedProtocols, false, true))[0];
-        unfilteredFields.select.applications = (await getApplicationsVisibleFields(user, [], false, true))[0];
+        unfilteredFields.select.applications = (await getApplicationsVisibleFields(user, [], false, false, false, true))[0];
         const unfilteredProtocolsWApplications = await prismaClient.protocol.findMany({
             where: { id: { in: detailedProtocols.map((protocol) => protocol.id) } },
             ...unfilteredFields,
@@ -1540,7 +1783,14 @@ export const getMyProtocols = async (req: Request, res: Response): Promise<void>
         const visibleProtocols = await Promise.all(
             unfilteredProtocolsWApplications.map(async (protocol, i) => {
                 const applicationsActions = await getApplicationsUserActions(user, detailedProtocols[i].applications);
-                const applicationsFields = await getApplicationsVisibleFields(user, detailedProtocols[i].applications, false, false);
+                const applicationsFields = await getApplicationsVisibleFields(
+                    user,
+                    detailedProtocols[i].applications,
+                    false,
+                    false,
+                    false,
+                    false
+                );
                 return {
                     ...fieldsFilter(protocol, filteredFields[i]),
                     applications: protocol.applications.map((application, j) => ({
@@ -1558,6 +1808,17 @@ export const getMyProtocols = async (req: Request, res: Response): Promise<void>
     }
 };
 
+/**
+ * Gets an protocol from the database by ID.
+ *
+ * This function handles the retrieval of an protocol in the database by ID, validating the user
+ * performing the action to then retrieve the protocol using Prisma.
+ *
+ * @param req - The request object, containing the protocol ID in the params and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getProtocol = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
@@ -1586,7 +1847,7 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
 
         // Get protocol only with visible fields and with embedded actions
         const fieldsWUnfilteredApplications = (await getVisibleFields(user, [detailedProtocol], false, false))[0];
-        fieldsWUnfilteredApplications.select.applications = (await getApplicationsVisibleFields(user, [], false, true))[0];
+        fieldsWUnfilteredApplications.select.applications = (await getApplicationsVisibleFields(user, [], false, false, false, true))[0];
         const visibleProtocolWUnfilteredApplications = {
             ...(await prismaClient.protocol.findUnique({
                 where: { id: detailedProtocol.id },
@@ -1597,7 +1858,7 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
         // Get applicattions only with visible fields and with embedded actions
         const detailedApplications = detailedProtocol.applications;
         const applicationActions = await getApplicationsUserActions(user, detailedApplications);
-        const applicationFields = await getApplicationsVisibleFields(user, detailedApplications, false, false);
+        const applicationFields = await getApplicationsVisibleFields(user, detailedApplications, false, false, false, false);
         const visibleProtocolWApplications = {
             ...visibleProtocolWUnfilteredApplications,
             applications: visibleProtocolWUnfilteredApplications.applications?.map((application, i) => ({
@@ -1612,6 +1873,17 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
+/**
+ * Gets an protocol from the database by ID with answers.
+ *
+ * This function handles the retrieval of an protocol in the database by ID with answers, validating the user
+ * performing the action to then retrieve the protocol using Prisma.
+ *
+ * @param req - The request object, containing the protocol ID in the params and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getProtocolWithAnswers = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
@@ -1639,7 +1911,7 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
 
         // Get protocol only with visible fields and with embedded actions
         const fieldsWUnfilteredApplications = (await getVisibleFields(user, [detailedProtocol], true, false))[0];
-        fieldsWUnfilteredApplications.select.applications = (await getApplicationsVisibleFields(user, [], true, true))[0];
+        fieldsWUnfilteredApplications.select.applications = (await getApplicationsVisibleFields(user, [], true, false, false, true))[0];
         const visibleProtocolWUnfilteredApplications = {
             ...(await prismaClient.protocol.findUnique({
                 where: { id: detailedProtocol.id },
@@ -1650,7 +1922,7 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
         // Get applicattions only with visible fields and with embedded actions
         const detailedApplications = detailedProtocol.applications;
         const applicationActions = await getApplicationsUserActions(user, detailedApplications);
-        const applicationFields = await getApplicationsVisibleFields(user, detailedApplications, true, false);
+        const applicationFields = await getApplicationsVisibleFields(user, detailedApplications, true, false, false, false);
         const visibleProtocolWApplications = {
             ...visibleProtocolWUnfilteredApplications,
             applications: visibleProtocolWUnfilteredApplications.applications?.map((application, i) => ({
@@ -1665,6 +1937,17 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
     }
 };
 
+/**
+ * Deletes an protocol from the database by ID.
+ *
+ * This function handles the deletion of an protocol in the database by ID, validating the user
+ * performing the action to then delete the protocol using Prisma.
+ *
+ * @param req - The request object, containing the protocol ID in the params and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const deleteProtocol = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
