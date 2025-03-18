@@ -162,7 +162,10 @@ export const getAllAddresses = async (req: Request, res: Response): Promise<void
 export const getAddressesByState = async (req: Request, res: Response): Promise<void> => {
     try {
         // Yup schemas
-        const searchParamsSchema = yup.object().shape({ state: yup.string().min(1).required(), country: yup.string().min(1).required() });
+        const searchParamsSchema = yup
+            .object()
+            .shape({ state: yup.string().min(1).required(), country: yup.string().min(1).required() })
+            .noUnknown();
         // Yup parsing/validation
         const searchParams = await searchParamsSchema.validate(req.body, { stripUnknown: false });
         // Requester user from Passport-JWT
@@ -194,11 +197,14 @@ export const getAddressesByState = async (req: Request, res: Response): Promise<
 export const getAddressId = async (req: Request, res: Response): Promise<void> => {
     try {
         // Yup schemas
-        const searchParamsSchema = yup.object().shape({
-            city: yup.string().min(1).required(),
-            state: yup.string().min(1).required(),
-            country: yup.string().min(1).required(),
-        });
+        const searchParamsSchema = yup
+            .object()
+            .shape({
+                city: yup.string().min(1).required(),
+                state: yup.string().min(1).required(),
+                country: yup.string().min(1).required(),
+            })
+            .noUnknown();
         // Yup parsing/validation
         const searchParams = await searchParamsSchema.validate(req.body, { stripUnknown: false });
         // Requester user from Passport-JWT

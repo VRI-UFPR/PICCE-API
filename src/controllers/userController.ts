@@ -288,7 +288,7 @@ export const createUser = async (req: Request, res: Response) => {
             })
             .noUnknown();
         // Yup parsing/validation
-        const userData = await createUserSchema.validate(req.body);
+        const userData = await createUserSchema.validate(req.body, { stripUnknown: false });
         // User from Passport-JWT
         const requester = req.user as User;
         // Check if user is authorized to create a user
@@ -356,12 +356,12 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
                 hash: yup.string(),
                 role: yup.string().oneOf(Object.values(UserRole)),
                 institutionId: yup.number(),
-                classrooms: yup.array().of(yup.number()),
+                classrooms: yup.array().of(yup.number()).default([]),
                 profileImageId: yup.number(),
             })
             .noUnknown();
         // Yup parsing/validation
-        const userData = await updateUserSchema.validate(req.body);
+        const userData = await updateUserSchema.validate(req.body, { stripUnknown: false });
         // User from Passport-JWT
         const requester = req.user as User;
         // Check if user is authorized to update the user
@@ -565,7 +565,7 @@ export const searchUserByUsername = async (req: Request, res: Response): Promise
             .shape({ term: yup.string().min(3).max(20).required() })
             .noUnknown();
         // Yup parsing/validation
-        const { term } = await searchUserSchema.validate(req.body);
+        const { term } = await searchUserSchema.validate(req.body, { stripUnknown: false });
         // Prisma operation
         const detailedStoredUsers = await prismaClient.user.findMany({
             where: {

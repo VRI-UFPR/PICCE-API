@@ -923,7 +923,7 @@ export const createProtocol = async (req: Request, res: Response) => {
             })
             .noUnknown();
         // Yup parsing/validation
-        const protocolData = await createProtocolSchema.validate(req.body, { stripUnknown: true });
+        const protocolData = await createProtocolSchema.validate(req.body, { stripUnknown: false });
         // Sort elements by placement
         for (const page of protocolData.pages) {
             page.itemGroups.sort((a, b) => a.placement - b.placement);
@@ -1243,7 +1243,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             })
             .noUnknown();
         // Yup parsing/validation
-        const protocolData = await updateProtocolSchema.validate(req.body, { stripUnknown: true });
+        const protocolData = await updateProtocolSchema.validate(req.body, { stripUnknown: false });
         // Sort elements by placement
         for (const page of protocolData.pages) {
             page.itemGroups.sort((a, b) => a.placement - b.placement);
@@ -1296,14 +1296,11 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                     replicable: protocolData.replicable,
                 },
             });
-            // Remove pages that are not in the updated protocol
-            await prisma.page.deleteMany({
-                where: {
-                    id: { notIn: protocolData.pages.filter((page) => page.id).map((page) => page.id as number) },
-                    protocolId: protocolId,
-                },
-            });
             // Update existing pages or create new ones
+            const pagesIds = [];
+            const itemGroupsIds = [];
+            const itemsIds = [];
+            const tableColumnsIds = [];
             for (const [pageId, page] of protocolData.pages.entries()) {
                 const upsertedPage = page.id
                     ? await prisma.page.update({
@@ -1317,24 +1314,19 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                               type: page.type as PageType,
                           },
                       });
-                // Remove itemGroups that are not in the updated page
-                await prisma.itemGroup.deleteMany({
-                    where: {
-                        id: { notIn: page.itemGroups.filter((itemGroup) => itemGroup.id).map((itemGroup) => itemGroup.id as number) },
-                        pageId: upsertedPage.id,
-                    },
-                });
+                pagesIds.push(upsertedPage.id);
                 // Update existing itemGroups or create new ones
                 for (const [itemGroupId, itemGroup] of page.itemGroups.entries()) {
                     validateItemGroup(itemGroup.type, itemGroup.items.length, itemGroup.tableColumns.length);
 
                     const upsertedItemGroup = itemGroup.id
                         ? await prisma.itemGroup.update({
-                              where: { id: itemGroup.id, pageId: upsertedPage.id },
+                              where: { id: itemGroup.id, page: { protocolId: protocolId } },
                               data: {
                                   placement: itemGroup.placement,
                                   isRepeatable: itemGroup.isRepeatable,
                                   type: itemGroup.type,
+                                  pageId: upsertedPage.id,
                               },
                           })
                         : await prisma.itemGroup.create({
@@ -1345,26 +1337,13 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                   type: itemGroup.type as ItemGroupType,
                               },
                           });
-                    // Remove tableColumns that are not in the updated itemGroup
-                    await prisma.tableColumn.deleteMany({
-                        where: {
-                            id: {
-                                notIn: itemGroup.tableColumns
-                                    .filter((tableColumn) => tableColumn.id)
-                                    .map((tableColumn) => tableColumn.id as number),
-                            },
-                            groupId: upsertedItemGroup.id,
-                        },
-                    });
+                    itemGroupsIds.push(upsertedItemGroup.id);
                     // Update existing tableColumns or create new ones
                     for (const [tableColumnId, tableColumn] of itemGroup.tableColumns.entries()) {
                         const upsertedTableColumn = tableColumn.id
                             ? await prisma.tableColumn.update({
-                                  where: {
-                                      groupId: upsertedItemGroup.id,
-                                      id: tableColumn.id,
-                                  },
-                                  data: { text: tableColumn.text, placement: tableColumn.placement },
+                                  where: { itemGroup: { page: { protocolId: protocolId } }, id: tableColumn.id },
+                                  data: { text: tableColumn.text, placement: tableColumn.placement, groupId: upsertedItemGroup.id },
                               })
                             : await prisma.tableColumn.create({
                                   data: {
@@ -1373,14 +1352,8 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                       groupId: upsertedItemGroup.id as number,
                                   },
                               });
+                        tableColumnsIds.push(upsertedTableColumn.id);
                     }
-                    // Remove items that are not in the updated itemGroup
-                    await prisma.item.deleteMany({
-                        where: {
-                            id: { notIn: itemGroup.items.filter((item) => item.id).map((item) => item.id as number) },
-                            groupId: upsertedItemGroup.id,
-                        },
-                    });
                     // Update existing items or create new ones
                     for (const [itemId, item] of itemGroup.items.entries()) {
                         // Check if item has the allowed amount of itemOptions and tableColumns
@@ -1391,7 +1364,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                             ? await prisma.item.update({
                                   where: {
                                       id: item.id,
-                                      groupId: upsertedItemGroup.id,
+                                      itemGroup: { page: { protocolId: protocolId } },
                                   },
                                   data: {
                                       text: item.text,
@@ -1399,6 +1372,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                       enabled: item.enabled,
                                       type: item.type,
                                       placement: item.placement,
+                                      groupId: upsertedItemGroup.id,
                                   },
                               })
                             : await prisma.item.create({
@@ -1412,6 +1386,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                   },
                               });
                         tempIdMap.set(item.tempId, upsertedItem.id);
+                        itemsIds.push(upsertedItem.id);
                         // Remove files that are not in the updated item
                         const filesToDelete = await prisma.file.findMany({
                             where: {
@@ -1586,6 +1561,22 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                           });
                 }
             }
+            // Remove pages that are not in the updated protocol
+            await prisma.page.deleteMany({
+                where: { id: { notIn: pagesIds }, protocolId: protocolId },
+            });
+            // Remove itemGroups that are not in the updated page
+            await prisma.itemGroup.deleteMany({
+                where: { id: { notIn: itemGroupsIds }, page: { protocolId: protocolId } },
+            });
+            // Remove tableColumns that are not in the updated itemGroup
+            await prisma.tableColumn.deleteMany({
+                where: { id: { notIn: tableColumnsIds }, itemGroup: { page: { protocolId: protocolId } } },
+            });
+            // Remove items that are not in the updated itemGroup
+            await prisma.item.deleteMany({
+                where: { id: { notIn: itemsIds }, itemGroup: { page: { protocolId: protocolId } } },
+            });
             // Check if there are any files left
             if (files.length > 0) {
                 throw new Error('Files not associated with any item or option detected.');
