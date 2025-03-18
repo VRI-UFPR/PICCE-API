@@ -16,6 +16,14 @@ import errorFormatter from '../services/errorFormatter';
 import { getDetailedProtocols, getProtocolsUserActions } from './protocolController';
 import fieldsFilter from '../services/fieldsFilter';
 
+/**
+ * Retrieve the detailed applications fields required for internal endpoint validations.
+ *
+ * This function handles the creation of a custom select filter that serves as a parameter for Prisma Client to return an
+ * application with all the fields required for internal endpoint validations.
+ *
+ * @returns A Prisma select filter object
+ */
 export const detailedApplicationFields = () => ({
     applier: { select: { id: true, institution: { select: { id: true } } } },
     viewersUser: { select: { id: true, institution: { select: { id: true } } } },
@@ -31,6 +39,15 @@ export const detailedApplicationFields = () => ({
     },
 });
 
+/**
+ * Gets a set of detailed applications from a set of IDs
+ *
+ * This function handles the retrieval of a set of detailed applications, with all the fields required for internal
+ * endpoint validations, from a set of applications IDs using Prisma.
+ *
+ * @param applicationsIds An array of applications IDs
+ * @returns A set of detailed applications
+ */
 export const getDetailedApplications = async (applicationsIds: number[]) => {
     const detailedApplications = await prismaClient.application.findMany({
         where: { id: { in: applicationsIds } },
@@ -39,6 +56,22 @@ export const getDetailedApplications = async (applicationsIds: number[]) => {
     return detailedApplications;
 };
 
+/**
+ * Retrieves a user's roles against a given set of applications.
+ *
+ * @param user - The user whose roles are being determined.
+ * @param applications - The detailed applications for which the roles are being determined.
+ * @returns A promise that resolves to an array of objects representing the roles of the user for each application.
+ *
+ * Each role object contains the following properties:
+ * - `answersViewer` - Whether the user can view the answers of the application.
+ * - `applier` - Whether the user is the creator of the application.
+ * - `coordinator` - Whether the user is a coordinator of the application applier's institution.
+ * - `instituionMember` - Whether the user is a member of the application applier's institution.
+ * - `protocolCreator` - Whether the user is the creator of the protocol associated with the application.
+ * - `protocolManager` - Whether the user is a manager of the protocol associated with the application.
+ * - `viewer` - Whether the user can view the application.
+ */
 export const getApplicationsUserRoles = async (user: User, applications: Awaited<ReturnType<typeof getDetailedApplications>>) => {
     const applicationsRoles = applications.map((application) => {
         const coordinator =
@@ -65,6 +98,20 @@ export const getApplicationsUserRoles = async (user: User, applications: Awaited
     return applicationsRoles;
 };
 
+/**
+ * Retrieves the actions that a user can perform on a set of applications.
+ *
+ * @param user - The user whose actions are being determined.
+ * @param applications - The detailed applications for which the actions are being determined.
+ * @returns A promise that resolves to an array of objects representing the actions that the user can perform on each application.
+ *
+ * The returned action object contains the following properties:
+ * - `toApproveAnswers` - Whether the user can approve answers for the application.
+ * - `toDelete` - Whether the user can delete the application.
+ * - `toGet` - Whether the user can get details of the application.
+ * - `toGetAnswers` - Whether the user can get details of the application with answers.
+ * - `toUpdate` - Whether the user can update the application.
+ */
 export const getApplicationsUserActions = async (user: User, applications: Awaited<ReturnType<typeof getDetailedApplications>>) => {
     const applicationsRoles = await getApplicationsUserRoles(user, applications);
 
@@ -108,21 +155,38 @@ export const getApplicationsUserActions = async (user: User, applications: Await
     return applicationsActions;
 };
 
-const checkAuthorization = async (user: User, applicationsId: number[], protocolsId: number[], action: string) => {
-    if (user.role === UserRole.ADMIN) return;
+/**
+ * Checks if the user is authorized to perform a specific action on a set of applications.
+ *
+ * @param requester - The user object containing requester user details.
+ * @param action - The action the user wants to perform (e.g., 'create', 'update', 'get', 'delete', 'approve', 'getAll', 'getMy').
+ *
+ * @throws Will throw an error if the user is not authorized to perform the action.
+ * @returns A promise that resolves if the user is authorized to perform the action.
+ */
+const checkAuthorization = async (requester: User, applicationsId: number[], protocolsId: number[], action: string) => {
+    if (requester.role === UserRole.ADMIN) return;
 
     switch (action) {
         case 'create': {
-            if ((await getProtocolsUserActions(user, await getDetailedProtocols(protocolsId))).some(({ toApply }) => !toApply))
+            if ((await getProtocolsUserActions(requester, await getDetailedProtocols(protocolsId))).some(({ toApply }) => !toApply))
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'update': {
-            if ((await getApplicationsUserActions(user, await getDetailedApplications(applicationsId))).some(({ toUpdate }) => !toUpdate))
+            if (
+                (await getApplicationsUserActions(requester, await getDetailedApplications(applicationsId))).some(
+                    ({ toUpdate }) => !toUpdate
+                )
+            )
                 throw new Error('This user is not authorized to perform this action');
         }
         case 'delete': {
-            if ((await getApplicationsUserActions(user, await getDetailedApplications(applicationsId))).some(({ toDelete }) => !toDelete))
+            if (
+                (await getApplicationsUserActions(requester, await getDetailedApplications(applicationsId))).some(
+                    ({ toDelete }) => !toDelete
+                )
+            )
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
@@ -134,13 +198,21 @@ const checkAuthorization = async (user: User, applicationsId: number[], protocol
             // No one can perform getAll operations on applications
             throw new Error('This user is not authorized to perform this action');
         case 'get': {
-            if ((await getApplicationsUserActions(user, await getDetailedApplications(applicationsId))).some(({ toGet }) => !toGet))
+            if ((await getApplicationsUserActions(requester, await getDetailedApplications(applicationsId))).some(({ toGet }) => !toGet))
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
     }
 };
 
+/**
+ * Retrieves the visible fields for applications based on the user's roles and permissions.
+ *
+ * @param user - The user for whom the visible fields are being determined.
+ * @param applications - The detailed applications for which the visible fields are being determined.
+ * @param ignoreFilters - A boolean indicating whether to ignore role-based filters and grant full access.
+ * @returns A promise that resolves to an array of objects representing the visible fields for each application.
+ */
 export const getApplicationsVisibleFields = async (
     user: User,
     applications: Awaited<ReturnType<typeof getDetailedApplications>>,
@@ -411,6 +483,25 @@ export const getApplicationsVisibleFields = async (
     return visibleFields;
 };
 
+/**
+ * Validates the visibility and viewers of an application.
+ *
+ * This function checks if the visibility and viewers of an application are valid based on the protocol's visibility and viewers.
+ *
+ * @param visibility - The visibility of the application.
+ * @param answersVisibility - The visibility of the answers of the application.
+ * @param viewersUsers - The IDs of the users that can view the application.
+ * @param viewersClassrooms - The IDs of the classrooms that can view the application.
+ * @param answersViewersUsers - The IDs of the users that can view the answers of the application.
+ * @param answersViewersClassrooms - The IDs of the classrooms that can view the answers of the application.
+ * @param protocolId - The ID of the protocol associated with the application.
+ * @throws Will throw an error if the visibility/viewers are invalid
+ *
+ * The function performs the following validations:
+ * - The application visibility/viewers must be at least as restrictive as the protocol visibility/viewers.
+ *
+ * @returns A promise that resolves if the visibility/viewers are valid.
+ */
 const validateVisibility = async (
     visibility: VisibilityMode | undefined,
     answersVisibility: VisibilityMode | undefined,
@@ -453,6 +544,17 @@ const validateVisibility = async (
     }
 };
 
+/**
+ * Creates a new application in the database.
+ *
+ * This function handles the creation of a new application, validating the body of the request and
+ * the user performing the action to then persist the object in the database using Prisma.
+ *
+ * @param req - The request object, containing the application data in the body and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const createApplication = async (req: Request, res: Response) => {
     try {
         // Yup schemas
@@ -522,6 +624,17 @@ export const createApplication = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * Updates an existing application in the database.
+ *
+ * This function handles the update of a existing application, validating the body of the request and
+ * the user performing the action to then persist the object in the database using Prisma.
+ *
+ * @param req - The request object, containing the application data in the body, the user object from Passport-JWT and the address ID in the params.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const updateApplication = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
@@ -591,6 +704,17 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
     }
 };
 
+/**
+ * Gets all applications associated with the user from the database.
+ *
+ * This function handles the retrieval of all applications associated with the user in the database,
+ * validating the user performing the action to then retrieve all applications using Prisma.
+ *
+ * @param req - The request object, containing the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getMyApplications = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
@@ -623,6 +747,17 @@ export const getMyApplications = async (req: Request, res: Response): Promise<vo
     }
 };
 
+/**
+ * Gets all visible applications from the database.
+ *
+ * This function handles the retrieval of all visible applications in the database, validating the user
+ * performing the action to then retrieve all visible applications using Prisma.
+ *
+ * @param req - The request object, containing the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getVisibleApplications = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
@@ -682,6 +817,17 @@ export const getVisibleApplications = async (req: Request, res: Response): Promi
     }
 };
 
+/**
+ * Gets all aplications from the database.
+ *
+ * This function handles the retrieval of all aplications in the database, validating the user
+ * performing the action to then retrieve all aplications using Prisma.
+ *
+ * @param req - The request object, containing the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getAllApplications = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
@@ -713,6 +859,17 @@ export const getAllApplications = async (req: Request, res: Response): Promise<v
     }
 };
 
+/**
+ * Gets an application from the database by ID.
+ *
+ * This function handles the retrieval of an application in the database by ID, validating the user
+ * performing the action to then retrieve the application using Prisma.
+ *
+ * @param req - The request object, containing the application ID in the params and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getApplication = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
@@ -773,6 +930,17 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
     }
 };
 
+/**
+ * Gets an application from the database by ID with protocol.
+ *
+ * This function handles the retrieval of an application in the database by ID with protocol, validating the user
+ * performing the action to then retrieve the application using Prisma.
+ *
+ * @param req - The request object, containing the application ID in the params and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getApplicationWithProtocol = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
@@ -802,6 +970,17 @@ export const getApplicationWithProtocol = async (req: Request, res: Response): P
     }
 };
 
+/**
+ * Gets an application from the database by ID with answers.
+ *
+ * This function handles the retrieval of an application in the database by ID with answers, validating the user
+ * performing the action to then retrieve the application using Prisma.
+ *
+ * @param req - The request object, containing the application ID in the params and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getApplicationWithAnswers = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
@@ -947,6 +1126,17 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
     }
 };
 
+/**
+ * Deletes an application from the database by ID.
+ *
+ * This function handles the deletion of an application in the database by ID, validating the user
+ * performing the action to then delete the application using Prisma.
+ *
+ * @param req - The request object, containing the application ID in the params and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const deleteApplication = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params

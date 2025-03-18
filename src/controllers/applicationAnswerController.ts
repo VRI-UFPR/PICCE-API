@@ -418,12 +418,12 @@ const getVisibleFields = async (
 };
 
 /**
- * Creates a new appication answer in the database.
+ * Creates a new application answer in the database.
  *
- * This function handles the creation of a new appication answer, validating the body of the request and
+ * This function handles the creation of a new application answer, validating the body of the request and
  * the user performing the action to then persist the object in the database using Prisma.
  *
- * @param req - The request object, containing the appication answer data in the body and the user object from Passport-JWT.
+ * @param req - The request object, containing the application answer data in the body and the user object from Passport-JWT.
  * @param res - The response object, used to send the response back to the client.
  *
  * @returns A promise that resolves when the function sets the response to the client.
