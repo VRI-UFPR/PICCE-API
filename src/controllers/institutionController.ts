@@ -17,11 +17,28 @@ import { detailedUserFields, getPeerUserActions, getVisibleUserFields as getUser
 import { detailedClassroomFields, getClassroomUserActions, getVisibleFields as getClassroomVisibleFields } from './classroomController';
 import fieldsFilter from '../services/fieldsFilter';
 
+/**
+ * Retrieve the detailed institutions fields required for internal endpoint validations.
+ *
+ * This function handles the creation of a custom select filter that serves as a parameter for Prisma Client to return an
+ * institution with all the fields required for internal endpoint validations.
+ *
+ * @returns A Prisma select filter object
+ */
 const detailedInstitutionFields = () => ({
     users: { include: detailedUserFields() },
     classrooms: { include: detailedClassroomFields() },
 });
 
+/**
+ * Gets a set of detailed institutions from a set of IDs
+ *
+ * This function handles the retrieval of a set of detailed institutions, with all the fields required for internal
+ * endpoint validations, from a set of institutions IDs using Prisma.
+ *
+ * @param institutionsIds An array of institutions IDs
+ * @returns A set of detailed institutions
+ */
 const getDetailedInstitutions = async (institutionsIds: number[]) => {
     return await prismaClient.institution.findMany({
         where: { id: { in: institutionsIds } },
@@ -29,6 +46,17 @@ const getDetailedInstitutions = async (institutionsIds: number[]) => {
     });
 };
 
+/**
+ * Retrieves a user's roles against a given set of institutions.
+ *
+ * @param user - The user whose roles are being determined.
+ * @param institutions - The detailed institutions for which the roles are being determined.
+ * @returns A promise that resolves to an array of objects representing the roles of the user for each institution.
+ *
+ * Each role object contains the following properties:
+ * - `member` - Whether the user is a member of the institution.
+ * - `coordinator` - Whether the user is a coordinator of the institution.
+ */
 const getInstitutionUserRoles = async (user: User, institutions: Awaited<ReturnType<typeof getDetailedInstitutions>>) => {
     const roles = institutions.map((institution) => {
         const member = institution.id === user.institutionId;
@@ -38,6 +66,16 @@ const getInstitutionUserRoles = async (user: User, institutions: Awaited<ReturnT
     return roles;
 };
 
+/**
+ * Retrieves the visible fields for institutions based on the user's roles and permissions.
+ *
+ * @param user - The user for whom the visible fields are being determined.
+ * @param institutions - The detailed institutions for which the visible fields are being determined.
+ * @param includeUsers - A boolean indicating whether to include visible fields for users.
+ * @param includeClassrooms - A boolean indicating whether to include visible fields for classrooms.
+ * @param ignoreFilters - A boolean indicating whether to ignore role-based filters and grant full access.
+ * @returns A promise that resolves to an array of objects representing the visible fields for each institution.
+ */
 const getVisibleFields = async (
     user: User,
     institutions: Awaited<ReturnType<typeof getDetailedInstitutions>>,
@@ -103,6 +141,15 @@ const getVisibleFields = async (
     return fields;
 };
 
+/**
+ * Retrieves the actions that a user can perform on a set of institutions.
+ *
+ * @param user - The user whose actions are being determined.
+ * @param institutions - The detailed institutions for which the actions are being determined.
+ * @returns A promise that resolves to an array of objects representing the actions that the user can perform on each institution.
+ *
+ * The returned action object contains the following properties:
+ */
 const getInstitutionUserActions = async (user: User, institutions: Awaited<ReturnType<typeof getDetailedInstitutions>>) => {
     const institutionsRoles = await getInstitutionUserRoles(user, institutions);
 
@@ -124,8 +171,18 @@ const getInstitutionUserActions = async (user: User, institutions: Awaited<Retur
     return actions;
 };
 
-const checkAuthorization = async (user: User, institutionsIds: number[], action: string) => {
-    if (user.role === UserRole.ADMIN) return;
+/**
+ * Checks if the user is authorized to perform a specific action on a set of institutions.
+ *
+ * @param requester - The user object containing requester user details.
+ * @param institutionsIds - The IDs of the institutions the user wants to perform the action on.
+ * @param action - The action the user wants to perform (e.g., 'create', 'update', 'delete', 'get', 'getAll', 'getVisible').
+ *
+ * @throws Will throw an error if the user is not authorized to perform the action.
+ * @returns A promise that resolves if the user is authorized to perform the action.
+ */
+const checkAuthorization = async (requester: User, institutionsIds: number[], action: string) => {
+    if (requester.role === UserRole.ADMIN) return;
 
     switch (action) {
         case 'create':
@@ -135,26 +192,45 @@ const checkAuthorization = async (user: User, institutionsIds: number[], action:
             break;
         }
         case 'update': {
-            if ((await getInstitutionUserActions(user, await getDetailedInstitutions(institutionsIds))).some(({ toUpdate }) => !toUpdate))
+            if (
+                (await getInstitutionUserActions(requester, await getDetailedInstitutions(institutionsIds))).some(
+                    ({ toUpdate }) => !toUpdate
+                )
+            )
                 throw new Error('This user is not authorized to perform this action');
         }
         case 'delete': {
-            if ((await getInstitutionUserActions(user, await getDetailedInstitutions(institutionsIds))).some(({ toDelete }) => !toDelete))
+            if (
+                (await getInstitutionUserActions(requester, await getDetailedInstitutions(institutionsIds))).some(
+                    ({ toDelete }) => !toDelete
+                )
+            )
                 throw new Error('This user is not authorized to perform this action');
         }
         case 'get': {
-            if ((await getInstitutionUserActions(user, await getDetailedInstitutions(institutionsIds))).some(({ toGet }) => !toGet))
+            if ((await getInstitutionUserActions(requester, await getDetailedInstitutions(institutionsIds))).some(({ toGet }) => !toGet))
                 throw new Error('This user is not authorized to perform this action');
         }
         case 'getVisible': {
             // Anyone (except users and guests) can perform getVisible operations on institutions
-            if (user.role === UserRole.USER || user.role === UserRole.GUEST)
+            if (requester.role === UserRole.USER || requester.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
     }
 };
 
+/**
+ * Creates a new institution in the database.
+ *
+ * This function handles the creation of a new institution, validating the body of the request and
+ * the user performing the action to then persist the object in the database using Prisma.
+ *
+ * @param req - The request object, containing the institution data in the body and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const createInstitution = async (req: Request, res: Response) => {
     try {
         // Yup schemas
@@ -168,31 +244,35 @@ export const createInstitution = async (req: Request, res: Response) => {
             })
             .noUnknown();
         // Yup parsing/validation
-        const institution = await createInstitutionSchema.validate(req.body);
+        const institutionData = await createInstitutionSchema.validate(req.body);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to create an institution
-        await checkAuthorization(user, [], 'create');
+        await checkAuthorization(requester, [], 'create');
         // Prisma operation
-        const detailedCreatedInstitution = await prismaClient.institution.create({
-            data: { id: institution.id, name: institution.name, type: institution.type, addressId: institution.addressId },
+        const detailedStoredInstitution = await prismaClient.institution.create({
+            data: { id: institutionData.id, name: institutionData.name, type: institutionData.type, addressId: institutionData.addressId },
             include: detailedInstitutionFields(),
         });
         // Get institution only with visible fields and with embedded actions
-        const fieldsWUnfilteredUsers = (await getVisibleFields(user, [detailedCreatedInstitution], true, true, false))[0];
-        fieldsWUnfilteredUsers.select.users = (await getUsersVisibleFields(user, [], true, true, true))[0];
-        fieldsWUnfilteredUsers.select.classrooms = (await getClassroomVisibleFields(user, [], true, true))[0];
+        const fieldsWUnfilteredUsers = {
+            select: {
+                ...(await getVisibleFields(requester, [detailedStoredInstitution], true, true, false))[0].select,
+                users: (await getUsersVisibleFields(requester, [], true, true, true))[0],
+                classrooms: (await getClassroomVisibleFields(requester, [], true, true))[0],
+            },
+        };
         const visibleInstitutionWUnfilteredUsers = {
-            ...(await prismaClient.institution.findUnique({ where: { id: detailedCreatedInstitution.id }, ...fieldsWUnfilteredUsers })),
-            actions: (await getInstitutionUserActions(user, [detailedCreatedInstitution]))[0],
+            ...(await prismaClient.institution.findUnique({ where: { id: detailedStoredInstitution.id }, ...fieldsWUnfilteredUsers })),
+            actions: (await getInstitutionUserActions(requester, [detailedStoredInstitution]))[0],
         };
         // Get users only with visible fields and with embedded actions
-        const detailedUsers = detailedCreatedInstitution.users;
-        const userActions = await getPeerUserActions(user, detailedUsers);
-        const filteredUserFields = await getUsersVisibleFields(user, detailedUsers, false, false, false);
-        const detailedClassrooms = detailedCreatedInstitution.classrooms;
-        const classroomActions = await getClassroomUserActions(user, detailedClassrooms);
-        const filteredClassroomFields = await getClassroomVisibleFields(user, detailedClassrooms, true, false);
+        const detailedUsers = detailedStoredInstitution.users;
+        const userActions = await getPeerUserActions(requester, detailedUsers);
+        const filteredUserFields = await getUsersVisibleFields(requester, detailedUsers, false, false, false);
+        const detailedClassrooms = detailedStoredInstitution.classrooms;
+        const classroomActions = await getClassroomUserActions(requester, detailedClassrooms);
+        const filteredClassroomFields = await getClassroomVisibleFields(requester, detailedClassrooms, true, false);
         const visibleInstitution = {
             ...visibleInstitutionWUnfilteredUsers,
             users: visibleInstitutionWUnfilteredUsers.users?.map((user, i) => ({
@@ -202,8 +282,8 @@ export const createInstitution = async (req: Request, res: Response) => {
             classrooms: await Promise.all(
                 (visibleInstitutionWUnfilteredUsers.classrooms ?? []).map(async (classroom, i) => {
                     const detailedUsers = detailedClassrooms[i].users;
-                    const userActions = await getPeerUserActions(user, detailedUsers);
-                    const userFields = await getUsersVisibleFields(user, detailedUsers, false, false, false);
+                    const userActions = await getPeerUserActions(requester, detailedUsers);
+                    const userFields = await getUsersVisibleFields(requester, detailedUsers, false, false, false);
                     return {
                         ...fieldsFilter(classroom, filteredClassroomFields[i]),
                         users: classroom.users.map((user, j) => ({
@@ -222,6 +302,17 @@ export const createInstitution = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * Updates an existing institution in the database.
+ *
+ * This function handles the update of a existing institution, validating the body of the request and
+ * the user performing the action to then persist the object in the database using Prisma.
+ *
+ * @param req - The request object, containing the institution data in the body, the user object from Passport-JWT and the address ID in the params.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const updateInstitution = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
@@ -236,32 +327,35 @@ export const updateInstitution = async (req: Request, res: Response): Promise<vo
             })
             .noUnknown();
         // Yup parsing/validation
-        const institution = await updateInstitutionSchema.validate(req.body);
+        const institutionData = await updateInstitutionSchema.validate(req.body);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to update an institution
-        await checkAuthorization(user, [institutionId], 'update');
+        await checkAuthorization(requester, [institutionId], 'update');
         // Prisma operation
-        const detailedUpdatedInstitution = await prismaClient.institution.update({
+        const detailedStoredInstitution = await prismaClient.institution.update({
             where: { id: institutionId },
-            data: { name: institution.name, type: institution.type, addressId: institution.addressId },
+            data: { name: institutionData.name, type: institutionData.type, addressId: institutionData.addressId },
             include: detailedInstitutionFields(),
         });
-        // Get institution only with visible fields and with embedded actions
-        const fieldsWUnfilteredUsers = (await getVisibleFields(user, [detailedUpdatedInstitution], true, true, false))[0];
-        fieldsWUnfilteredUsers.select.users = (await getUsersVisibleFields(user, [], false, false, true))[0];
-        fieldsWUnfilteredUsers.select.classrooms = (await getClassroomVisibleFields(user, [], true, true))[0];
+        const fieldsWUnfilteredUsers = {
+            select: {
+                ...(await getVisibleFields(requester, [detailedStoredInstitution], true, true, false))[0].select,
+                users: (await getUsersVisibleFields(requester, [], true, true, true))[0],
+                classrooms: (await getClassroomVisibleFields(requester, [], true, true))[0],
+            },
+        };
         const visibleInstitutionWUnfilteredUsers = {
-            ...(await prismaClient.institution.findUnique({ where: { id: detailedUpdatedInstitution.id }, ...fieldsWUnfilteredUsers })),
-            actions: (await getInstitutionUserActions(user, [detailedUpdatedInstitution]))[0],
+            ...(await prismaClient.institution.findUnique({ where: { id: detailedStoredInstitution.id }, ...fieldsWUnfilteredUsers })),
+            actions: (await getInstitutionUserActions(requester, [detailedStoredInstitution]))[0],
         };
         // Get users only with visible fields and with embedded actions
-        const detailedUsers = detailedUpdatedInstitution.users;
-        const userActions = await getPeerUserActions(user, detailedUsers);
-        const filteredUserFields = await getUsersVisibleFields(user, detailedUsers, false, false, false);
-        const detailedClassrooms = detailedUpdatedInstitution.classrooms;
-        const classroomActions = await getClassroomUserActions(user, detailedClassrooms);
-        const filteredClassroomFields = await getClassroomVisibleFields(user, detailedClassrooms, true, false);
+        const detailedUsers = detailedStoredInstitution.users;
+        const userActions = await getPeerUserActions(requester, detailedUsers);
+        const filteredUserFields = await getUsersVisibleFields(requester, detailedUsers, false, false, false);
+        const detailedClassrooms = detailedStoredInstitution.classrooms;
+        const classroomActions = await getClassroomUserActions(requester, detailedClassrooms);
+        const filteredClassroomFields = await getClassroomVisibleFields(requester, detailedClassrooms, true, false);
         const visibleInstitution = {
             ...visibleInstitutionWUnfilteredUsers,
             users: visibleInstitutionWUnfilteredUsers.users?.map((user, i) => ({
@@ -271,8 +365,8 @@ export const updateInstitution = async (req: Request, res: Response): Promise<vo
             classrooms: await Promise.all(
                 (visibleInstitutionWUnfilteredUsers.classrooms ?? []).map(async (classroom, i) => {
                     const detailedUsers = detailedClassrooms[i].users;
-                    const userActions = await getPeerUserActions(user, detailedUsers);
-                    const userFields = await getUsersVisibleFields(user, detailedUsers, false, false, false);
+                    const userActions = await getPeerUserActions(requester, detailedUsers);
+                    const userFields = await getUsersVisibleFields(requester, detailedUsers, false, false, false);
                     return {
                         ...fieldsFilter(classroom, filteredClassroomFields[i]),
                         users: classroom.users.map((user, j) => ({
@@ -291,32 +385,47 @@ export const updateInstitution = async (req: Request, res: Response): Promise<vo
     }
 };
 
+/**
+ * Gets all institutions from the database.
+ *
+ * This function handles the retrieval of all institutions in the database, validating the user
+ * performing the action to then retrieve all institutions using Prisma.
+ *
+ * @param req - The request object, containing the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getAllInstitutions = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to get all institutions (only admins)
-        await checkAuthorization(user, [], 'getAll');
+        await checkAuthorization(requester, [], 'getAll');
         // Prisma operation
-        const detailedInstitutions = await prismaClient.institution.findMany({ include: detailedInstitutionFields() });
+        const detailedStoredInstitutions = await prismaClient.institution.findMany({ include: detailedInstitutionFields() });
         // Get institutions only with visible fields and with embedded actions
-        const actions = await getInstitutionUserActions(user, detailedInstitutions);
-        const filteredFields = await getVisibleFields(user, detailedInstitutions, true, true, false);
-        const unfilteredFields = (await getVisibleFields(user, detailedInstitutions, true, true, true))[0];
-        unfilteredFields.select.users = (await getUsersVisibleFields(user, [], false, false, true))[0];
-        unfilteredFields.select.classrooms = (await getClassroomVisibleFields(user, [], true, true))[0];
+        const actions = await getInstitutionUserActions(requester, detailedStoredInstitutions);
+        const filteredFields = await getVisibleFields(requester, detailedStoredInstitutions, true, true, false);
+        const unfilteredFields = {
+            select: {
+                ...(await getVisibleFields(requester, detailedStoredInstitutions, true, true, true))[0].select,
+                users: (await getUsersVisibleFields(requester, [], false, false, true))[0],
+                classrooms: (await getClassroomVisibleFields(requester, [], true, true))[0],
+            },
+        };
         const unfilteredInstitutionWUsers = await prismaClient.institution.findMany({
-            where: { id: { in: detailedInstitutions.map(({ id }) => id) } },
+            where: { id: { in: detailedStoredInstitutions.map(({ id }) => id) } },
             ...unfilteredFields,
         });
         const visibleInstitutions = await Promise.all(
             unfilteredInstitutionWUsers.map(async (institution, i) => {
-                const detailedUsers = detailedInstitutions[i].users;
-                const userActions = await getPeerUserActions(user, detailedUsers);
-                const userFields = await getUsersVisibleFields(user, detailedUsers, false, false, false);
-                const detailedClassrooms = detailedInstitutions[i].classrooms;
-                const classroomActions = await getClassroomUserActions(user, detailedClassrooms);
-                const classroomFields = await getClassroomVisibleFields(user, detailedClassrooms, true, false);
+                const detailedUsers = detailedStoredInstitutions[i].users;
+                const userActions = await getPeerUserActions(requester, detailedUsers);
+                const userFields = await getUsersVisibleFields(requester, detailedUsers, false, false, false);
+                const detailedClassrooms = detailedStoredInstitutions[i].classrooms;
+                const classroomActions = await getClassroomUserActions(requester, detailedClassrooms);
+                const classroomFields = await getClassroomVisibleFields(requester, detailedClassrooms, true, false);
                 return {
                     ...fieldsFilter(institution, filteredFields[i]),
                     users: institution.users?.map((user, j) => ({
@@ -326,8 +435,8 @@ export const getAllInstitutions = async (req: Request, res: Response): Promise<v
                     classrooms: await Promise.all(
                         institution.classrooms.map(async (classroom, j) => {
                             const detailedUsers = detailedClassrooms[j].users;
-                            const userActions = await getPeerUserActions(user, detailedUsers);
-                            const userFields = await getUsersVisibleFields(user, detailedUsers, false, false, false);
+                            const userActions = await getPeerUserActions(requester, detailedUsers);
+                            const userFields = await getUsersVisibleFields(requester, detailedUsers, false, false, false);
                             return {
                                 ...fieldsFilter(classroom, classroomFields[j]),
                                 users: classroom.users.map((user, k) => ({
@@ -349,40 +458,55 @@ export const getAllInstitutions = async (req: Request, res: Response): Promise<v
     }
 };
 
+/**
+ * Gets all visible institutions from the database.
+ *
+ * This function handles the retrieval of all visible institutions in the database, validating the user
+ * performing the action to then retrieve all visible institutions using Prisma.
+ *
+ * @param req - The request object, containing the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getVisibleInstitutions = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to get their institutions
-        await checkAuthorization(user, [], 'getVisible');
+        await checkAuthorization(requester, [], 'getVisible');
         // Prisma operation
-        const detailedInstitutions =
-            user.role === UserRole.ADMIN
+        const detailedStoredInstitutions =
+            requester.role === UserRole.ADMIN
                 ? // Admins can see all institutions
                   await prismaClient.institution.findMany({ include: detailedInstitutionFields() })
                 : // Other users can see only their institutions
                   await prismaClient.institution.findMany({
-                      where: { users: { some: { id: user.id } } },
+                      where: { users: { some: { id: requester.id } } },
                       include: detailedInstitutionFields(),
                   });
         // Get institutions only with visible fields and with embedded actions
-        const actions = await getInstitutionUserActions(user, detailedInstitutions);
-        const filteredFields = await getVisibleFields(user, detailedInstitutions, true, true, false);
-        const unfilteredFields = (await getVisibleFields(user, detailedInstitutions, true, true, true))[0];
-        unfilteredFields.select.users = (await getUsersVisibleFields(user, [], false, false, true))[0];
-        unfilteredFields.select.classrooms = (await getClassroomVisibleFields(user, [], true, true))[0];
+        const actions = await getInstitutionUserActions(requester, detailedStoredInstitutions);
+        const filteredFields = await getVisibleFields(requester, detailedStoredInstitutions, true, true, false);
+        const unfilteredFields = {
+            select: {
+                ...(await getVisibleFields(requester, detailedStoredInstitutions, true, true, true))[0].select,
+                users: (await getUsersVisibleFields(requester, [], false, false, true))[0],
+                classrooms: (await getClassroomVisibleFields(requester, [], true, true))[0],
+            },
+        };
         const unfilteredInstitutionWUsers = await prismaClient.institution.findMany({
-            where: { id: { in: detailedInstitutions.map(({ id }) => id) } },
+            where: { id: { in: detailedStoredInstitutions.map(({ id }) => id) } },
             ...unfilteredFields,
         });
         const visibleInstitutions = await Promise.all(
             unfilteredInstitutionWUsers.map(async (institution, i) => {
-                const detailedUsers = detailedInstitutions[i].users;
-                const userActions = await getPeerUserActions(user, detailedUsers);
-                const userFields = await getUsersVisibleFields(user, detailedUsers, false, false, false);
-                const detailedClassrooms = detailedInstitutions[i].classrooms;
-                const classroomActions = await getClassroomUserActions(user, detailedClassrooms);
-                const classroomFields = await getClassroomVisibleFields(user, detailedClassrooms, true, false);
+                const detailedUsers = detailedStoredInstitutions[i].users;
+                const userActions = await getPeerUserActions(requester, detailedUsers);
+                const userFields = await getUsersVisibleFields(requester, detailedUsers, false, false, false);
+                const detailedClassrooms = detailedStoredInstitutions[i].classrooms;
+                const classroomActions = await getClassroomUserActions(requester, detailedClassrooms);
+                const classroomFields = await getClassroomVisibleFields(requester, detailedClassrooms, true, false);
                 return {
                     ...fieldsFilter(institution, filteredFields[i]),
                     users: institution.users?.map((user, j) => ({
@@ -392,8 +516,8 @@ export const getVisibleInstitutions = async (req: Request, res: Response): Promi
                     classrooms: await Promise.all(
                         institution.classrooms.map(async (classroom, j) => {
                             const detailedUsers = detailedClassrooms[j].users;
-                            const userActions = await getPeerUserActions(user, detailedUsers);
-                            const userFields = await getUsersVisibleFields(user, detailedUsers, false, false, false);
+                            const userActions = await getPeerUserActions(requester, detailedUsers);
+                            const userFields = await getUsersVisibleFields(requester, detailedUsers, false, false, false);
                             return {
                                 ...fieldsFilter(classroom, classroomFields[j]),
                                 users: classroom.users.map((user, k) => ({
@@ -415,34 +539,49 @@ export const getVisibleInstitutions = async (req: Request, res: Response): Promi
     }
 };
 
+/**
+ * Gets an institution from the database by ID.
+ *
+ * This function handles the retrieval of an institution in the database by ID, validating the user
+ * performing the action to then retrieve the institution using Prisma.
+ *
+ * @param req - The request object, containing the institution ID in the params and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getInstitution = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
         const institutionId: number = parseInt(req.params.institutionId);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to get an institution
-        await checkAuthorization(user, [institutionId], 'get');
+        await checkAuthorization(requester, [institutionId], 'get');
         // Prisma operation
-        const detailedInstitution = await prismaClient.institution.findUniqueOrThrow({
+        const detailedStoredInstitution = await prismaClient.institution.findUniqueOrThrow({
             where: { id: institutionId },
             include: detailedInstitutionFields(),
         });
         // Get institution only with visible fields and with embedded actions
-        const fieldsWUnfilteredUsers = (await getVisibleFields(user, [detailedInstitution], true, true, false))[0];
-        fieldsWUnfilteredUsers.select.users = (await getUsersVisibleFields(user, [], false, false, true))[0];
-        fieldsWUnfilteredUsers.select.classrooms = (await getClassroomVisibleFields(user, [], true, true))[0];
+        const fieldsWUnfilteredUsers = {
+            select: {
+                ...(await getVisibleFields(requester, [detailedStoredInstitution], true, true, false))[0].select,
+                users: (await getUsersVisibleFields(requester, [], true, true, true))[0],
+                classrooms: (await getClassroomVisibleFields(requester, [], true, true))[0],
+            },
+        };
         const visibleInstitutionWUnfilteredUsers = {
-            ...(await prismaClient.institution.findUnique({ where: { id: detailedInstitution.id }, ...fieldsWUnfilteredUsers })),
-            actions: (await getInstitutionUserActions(user, [detailedInstitution]))[0],
+            ...(await prismaClient.institution.findUnique({ where: { id: detailedStoredInstitution.id }, ...fieldsWUnfilteredUsers })),
+            actions: (await getInstitutionUserActions(requester, [detailedStoredInstitution]))[0],
         };
         // Get users only with visible fields and with embedded actions
-        const detailedUsers = detailedInstitution.users;
-        const userActions = await getPeerUserActions(user, detailedUsers);
-        const filteredUserFields = await getUsersVisibleFields(user, detailedUsers, false, false, false);
-        const detailedClassrooms = detailedInstitution.classrooms;
-        const classroomActions = await getClassroomUserActions(user, detailedClassrooms);
-        const filteredClassroomFields = await getClassroomVisibleFields(user, detailedClassrooms, true, false);
+        const detailedUsers = detailedStoredInstitution.users;
+        const userActions = await getPeerUserActions(requester, detailedUsers);
+        const filteredUserFields = await getUsersVisibleFields(requester, detailedUsers, false, false, false);
+        const detailedClassrooms = detailedStoredInstitution.classrooms;
+        const classroomActions = await getClassroomUserActions(requester, detailedClassrooms);
+        const filteredClassroomFields = await getClassroomVisibleFields(requester, detailedClassrooms, true, false);
         const visibleInstitutionWUsers = {
             ...visibleInstitutionWUnfilteredUsers,
             users: visibleInstitutionWUnfilteredUsers.users?.map((user, i) => ({
@@ -452,8 +591,8 @@ export const getInstitution = async (req: Request, res: Response): Promise<void>
             classrooms: await Promise.all(
                 (visibleInstitutionWUnfilteredUsers.classrooms ?? []).map(async (classroom, i) => {
                     const detailedUsers = detailedClassrooms[i].users;
-                    const userActions = await getPeerUserActions(user, detailedUsers);
-                    const userFields = await getUsersVisibleFields(user, detailedUsers, false, false, false);
+                    const userActions = await getPeerUserActions(requester, detailedUsers);
+                    const userFields = await getUsersVisibleFields(requester, detailedUsers, false, false, false);
                     return {
                         ...fieldsFilter(classroom, filteredClassroomFields[i]),
                         users: classroom.users.map((user, j) => ({
@@ -472,14 +611,25 @@ export const getInstitution = async (req: Request, res: Response): Promise<void>
     }
 };
 
+/**
+ * Deletes an institution from the database by ID.
+ *
+ * This function handles the deletion of an institution in the database by ID, validating the user
+ * performing the action to then delete the institution using Prisma.
+ *
+ * @param req - The request object, containing the institution ID in the params and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const deleteInstitution = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
         const institutionId: number = parseInt(req.params.institutionId);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to delete an institution
-        await checkAuthorization(user, [institutionId], 'delete');
+        await checkAuthorization(requester, [institutionId], 'delete');
         // Prisma operation
         const deletedInstitution = await prismaClient.institution.delete({ where: { id: institutionId }, select: { id: true } });
 

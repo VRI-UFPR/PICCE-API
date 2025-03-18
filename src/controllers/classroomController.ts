@@ -48,6 +48,7 @@ const getDetailedClassrooms = async (classroomsIds: number[]) => {
  *
  * @param user - The user for whom the visible fields are being determined.
  * @param classrooms - The detailed classrooms for which the visible fields are being determined.
+ * @param includeUsers - A boolean indicating whether to include the users of the classrooms in the visible fields.
  * @param ignoreFilters - A boolean indicating whether to ignore role-based filters and grant full access.
  * @returns A promise that resolves to an array of objects representing the visible fields for each classroom.
  */
