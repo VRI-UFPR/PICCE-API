@@ -159,6 +159,8 @@ export const getApplicationsUserActions = async (user: User, applications: Await
  * Checks if the user is authorized to perform a specific action on a set of applications.
  *
  * @param requester - The user object containing requester user details.
+ * @param applicationsId - The IDs of the applications the user wants to perform the action on.
+ * @param protocolsId - The IDs of the protocols associated with the applications.
  * @param action - The action the user wants to perform (e.g., 'create', 'update', 'get', 'delete', 'approve', 'getAll', 'getMy').
  *
  * @throws Will throw an error if the user is not authorized to perform the action.
@@ -210,6 +212,9 @@ const checkAuthorization = async (requester: User, applicationsId: number[], pro
  *
  * @param user - The user for whom the visible fields are being determined.
  * @param applications - The detailed applications for which the visible fields are being determined.
+ * @param includeAnswers - A boolean indicating whether to include the answers in the visible fields.
+ * @param includeViewers - A boolean indicating whether to include the viewers in the visible fields.
+ * @param includeProtocol - A boolean indicating whether to include the protocol in the visible fields.
  * @param ignoreFilters - A boolean indicating whether to ignore role-based filters and grant full access.
  * @returns A promise that resolves to an array of objects representing the visible fields for each application.
  */
@@ -575,36 +580,36 @@ export const createApplication = async (req: Request, res: Response) => {
             })
             .noUnknown();
         // Yup parsing/validation
-        const application = await createApplicationSchema.validate(req.body, { stripUnknown: false });
+        const applicationData = await createApplicationSchema.validate(req.body, { stripUnknown: false });
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if the user is allowed to apply the protocol
-        await checkAuthorization(user, [], [application.protocolId], 'create');
+        await checkAuthorization(requester, [], [applicationData.protocolId], 'create');
         // Check if the viewers are valid
         await validateVisibility(
-            application.visibility,
-            application.answersVisibility,
-            application.viewersUser as number[],
-            application.viewersClassroom as number[],
-            application.answersViewersUser as number[],
-            application.answersViewersClassroom as number[],
-            application.protocolId
+            applicationData.visibility,
+            applicationData.answersVisibility,
+            applicationData.viewersUser as number[],
+            applicationData.viewersClassroom as number[],
+            applicationData.answersViewersUser as number[],
+            applicationData.answersViewersClassroom as number[],
+            applicationData.protocolId
         );
         // Prisma operation
-        const detailedCreatedApplication = await prismaClient.application.create({
+        const detailedStoredApplication = await prismaClient.application.create({
             data: {
-                protocolId: application.protocolId,
-                applierId: user.id,
-                visibility: application.visibility,
-                answersVisibility: application.answersVisibility,
-                viewersUser: { connect: application.viewersUser.map((id) => ({ id: id })) },
-                viewersClassroom: { connect: application.viewersClassroom.map((id) => ({ id: id })) },
-                answersViewersUser: { connect: application.answersViewersUser.map((id) => ({ id: id })) },
-                answersViewersClassroom: { connect: application.answersViewersClassroom.map((id) => ({ id: id })) },
-                keepLocation: application.keepLocation,
-                startDate: application.startDate,
-                endDate: application.endDate,
-                enabled: application.enabled,
+                protocolId: applicationData.protocolId,
+                applierId: requester.id,
+                visibility: applicationData.visibility,
+                answersVisibility: applicationData.answersVisibility,
+                viewersUser: { connect: applicationData.viewersUser.map((id) => ({ id: id })) },
+                viewersClassroom: { connect: applicationData.viewersClassroom.map((id) => ({ id: id })) },
+                answersViewersUser: { connect: applicationData.answersViewersUser.map((id) => ({ id: id })) },
+                answersViewersClassroom: { connect: applicationData.answersViewersClassroom.map((id) => ({ id: id })) },
+                keepLocation: applicationData.keepLocation,
+                startDate: applicationData.startDate,
+                endDate: applicationData.endDate,
+                enabled: applicationData.enabled,
             },
             include: detailedApplicationFields(),
         });
@@ -612,10 +617,10 @@ export const createApplication = async (req: Request, res: Response) => {
         // Get application only with visible fields and with embedded actions
         const visibleApplication = {
             ...(await prismaClient.application.findUnique({
-                where: { id: detailedCreatedApplication.id },
-                ...(await getApplicationsVisibleFields(user, [detailedCreatedApplication], false, true, true, false))[0],
+                where: { id: detailedStoredApplication.id },
+                ...(await getApplicationsVisibleFields(requester, [detailedStoredApplication], false, true, true, false))[0],
             })),
-            actions: (await getApplicationsUserActions(user, [detailedCreatedApplication]))[0],
+            actions: (await getApplicationsUserActions(requester, [detailedStoredApplication]))[0],
         };
 
         res.status(201).json({ message: 'Application created.', data: visibleApplication });
@@ -656,35 +661,35 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
             })
             .noUnknown();
         // Yup parsing/validation
-        const application = await updateApplicationSchema.validate(req.body, { stripUnknown: false });
+        const applicationData = await updateApplicationSchema.validate(req.body, { stripUnknown: false });
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if the user is allowed to update the application
-        await checkAuthorization(user, [applicationId], [], 'update');
+        await checkAuthorization(requester, [applicationId], [], 'update');
         // Check if the viewers are valid
         await validateVisibility(
-            application.visibility,
-            application.answersVisibility,
-            application.viewersUser as number[],
-            application.viewersClassroom as number[],
-            application.answersViewersUser as number[],
-            application.answersViewersClassroom as number[],
+            applicationData.visibility,
+            applicationData.answersVisibility,
+            applicationData.viewersUser as number[],
+            applicationData.viewersClassroom as number[],
+            applicationData.answersViewersUser as number[],
+            applicationData.answersViewersClassroom as number[],
             (await prismaClient.application.findUniqueOrThrow({ where: { id: applicationId } })).protocolId
         );
         // Prisma operation
-        const detailedUpdatedApplication = await prismaClient.application.update({
+        const detailedStoredApplication = await prismaClient.application.update({
             where: { id: applicationId },
             data: {
-                visibility: application.visibility,
-                answersVisibility: application.answersVisibility,
-                viewersUser: { set: [], connect: application.viewersUser.map((id) => ({ id: id })) },
-                viewersClassroom: { set: [], connect: application.viewersClassroom.map((id) => ({ id: id })) },
-                answersViewersUser: { set: [], connect: application.answersViewersUser.map((id) => ({ id: id })) },
-                answersViewersClassroom: { set: [], connect: application.answersViewersClassroom.map((id) => ({ id: id })) },
-                keepLocation: application.keepLocation,
-                startDate: application.startDate,
-                endDate: application.endDate,
-                enabled: application.enabled,
+                visibility: applicationData.visibility,
+                answersVisibility: applicationData.answersVisibility,
+                viewersUser: { set: [], connect: applicationData.viewersUser.map((id) => ({ id: id })) },
+                viewersClassroom: { set: [], connect: applicationData.viewersClassroom.map((id) => ({ id: id })) },
+                answersViewersUser: { set: [], connect: applicationData.answersViewersUser.map((id) => ({ id: id })) },
+                answersViewersClassroom: { set: [], connect: applicationData.answersViewersClassroom.map((id) => ({ id: id })) },
+                keepLocation: applicationData.keepLocation,
+                startDate: applicationData.startDate,
+                endDate: applicationData.endDate,
+                enabled: applicationData.enabled,
             },
             include: detailedApplicationFields(),
         });
@@ -692,10 +697,10 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
         // Get application only with visible fields and with embedded actions
         const visibleApplication = {
             ...(await prismaClient.application.findUnique({
-                where: { id: detailedUpdatedApplication.id },
-                ...(await getApplicationsVisibleFields(user, [detailedUpdatedApplication], false, true, true, false))[0],
+                where: { id: detailedStoredApplication.id },
+                ...(await getApplicationsVisibleFields(requester, [detailedStoredApplication], false, true, true, false))[0],
             })),
-            actions: (await getApplicationsUserActions(user, [detailedUpdatedApplication]))[0],
+            actions: (await getApplicationsUserActions(requester, [detailedStoredApplication]))[0],
         };
 
         res.status(200).json({ message: 'Application updated.', data: visibleApplication });
@@ -718,22 +723,22 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
 export const getMyApplications = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if the user is allowed to get their applications
-        await checkAuthorization(user, [], [], 'getMy');
+        await checkAuthorization(requester, [], [], 'getMy');
         // Prisma operation
-        const detailedApplications = await prismaClient.application.findMany({
+        const detailedStoredApplications = await prismaClient.application.findMany({
             orderBy: { id: 'asc' },
-            where: { applierId: user.id },
+            where: { applierId: requester.id },
             include: detailedApplicationFields(),
         });
 
         // Get application only with visible fields and with embedded actions
-        const actions = await getApplicationsUserActions(user, detailedApplications);
-        const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, true, true, false);
-        const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true, true, true))[0];
+        const actions = await getApplicationsUserActions(requester, detailedStoredApplications);
+        const filteredFields = await getApplicationsVisibleFields(requester, detailedStoredApplications, false, true, true, false);
+        const unfilteredFields = (await getApplicationsVisibleFields(requester, [], false, true, true, true))[0];
         const unfilteredApplications = await prismaClient.application.findMany({
-            where: { id: { in: detailedApplications.map(({ id }) => id) } },
+            where: { id: { in: detailedStoredApplications.map(({ id }) => id) } },
             ...unfilteredFields,
         });
         const visibleApplications = unfilteredApplications.map((application, i) => ({
@@ -761,14 +766,14 @@ export const getMyApplications = async (req: Request, res: Response): Promise<vo
 export const getVisibleApplications = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if the user is allowed to get visible applications
-        await checkAuthorization(user, [], [], 'getVisible');
+        await checkAuthorization(requester, [], [], 'getVisible');
         // Prisma operation
-        const detailedApplications = await prismaClient.application.findMany({
+        const detailedStoredApplications = await prismaClient.application.findMany({
             orderBy: { id: 'asc' },
             where:
-                user.role === UserRole.ADMIN
+                requester.role === UserRole.ADMIN
                     ? undefined
                     : {
                           OR: [
@@ -784,26 +789,26 @@ export const getVisibleApplications = async (req: Request, res: Response): Promi
                                       {
                                           OR: [
                                               { visibility: VisibilityMode.PUBLIC },
-                                              { viewersUser: { some: { id: user.id } } },
-                                              { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
-                                              ...(user.role !== UserRole.GUEST ? [{ visibility: VisibilityMode.AUTHENTICATED }] : []),
+                                              { viewersUser: { some: { id: requester.id } } },
+                                              { viewersClassroom: { some: { users: { some: { id: requester.id } } } } },
+                                              ...(requester.role !== UserRole.GUEST ? [{ visibility: VisibilityMode.AUTHENTICATED }] : []),
                                           ],
                                       },
                                   ],
                               },
-                              { applierId: user.id },
-                              ...(user.role === UserRole.COORDINATOR ? [{ applier: { institutionId: user.institutionId } }] : []),
+                              { applierId: requester.id },
+                              ...(requester.role === UserRole.COORDINATOR ? [{ applier: { institutionId: requester.institutionId } }] : []),
                           ],
                       },
             include: detailedApplicationFields(),
         });
 
         // Get application only with visible fields and with embedded actions
-        const actions = await getApplicationsUserActions(user, detailedApplications);
-        const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, true, true, false);
-        const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true, true, true))[0];
+        const actions = await getApplicationsUserActions(requester, detailedStoredApplications);
+        const filteredFields = await getApplicationsVisibleFields(requester, detailedStoredApplications, false, true, true, false);
+        const unfilteredFields = (await getApplicationsVisibleFields(requester, [], false, true, true, true))[0];
         const unfilteredApplications = await prismaClient.application.findMany({
-            where: { id: { in: detailedApplications.map(({ id }) => id) } },
+            where: { id: { in: detailedStoredApplications.map(({ id }) => id) } },
             ...unfilteredFields,
         });
         const visibleApplications = unfilteredApplications.map((application, i) => ({
@@ -831,21 +836,21 @@ export const getVisibleApplications = async (req: Request, res: Response): Promi
 export const getAllApplications = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if the user is allowed to get all applications
-        await checkAuthorization(user, [], [], 'getAll');
+        await checkAuthorization(requester, [], [], 'getAll');
         // Prisma operation
-        const detailedApplications = await prismaClient.application.findMany({
+        const detailedStoredApplications = await prismaClient.application.findMany({
             orderBy: { id: 'asc' },
             include: detailedApplicationFields(),
         });
 
         // Get application only with visible fields and with embedded actions
-        const actions = await getApplicationsUserActions(user, detailedApplications);
-        const filteredFields = await getApplicationsVisibleFields(user, detailedApplications, false, true, true, false);
-        const unfilteredFields = (await getApplicationsVisibleFields(user, [], false, true, true, true))[0];
+        const actions = await getApplicationsUserActions(requester, detailedStoredApplications);
+        const filteredFields = await getApplicationsVisibleFields(requester, detailedStoredApplications, false, true, true, false);
+        const unfilteredFields = (await getApplicationsVisibleFields(requester, [], false, true, true, true))[0];
         const unfilteredApplications = await prismaClient.application.findMany({
-            where: { id: { in: detailedApplications.map(({ id }) => id) } },
+            where: { id: { in: detailedStoredApplications.map(({ id }) => id) } },
             ...unfilteredFields,
         });
         const visibleApplications = unfilteredApplications.map((application, i) => ({
@@ -875,14 +880,14 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
         // ID from params
         const applicationId: number = parseInt(req.params.applicationId);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if the user is allowed to get the application
-        await checkAuthorization(user, [applicationId], [], 'get');
+        await checkAuthorization(requester, [applicationId], [], 'get');
         // Prisma operation
-        const detailedApplication = await prismaClient.application.findUniqueOrThrow({
+        const detailedStoredApplication = await prismaClient.application.findUniqueOrThrow({
             where: {
                 id: applicationId,
-                ...(user.role === UserRole.ADMIN
+                ...(requester.role === UserRole.ADMIN
                     ? []
                     : [
                           {
@@ -899,15 +904,19 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
                                           {
                                               OR: [
                                                   { visibility: VisibilityMode.PUBLIC },
-                                                  { viewersUser: { some: { id: user.id } } },
-                                                  { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
-                                                  ...(user.role !== UserRole.GUEST ? [{ visibility: VisibilityMode.AUTHENTICATED }] : []),
+                                                  { viewersUser: { some: { id: requester.id } } },
+                                                  { viewersClassroom: { some: { users: { some: { id: requester.id } } } } },
+                                                  ...(requester.role !== UserRole.GUEST
+                                                      ? [{ visibility: VisibilityMode.AUTHENTICATED }]
+                                                      : []),
                                               ],
                                           },
                                       ],
                                   },
-                                  { applierId: user.id },
-                                  ...(user.role === UserRole.COORDINATOR ? [{ applier: { institutionId: user.institutionId } }] : []),
+                                  { applierId: requester.id },
+                                  ...(requester.role === UserRole.COORDINATOR
+                                      ? [{ applier: { institutionId: requester.institutionId } }]
+                                      : []),
                               ],
                           },
                       ]),
@@ -919,9 +928,9 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
         const visibleApplication = {
             ...(await prismaClient.application.findUnique({
                 where: { id: applicationId },
-                ...(await getApplicationsVisibleFields(user, [detailedApplication], false, true, true, false))[0],
+                ...(await getApplicationsVisibleFields(requester, [detailedStoredApplication], false, true, true, false))[0],
             })),
-            actions: (await getApplicationsUserActions(user, [detailedApplication]))[0],
+            actions: (await getApplicationsUserActions(requester, [detailedStoredApplication]))[0],
         };
 
         res.status(200).json({ message: 'Application found.', data: visibleApplication });
@@ -946,11 +955,11 @@ export const getApplicationWithProtocol = async (req: Request, res: Response): P
         // ID from params
         const applicationId: number = parseInt(req.params.applicationId);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if the user is allowed to view applications with protocols
-        await checkAuthorization(user, [applicationId], [], 'get');
+        await checkAuthorization(requester, [applicationId], [], 'get');
         // Prisma operation
-        const detailedApplication = await prismaClient.application.findUniqueOrThrow({
+        const detailedStoredApplication = await prismaClient.application.findUniqueOrThrow({
             where: { id: applicationId },
             include: detailedApplicationFields(),
         });
@@ -959,9 +968,9 @@ export const getApplicationWithProtocol = async (req: Request, res: Response): P
         const visibleApplication = {
             ...(await prismaClient.application.findUnique({
                 where: { id: applicationId },
-                ...(await getApplicationsVisibleFields(user, [detailedApplication], false, true, true, false))[0],
+                ...(await getApplicationsVisibleFields(requester, [detailedStoredApplication], false, true, true, false))[0],
             })),
-            actions: (await getApplicationsUserActions(user, [detailedApplication]))[0],
+            actions: (await getApplicationsUserActions(requester, [detailedStoredApplication]))[0],
         };
 
         res.status(200).json({ message: 'Application with protocol found.', data: visibleApplication });
@@ -986,11 +995,11 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
         // ID from params
         const applicationId: number = parseInt(req.params.applicationId);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is allowed to view applications with answers
-        await checkAuthorization(user, [applicationId], [], 'get');
+        await checkAuthorization(requester, [applicationId], [], 'get');
         // Prisma operation
-        const detailedApplication: any = await prismaClient.application.findUniqueOrThrow({
+        const detailedStoredApplication: any = await prismaClient.application.findUniqueOrThrow({
             where: { id: applicationId },
             include: detailedApplicationFields(),
         });
@@ -999,9 +1008,9 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
         const visibleApplication = {
             ...(await prismaClient.application.findUnique({
                 where: { id: applicationId },
-                ...(await getApplicationsVisibleFields(user, [detailedApplication], true, true, true, false))[0],
+                ...(await getApplicationsVisibleFields(requester, [detailedStoredApplication], true, true, true, false))[0],
             })),
-            actions: (await getApplicationsUserActions(user, [detailedApplication]))[0],
+            actions: (await getApplicationsUserActions(requester, [detailedStoredApplication]))[0],
         };
 
         const processedApplication: any = { ...visibleApplication };
@@ -1142,9 +1151,9 @@ export const deleteApplication = async (req: Request, res: Response): Promise<vo
         // ID from params
         const applicationId: number = parseInt(req.params.applicationId);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is allowed to delete the application
-        await checkAuthorization(user, [applicationId], [], 'delete');
+        await checkAuthorization(requester, [applicationId], [], 'delete');
         // Prisma operation
         const deletedApplication = await prismaClient.application.delete({
             where: { id: applicationId },

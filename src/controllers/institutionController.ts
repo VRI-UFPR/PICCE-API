@@ -149,6 +149,9 @@ const getVisibleFields = async (
  * @returns A promise that resolves to an array of objects representing the actions that the user can perform on each institution.
  *
  * The returned action object contains the following properties:
+ * - `toUpdate` - Whether the user can perform update operations on the institution.
+ * - `toDelete` - Whether the user can perform delete operations on the institution.
+ * - `toGet` - Whether the user can perform get operations on the institution.
  */
 const getInstitutionUserActions = async (user: User, institutions: Awaited<ReturnType<typeof getDetailedInstitutions>>) => {
     const institutionsRoles = await getInstitutionUserRoles(user, institutions);

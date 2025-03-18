@@ -426,7 +426,8 @@ export const getProtocolsUserActions = async (user: User, protocols: Awaited<Ret
  * Checks if the user is authorized to perform a specific action on a set of protocols.
  *
  * @param requester - The user object containing requester user details.
- * @param action - The action the user wants to perform (e.g., 'create', 'update', 'get', 'delete', 'approve', 'getAll', 'getMy').
+ * @param protocolIds - An array of protocol IDs on which the user wants to perform the action.
+ * @param action - The action the user wants to perform (e.g., 'create', 'update', 'delete', 'get', 'getWAnswers').
  *
  * @throws Will throw an error if the user is not authorized to perform the action.
  * @returns A promise that resolves if the user is authorized to perform the action.
@@ -922,9 +923,9 @@ export const createProtocol = async (req: Request, res: Response) => {
             })
             .noUnknown();
         // Yup parsing/validation
-        const protocol = await createProtocolSchema.validate(req.body, { stripUnknown: true });
+        const protocolData = await createProtocolSchema.validate(req.body, { stripUnknown: true });
         // Sort elements by placement
-        for (const page of protocol.pages) {
+        for (const page of protocolData.pages) {
             page.itemGroups.sort((a, b) => a.placement - b.placement);
             for (const itemGroup of page.itemGroups) {
                 for (const item of itemGroup.items) {
@@ -934,48 +935,48 @@ export const createProtocol = async (req: Request, res: Response) => {
                 itemGroup.tableColumns.sort((a, b) => a.placement - b.placement);
             }
         }
-        protocol.pages.sort((a, b) => a.placement - b.placement);
+        protocolData.pages.sort((a, b) => a.placement - b.placement);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is allowed to create a application
-        await checkAuthorization(user, [], 'create');
+        await checkAuthorization(requester, [], 'create');
         // Check if managers are publishers, coordinators or admins of the same institution
-        await validateManagers(protocol.managers as number[], user.institutionId);
+        await validateManagers(protocolData.managers as number[], requester.institutionId);
         // Check if viewers are not guests or admins
-        await validadeViewers(protocol.viewersUser as number[]);
-        await validadeViewers(protocol.answersViewersUser as number[]);
+        await validadeViewers(protocolData.viewersUser as number[]);
+        await validadeViewers(protocolData.answersViewersUser as number[]);
         // Check if appliers are publishers, coordinators or appliers
-        await validateAppliers(protocol.appliers as number[]);
+        await validateAppliers(protocolData.appliers as number[]);
         // Check if protocol placements are valid
-        await validateProtocolPlacements(protocol);
+        await validateProtocolPlacements(protocolData);
         // Check if dependencies are valid
-        await validateDependencies(protocol);
+        await validateDependencies(protocolData);
         // Multer files
         const files = req.files as Express.Multer.File[];
         // Create map table for tempIds
         const tempIdMap = new Map<number, number>();
         // Prisma transaction
-        const detailedCreatedProtocol = await prismaClient.$transaction(async (prisma) => {
+        const detailedStoredProtocol = await prismaClient.$transaction(async (prisma) => {
             const createdProtocol = await prisma.protocol.create({
                 data: {
-                    title: protocol.title,
-                    description: protocol.description,
-                    enabled: protocol.enabled,
-                    creatorId: user.id,
-                    managers: { connect: protocol.managers.map((manager) => ({ id: manager })) },
-                    visibility: protocol.visibility as VisibilityMode,
-                    applicability: protocol.applicability as VisibilityMode,
-                    answersVisibility: protocol.answersVisibility as VisibilityMode,
-                    viewersUser: { connect: protocol.viewersUser.map((viewer) => ({ id: viewer })) },
-                    viewersClassroom: { connect: protocol.viewersClassroom.map((viewer) => ({ id: viewer })) },
-                    answersViewersUser: { connect: protocol.answersViewersUser.map((viewer) => ({ id: viewer })) },
-                    answersViewersClassroom: { connect: protocol.answersViewersClassroom.map((viewer) => ({ id: viewer })) },
-                    appliers: { connect: protocol.appliers.map((applier) => ({ id: applier })) },
-                    replicable: protocol.replicable,
+                    title: protocolData.title,
+                    description: protocolData.description,
+                    enabled: protocolData.enabled,
+                    creatorId: requester.id,
+                    managers: { connect: protocolData.managers.map((manager) => ({ id: manager })) },
+                    visibility: protocolData.visibility as VisibilityMode,
+                    applicability: protocolData.applicability as VisibilityMode,
+                    answersVisibility: protocolData.answersVisibility as VisibilityMode,
+                    viewersUser: { connect: protocolData.viewersUser.map((viewer) => ({ id: viewer })) },
+                    viewersClassroom: { connect: protocolData.viewersClassroom.map((viewer) => ({ id: viewer })) },
+                    answersViewersUser: { connect: protocolData.answersViewersUser.map((viewer) => ({ id: viewer })) },
+                    answersViewersClassroom: { connect: protocolData.answersViewersClassroom.map((viewer) => ({ id: viewer })) },
+                    appliers: { connect: protocolData.appliers.map((applier) => ({ id: applier })) },
+                    replicable: protocolData.replicable,
                 },
             });
             // Create nested pages as well as nested itemGroups, items, itemOptions and itemValidations
-            for (const [pageId, page] of protocol.pages.entries()) {
+            for (const [pageId, page] of protocolData.pages.entries()) {
                 const createdPage = await prisma.page.create({
                     data: { placement: page.placement, protocolId: createdProtocol.id, type: page.type },
                 });
@@ -1093,19 +1094,21 @@ export const createProtocol = async (req: Request, res: Response) => {
         });
 
         // Get protocol only with visible fields and with embedded actions
-        const fieldsWUnfilteredApplications = (await getVisibleFields(user, [detailedCreatedProtocol], false, false))[0];
-        fieldsWUnfilteredApplications.select.applications = (await getApplicationsVisibleFields(user, [], false, false, false, true))[0];
+        const fieldsWUnfilteredApplications = (await getVisibleFields(requester, [detailedStoredProtocol], false, false))[0];
+        fieldsWUnfilteredApplications.select.applications = (
+            await getApplicationsVisibleFields(requester, [], false, false, false, true)
+        )[0];
         const visibleProtocolWUnfilteredApplications = {
             ...(await prismaClient.protocol.findUnique({
-                where: { id: detailedCreatedProtocol.id },
+                where: { id: detailedStoredProtocol.id },
                 ...fieldsWUnfilteredApplications,
             })),
-            actions: (await getProtocolsUserActions(user, [detailedCreatedProtocol]))[0],
+            actions: (await getProtocolsUserActions(requester, [detailedStoredProtocol]))[0],
         };
         // Get applicattions only with visible fields and with embedded actions
-        const detailedApplications = detailedCreatedProtocol.applications;
-        const applicationActions = await getApplicationsUserActions(user, detailedApplications);
-        const applicationFields = await getApplicationsVisibleFields(user, detailedApplications, false, false, false, false);
+        const detailedApplications = detailedStoredProtocol.applications;
+        const applicationActions = await getApplicationsUserActions(requester, detailedApplications);
+        const applicationFields = await getApplicationsVisibleFields(requester, detailedApplications, false, false, false, false);
         const visibleProtocolWApplications = {
             ...visibleProtocolWUnfilteredApplications,
             applications: visibleProtocolWUnfilteredApplications.applications?.map((application, i) => ({
@@ -1136,7 +1139,7 @@ export const createProtocol = async (req: Request, res: Response) => {
 export const updateProtocol = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
-        const id: number = parseInt(req.params.protocolId);
+        const protocolId: number = parseInt(req.params.protocolId);
         // Yup schemas
         const updateFileSchema = yup
             .object()
@@ -1240,9 +1243,9 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             })
             .noUnknown();
         // Yup parsing/validation
-        const protocol = await updateProtocolSchema.validate(req.body, { stripUnknown: true });
+        const protocolData = await updateProtocolSchema.validate(req.body, { stripUnknown: true });
         // Sort elements by placement
-        for (const page of protocol.pages) {
+        for (const page of protocolData.pages) {
             page.itemGroups.sort((a, b) => a.placement - b.placement);
             for (const itemGroup of page.itemGroups) {
                 for (const item of itemGroup.items) {
@@ -1252,64 +1255,64 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                 itemGroup.tableColumns.sort((a, b) => a.placement - b.placement);
             }
         }
-        protocol.pages.sort((a, b) => a.placement - b.placement);
+        protocolData.pages.sort((a, b) => a.placement - b.placement);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is included in the managers, or if user is admin
-        await checkAuthorization(user, [id], 'update');
+        await checkAuthorization(requester, [protocolId], 'update');
         // Check if managers are publishers, coordinators or admins of the same institution
-        await validateManagers(protocol.managers as number[], user.institutionId);
+        await validateManagers(protocolData.managers as number[], requester.institutionId);
         // Check if viewers are not guests or admins
-        await validadeViewers(protocol.viewersUser as number[]);
-        await validadeViewers(protocol.answersViewersUser as number[]);
+        await validadeViewers(protocolData.viewersUser as number[]);
+        await validadeViewers(protocolData.answersViewersUser as number[]);
         // Check if appliers are publishers, coordinators or appliers
-        await validateAppliers(protocol.appliers as number[]);
+        await validateAppliers(protocolData.appliers as number[]);
         // Check if protocol placements are valid
-        await validateProtocolPlacements(protocol);
+        await validateProtocolPlacements(protocolData);
         // Check if dependencies are valid
-        await validateDependencies(protocol);
+        await validateDependencies(protocolData);
         //Multer files
         const files = req.files as Express.Multer.File[];
         // Create map table for tempIds
         const tempIdMap = new Map<number, number>();
         // Prisma transaction
-        const detailedUpsertedProtocol = await prismaClient.$transaction(async (prisma) => {
+        const detailedStoredProtocol = await prismaClient.$transaction(async (prisma) => {
             // Update protocol
             await prisma.protocol.update({
-                where: { id: id },
+                where: { id: protocolId },
                 data: {
-                    title: protocol.title,
-                    description: protocol.description,
-                    enabled: protocol.enabled,
-                    managers: { set: [], connect: protocol.managers.map((manager) => ({ id: manager })) },
-                    visibility: protocol.visibility as VisibilityMode,
-                    applicability: protocol.applicability as VisibilityMode,
-                    answersVisibility: protocol.answersVisibility as VisibilityMode,
-                    viewersUser: { set: [], connect: protocol.viewersUser.map((viewer) => ({ id: viewer })) },
-                    viewersClassroom: { set: [], connect: protocol.viewersClassroom.map((viewer) => ({ id: viewer })) },
-                    answersViewersUser: { set: [], connect: protocol.answersViewersUser.map((viewer) => ({ id: viewer })) },
-                    answersViewersClassroom: { set: [], connect: protocol.answersViewersClassroom.map((viewer) => ({ id: viewer })) },
-                    appliers: { set: [], connect: protocol.appliers.map((applier) => ({ id: applier })) },
-                    replicable: protocol.replicable,
+                    title: protocolData.title,
+                    description: protocolData.description,
+                    enabled: protocolData.enabled,
+                    managers: { set: [], connect: protocolData.managers.map((manager) => ({ id: manager })) },
+                    visibility: protocolData.visibility as VisibilityMode,
+                    applicability: protocolData.applicability as VisibilityMode,
+                    answersVisibility: protocolData.answersVisibility as VisibilityMode,
+                    viewersUser: { set: [], connect: protocolData.viewersUser.map((viewer) => ({ id: viewer })) },
+                    viewersClassroom: { set: [], connect: protocolData.viewersClassroom.map((viewer) => ({ id: viewer })) },
+                    answersViewersUser: { set: [], connect: protocolData.answersViewersUser.map((viewer) => ({ id: viewer })) },
+                    answersViewersClassroom: { set: [], connect: protocolData.answersViewersClassroom.map((viewer) => ({ id: viewer })) },
+                    appliers: { set: [], connect: protocolData.appliers.map((applier) => ({ id: applier })) },
+                    replicable: protocolData.replicable,
                 },
             });
             // Remove pages that are not in the updated protocol
             await prisma.page.deleteMany({
                 where: {
-                    id: { notIn: protocol.pages.filter((page) => page.id).map((page) => page.id as number) },
-                    protocolId: id,
+                    id: { notIn: protocolData.pages.filter((page) => page.id).map((page) => page.id as number) },
+                    protocolId: protocolId,
                 },
             });
             // Update existing pages or create new ones
-            for (const [pageId, page] of protocol.pages.entries()) {
+            for (const [pageId, page] of protocolData.pages.entries()) {
                 const upsertedPage = page.id
                     ? await prisma.page.update({
-                          where: { id: page.id, protocolId: id },
+                          where: { id: page.id, protocolId: protocolId },
                           data: { placement: page.placement, type: page.type },
                       })
                     : await prisma.page.create({
                           data: {
-                              protocolId: id as number,
+                              protocolId: protocolId as number,
                               placement: page.placement as number,
                               type: page.type as PageType,
                           },
@@ -1589,23 +1592,25 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             }
 
             // Return the updated protocol with nested content included
-            return await prisma.protocol.findUniqueOrThrow({ where: { id: id }, include: detailedProtocolFields() });
+            return await prisma.protocol.findUniqueOrThrow({ where: { id: protocolId }, include: detailedProtocolFields() });
         });
 
         // Get protocol only with visible fields and with embedded actions
-        const fieldsWUnfilteredApplications = (await getVisibleFields(user, [detailedUpsertedProtocol], false, false))[0];
-        fieldsWUnfilteredApplications.select.applications = (await getApplicationsVisibleFields(user, [], false, false, false, true))[0];
+        const fieldsWUnfilteredApplications = (await getVisibleFields(requester, [detailedStoredProtocol], false, false))[0];
+        fieldsWUnfilteredApplications.select.applications = (
+            await getApplicationsVisibleFields(requester, [], false, false, false, true)
+        )[0];
         const visibleProtocolWUnfilteredApplications = {
             ...(await prismaClient.protocol.findUnique({
-                where: { id: detailedUpsertedProtocol.id },
+                where: { id: detailedStoredProtocol.id },
                 ...fieldsWUnfilteredApplications,
             })),
-            actions: (await getProtocolsUserActions(user, [detailedUpsertedProtocol]))[0],
+            actions: (await getProtocolsUserActions(requester, [detailedStoredProtocol]))[0],
         };
         // Get applicattions only with visible fields and with embedded actions
-        const detailedApplications = detailedUpsertedProtocol.applications;
-        const applicationActions = await getApplicationsUserActions(user, detailedApplications);
-        const applicationFields = await getApplicationsVisibleFields(user, detailedApplications, false, false, false, false);
+        const detailedApplications = detailedStoredProtocol.applications;
+        const applicationActions = await getApplicationsUserActions(requester, detailedApplications);
+        const applicationFields = await getApplicationsVisibleFields(requester, detailedApplications, false, false, false, false);
         const visibleProtocolWApplications = {
             ...visibleProtocolWUnfilteredApplications,
             applications: visibleProtocolWUnfilteredApplications.applications?.map((application, i) => ({
@@ -1636,26 +1641,26 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
 export const getAllProtocols = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is allowed to get all protocols
-        await checkAuthorization(user, [], 'getAll');
+        await checkAuthorization(requester, [], 'getAll');
         // Prisma operation
-        const detailedProtocols = await prismaClient.protocol.findMany({ orderBy: { id: 'asc' }, include: detailedProtocolFields() });
+        const detailedStoredProtocols = await prismaClient.protocol.findMany({ orderBy: { id: 'asc' }, include: detailedProtocolFields() });
         // Get protocol only with visible fields and with embedded actions
-        const actions = await getProtocolsUserActions(user, detailedProtocols);
-        const filteredFields = await getVisibleFields(user, detailedProtocols, false, false);
-        const unfilteredFields = (await getVisibleFields(user, detailedProtocols, false, true))[0];
-        unfilteredFields.select.applications = (await getApplicationsVisibleFields(user, [], false, false, false, true))[0];
+        const actions = await getProtocolsUserActions(requester, detailedStoredProtocols);
+        const filteredFields = await getVisibleFields(requester, detailedStoredProtocols, false, false);
+        const unfilteredFields = (await getVisibleFields(requester, detailedStoredProtocols, false, true))[0];
+        unfilteredFields.select.applications = (await getApplicationsVisibleFields(requester, [], false, false, false, true))[0];
         const unfilteredProtocolsWApplications = await prismaClient.protocol.findMany({
-            where: { id: { in: detailedProtocols.map((protocol) => protocol.id) } },
+            where: { id: { in: detailedStoredProtocols.map((protocol) => protocol.id) } },
             ...unfilteredFields,
         });
         const visibleProtocols = await Promise.all(
             unfilteredProtocolsWApplications.map(async (protocol, i) => {
-                const applicationsActions = await getApplicationsUserActions(user, detailedProtocols[i].applications);
+                const applicationsActions = await getApplicationsUserActions(requester, detailedStoredProtocols[i].applications);
                 const applicationsFields = await getApplicationsVisibleFields(
-                    user,
-                    detailedProtocols[i].applications,
+                    requester,
+                    detailedStoredProtocols[i].applications,
                     false,
                     false,
                     false,
@@ -1692,25 +1697,25 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
 export const getVisibleProtocols = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is allowed to get visible protocols
-        await checkAuthorization(user, [], 'getVisible');
+        await checkAuthorization(requester, [], 'getVisible');
         // Prisma operation
-        const detailedProtocols =
-            user.role === UserRole.ADMIN
+        const detailedStoredProtocols =
+            requester.role === UserRole.ADMIN
                 ? await prismaClient.protocol.findMany({ orderBy: { id: 'asc' }, include: detailedProtocolFields() })
                 : await prismaClient.protocol.findMany({
                       orderBy: { id: 'asc' },
                       where: {
                           OR: [
-                              { managers: { some: { id: user.id } } },
-                              { appliers: { some: { id: user.id } } },
-                              { viewersUser: { some: { id: user.id } }, enabled: true },
-                              { viewersClassroom: { some: { users: { some: { id: user.id } } } }, enabled: true },
-                              { creatorId: user.id },
+                              { managers: { some: { id: requester.id } } },
+                              { appliers: { some: { id: requester.id } } },
+                              { viewersUser: { some: { id: requester.id } }, enabled: true },
+                              { viewersClassroom: { some: { users: { some: { id: requester.id } } } }, enabled: true },
+                              { creatorId: requester.id },
                               { visibility: VisibilityMode.PUBLIC, enabled: true },
-                              ...(user.role === UserRole.COORDINATOR ? [{ creator: { institutionId: user.institutionId } }] : []),
-                              ...(user.role !== UserRole.GUEST ? [{ visibility: VisibilityMode.AUTHENTICATED, enabled: true }] : []),
+                              ...(requester.role === UserRole.COORDINATOR ? [{ creator: { institutionId: requester.institutionId } }] : []),
+                              ...(requester.role !== UserRole.GUEST ? [{ visibility: VisibilityMode.AUTHENTICATED, enabled: true }] : []),
                           ],
                           enabled: true,
                       },
@@ -1718,20 +1723,20 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
                   });
 
         // Get protocol only with visible fields and with embedded actions
-        const actions = await getProtocolsUserActions(user, detailedProtocols);
-        const filteredFields = await getVisibleFields(user, detailedProtocols, false, false);
-        const unfilteredFields = (await getVisibleFields(user, detailedProtocols, false, true))[0];
-        unfilteredFields.select.applications = (await getApplicationsVisibleFields(user, [], false, false, false, true))[0];
+        const actions = await getProtocolsUserActions(requester, detailedStoredProtocols);
+        const filteredFields = await getVisibleFields(requester, detailedStoredProtocols, false, false);
+        const unfilteredFields = (await getVisibleFields(requester, detailedStoredProtocols, false, true))[0];
+        unfilteredFields.select.applications = (await getApplicationsVisibleFields(requester, [], false, false, false, true))[0];
         const unfilteredProtocolsWApplications = await prismaClient.protocol.findMany({
-            where: { id: { in: detailedProtocols.map((protocol) => protocol.id) } },
+            where: { id: { in: detailedStoredProtocols.map((protocol) => protocol.id) } },
             ...unfilteredFields,
         });
         const visibleProtocols = await Promise.all(
             unfilteredProtocolsWApplications.map(async (protocol, i) => {
-                const applicationsActions = await getApplicationsUserActions(user, detailedProtocols[i].applications);
+                const applicationsActions = await getApplicationsUserActions(requester, detailedStoredProtocols[i].applications);
                 const applicationsFields = await getApplicationsVisibleFields(
-                    user,
-                    detailedProtocols[i].applications,
+                    requester,
+                    detailedStoredProtocols[i].applications,
                     false,
                     false,
                     false,
@@ -1768,28 +1773,28 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
 export const getMyProtocols = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Prisma operation
-        const detailedProtocols = await prismaClient.protocol.findMany({
+        const detailedStoredProtocols = await prismaClient.protocol.findMany({
             orderBy: { id: 'asc' },
-            where: { OR: [{ managers: { some: { id: user.id } }, creatorId: user.id }] },
+            where: { OR: [{ managers: { some: { id: requester.id } }, creatorId: requester.id }] },
             include: detailedProtocolFields(),
         });
         // Get protocol only with visible fields and with embedded actions
-        const actions = await getProtocolsUserActions(user, detailedProtocols);
-        const filteredFields = await getVisibleFields(user, detailedProtocols, false, false);
-        const unfilteredFields = (await getVisibleFields(user, detailedProtocols, false, true))[0];
-        unfilteredFields.select.applications = (await getApplicationsVisibleFields(user, [], false, false, false, true))[0];
+        const actions = await getProtocolsUserActions(requester, detailedStoredProtocols);
+        const filteredFields = await getVisibleFields(requester, detailedStoredProtocols, false, false);
+        const unfilteredFields = (await getVisibleFields(requester, detailedStoredProtocols, false, true))[0];
+        unfilteredFields.select.applications = (await getApplicationsVisibleFields(requester, [], false, false, false, true))[0];
         const unfilteredProtocolsWApplications = await prismaClient.protocol.findMany({
-            where: { id: { in: detailedProtocols.map((protocol) => protocol.id) } },
+            where: { id: { in: detailedStoredProtocols.map((protocol) => protocol.id) } },
             ...unfilteredFields,
         });
         const visibleProtocols = await Promise.all(
             unfilteredProtocolsWApplications.map(async (protocol, i) => {
-                const applicationsActions = await getApplicationsUserActions(user, detailedProtocols[i].applications);
+                const applicationsActions = await getApplicationsUserActions(requester, detailedStoredProtocols[i].applications);
                 const applicationsFields = await getApplicationsVisibleFields(
-                    user,
-                    detailedProtocols[i].applications,
+                    requester,
+                    detailedStoredProtocols[i].applications,
                     false,
                     false,
                     false,
@@ -1828,41 +1833,43 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
         // ID from params
         const protocolId: number = parseInt(req.params.protocolId);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is allowed to get the protocol
-        await checkAuthorization(user, [protocolId], 'get');
+        await checkAuthorization(requester, [protocolId], 'get');
         // Get protocol with nested content included
-        const detailedProtocol = await prismaClient.protocol.findUniqueOrThrow({
+        const detailedStoredProtocol = await prismaClient.protocol.findUniqueOrThrow({
             where: {
                 id: protocolId,
                 OR: [
-                    { managers: { some: { id: user.id } } },
-                    { appliers: { some: { id: user.id } }, enabled: true },
-                    { viewersUser: { some: { id: user.id } }, enabled: true },
-                    { viewersClassroom: { some: { users: { some: { id: user.id } } } }, enabled: true },
-                    { creatorId: user.id },
+                    { managers: { some: { id: requester.id } } },
+                    { appliers: { some: { id: requester.id } }, enabled: true },
+                    { viewersUser: { some: { id: requester.id } }, enabled: true },
+                    { viewersClassroom: { some: { users: { some: { id: requester.id } } } }, enabled: true },
+                    { creatorId: requester.id },
                     { visibility: VisibilityMode.PUBLIC, enabled: true },
-                    ...(user.role === UserRole.COORDINATOR ? [{ creator: { institutionId: user.institutionId } }] : []),
-                    ...(user.role !== UserRole.GUEST ? [{ visibility: VisibilityMode.AUTHENTICATED, enabled: true }] : []),
+                    ...(requester.role === UserRole.COORDINATOR ? [{ creator: { institutionId: requester.institutionId } }] : []),
+                    ...(requester.role !== UserRole.GUEST ? [{ visibility: VisibilityMode.AUTHENTICATED, enabled: true }] : []),
                 ],
             },
             include: detailedProtocolFields(),
         });
 
         // Get protocol only with visible fields and with embedded actions
-        const fieldsWUnfilteredApplications = (await getVisibleFields(user, [detailedProtocol], false, false))[0];
-        fieldsWUnfilteredApplications.select.applications = (await getApplicationsVisibleFields(user, [], false, false, false, true))[0];
+        const fieldsWUnfilteredApplications = (await getVisibleFields(requester, [detailedStoredProtocol], false, false))[0];
+        fieldsWUnfilteredApplications.select.applications = (
+            await getApplicationsVisibleFields(requester, [], false, false, false, true)
+        )[0];
         const visibleProtocolWUnfilteredApplications = {
             ...(await prismaClient.protocol.findUnique({
-                where: { id: detailedProtocol.id },
+                where: { id: detailedStoredProtocol.id },
                 ...fieldsWUnfilteredApplications,
             })),
-            actions: (await getProtocolsUserActions(user, [detailedProtocol]))[0],
+            actions: (await getProtocolsUserActions(requester, [detailedStoredProtocol]))[0],
         };
         // Get applicattions only with visible fields and with embedded actions
-        const detailedApplications = detailedProtocol.applications;
-        const applicationActions = await getApplicationsUserActions(user, detailedApplications);
-        const applicationFields = await getApplicationsVisibleFields(user, detailedApplications, false, false, false, false);
+        const detailedApplications = detailedStoredProtocol.applications;
+        const applicationActions = await getApplicationsUserActions(requester, detailedApplications);
+        const applicationFields = await getApplicationsVisibleFields(requester, detailedApplications, false, false, false, false);
         const visibleProtocolWApplications = {
             ...visibleProtocolWUnfilteredApplications,
             applications: visibleProtocolWUnfilteredApplications.applications?.map((application, i) => ({
@@ -1893,40 +1900,42 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
         // ID from params
         const protocolId: number = parseInt(req.params.protocolId);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is allowed to get the protocol
-        await checkAuthorization(user, [protocolId], 'getWAnswers');
+        await checkAuthorization(requester, [protocolId], 'getWAnswers');
         // Get protocol with nested content included
-        const detailedProtocol = await prismaClient.protocol.findUniqueOrThrow({
+        const detailedStoredProtocol = await prismaClient.protocol.findUniqueOrThrow({
             where: {
                 id: protocolId,
                 OR: [
-                    { managers: { some: { id: user.id } } },
-                    { answersViewersUser: { some: { id: user.id } }, enabled: true },
-                    { answersViewersClassroom: { some: { users: { some: { id: user.id } } } }, enabled: true },
-                    { creatorId: user.id },
+                    { managers: { some: { id: requester.id } } },
+                    { answersViewersUser: { some: { id: requester.id } }, enabled: true },
+                    { answersViewersClassroom: { some: { users: { some: { id: requester.id } } } }, enabled: true },
+                    { creatorId: requester.id },
                     { answersVisibility: VisibilityMode.PUBLIC, enabled: true },
-                    ...(user.role === UserRole.COORDINATOR ? [{ creator: { institutionId: user.institutionId } }] : []),
-                    ...(user.role !== UserRole.GUEST ? [{ answersVisibility: VisibilityMode.AUTHENTICATED, enabled: true }] : []),
+                    ...(requester.role === UserRole.COORDINATOR ? [{ creator: { institutionId: requester.institutionId } }] : []),
+                    ...(requester.role !== UserRole.GUEST ? [{ answersVisibility: VisibilityMode.AUTHENTICATED, enabled: true }] : []),
                 ],
             },
             include: detailedProtocolFields(),
         });
 
         // Get protocol only with visible fields and with embedded actions
-        const fieldsWUnfilteredApplications = (await getVisibleFields(user, [detailedProtocol], true, false))[0];
-        fieldsWUnfilteredApplications.select.applications = (await getApplicationsVisibleFields(user, [], true, false, false, true))[0];
+        const fieldsWUnfilteredApplications = (await getVisibleFields(requester, [detailedStoredProtocol], true, false))[0];
+        fieldsWUnfilteredApplications.select.applications = (
+            await getApplicationsVisibleFields(requester, [], true, false, false, true)
+        )[0];
         const visibleProtocolWUnfilteredApplications = {
             ...(await prismaClient.protocol.findUnique({
-                where: { id: detailedProtocol.id },
+                where: { id: detailedStoredProtocol.id },
                 ...fieldsWUnfilteredApplications,
             })),
-            actions: (await getProtocolsUserActions(user, [detailedProtocol]))[0],
+            actions: (await getProtocolsUserActions(requester, [detailedStoredProtocol]))[0],
         };
         // Get applicattions only with visible fields and with embedded actions
-        const detailedApplications = detailedProtocol.applications;
-        const applicationActions = await getApplicationsUserActions(user, detailedApplications);
-        const applicationFields = await getApplicationsVisibleFields(user, detailedApplications, true, false, false, false);
+        const detailedApplications = detailedStoredProtocol.applications;
+        const applicationActions = await getApplicationsUserActions(requester, detailedApplications);
+        const applicationFields = await getApplicationsVisibleFields(requester, detailedApplications, true, false, false, false);
         const visibleProtocolWApplications = {
             ...visibleProtocolWUnfilteredApplications,
             applications: visibleProtocolWUnfilteredApplications.applications?.map((application, i) => ({
@@ -1955,18 +1964,18 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
 export const deleteProtocol = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
-        const id: number = parseInt(req.params.protocolId);
+        const protocolId: number = parseInt(req.params.protocolId);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is allowed to delete the protocol
-        await checkAuthorization(user, [id], 'delete');
+        await checkAuthorization(requester, [protocolId], 'delete');
         // Get current number of applications
-        const applicationsCount = await prismaClient.application.count({ where: { protocolId: id } });
+        const applicationsCount = await prismaClient.application.count({ where: { protocolId: protocolId } });
         // Check if there are any applications associated with the protocol
         if (applicationsCount > 0)
             throw new Error('Cannot delete protocol with associated applications, please delete them first or disable the protocol.');
         // Delete protocol
-        const deletedProtocol = await prismaClient.protocol.delete({ where: { id }, select: { id: true } });
+        const deletedProtocol = await prismaClient.protocol.delete({ where: { id: protocolId }, select: { id: true } });
 
         res.status(200).json({ message: 'Protocol deleted.', data: deletedProtocol });
     } catch (error: any) {

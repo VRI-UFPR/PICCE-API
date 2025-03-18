@@ -157,6 +157,8 @@ const getApplicationAnswerActions = async (user: User, applicationAnswers: Await
  * Checks if the user is authorized to perform a specific action on a set of application answers.
  *
  * @param requester - The user object containing requester user details.
+ * @param applicationAnswersIds - The IDs of the application answers the user wants to perform the action on.
+ * @param applicationsIds - The IDs of the applications related to the application answers.
  * @param action - The action the user wants to perform (e.g., 'create', 'update', 'get', 'delete', 'approve', 'getAll', 'getMy').
  *
  * @throws Will throw an error if the user is not authorized to perform the action.
@@ -851,15 +853,17 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
         await checkAuthorization(requester, [], [], 'getAll');
         // Prisma database transactions
         // Get detailed application answers to perform internal operations
-        const detailedApplicationAnswers = await prismaClient.applicationAnswer.findMany({ include: detailedApplicationAnswerFields() });
+        const detailedStoredApplicationAnswers = await prismaClient.applicationAnswer.findMany({
+            include: detailedApplicationAnswerFields(),
+        });
         // Get unfiltered application answers from the database
         const unfilteredApplicationAnswers = await prismaClient.applicationAnswer.findMany({
-            where: { id: { in: detailedApplicationAnswers.map(({ id }) => id) } },
+            where: { id: { in: detailedStoredApplicationAnswers.map(({ id }) => id) } },
             ...(await getVisibleFields(requester, [], true))[0],
         });
         // Get application answers only with visible fields and with embed actions
-        const actions = await getApplicationAnswerActions(requester, detailedApplicationAnswers);
-        const filteredFields = await getVisibleFields(requester, detailedApplicationAnswers, false);
+        const actions = await getApplicationAnswerActions(requester, detailedStoredApplicationAnswers);
+        const filteredFields = await getVisibleFields(requester, detailedStoredApplicationAnswers, false);
         const visibleApplicationAnswers = unfilteredApplicationAnswers.map((applicationAnswer, i) => ({
             ...fieldsFilter(applicationAnswer, filteredFields[i]),
             actions: actions[i],
@@ -885,21 +889,21 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
 export const getMyApplicationAnswers = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is allowed to get their application answers
-        await checkAuthorization(user, [], [], 'getMy');
+        await checkAuthorization(requester, [], [], 'getMy');
         // Prisma operation
-        const detailedApplicationAnswers = await prismaClient.applicationAnswer.findMany({
-            where: { userId: user.id },
+        const detailedStoredApplicationAnswers = await prismaClient.applicationAnswer.findMany({
+            where: { userId: requester.id },
             include: detailedApplicationAnswerFields(),
         });
         // Get application answers only with visible fields and with embedded actions
         // Get application answers only with visible fields and with embedded actions
-        const actions = await getApplicationAnswerActions(user, detailedApplicationAnswers);
-        const filteredFields = await getVisibleFields(user, detailedApplicationAnswers, false);
-        const unfilteredFields = (await getVisibleFields(user, [], true))[0];
+        const actions = await getApplicationAnswerActions(requester, detailedStoredApplicationAnswers);
+        const filteredFields = await getVisibleFields(requester, detailedStoredApplicationAnswers, false);
+        const unfilteredFields = (await getVisibleFields(requester, [], true))[0];
         const unfilteredApplicationAnswers = await prismaClient.applicationAnswer.findMany({
-            where: { id: { in: detailedApplicationAnswers.map(({ id }) => id) } },
+            where: { id: { in: detailedStoredApplicationAnswers.map(({ id }) => id) } },
             ...unfilteredFields,
         });
         const visibleApplicationAnswers = unfilteredApplicationAnswers.map((applicationAnswer, i) => ({
@@ -929,21 +933,21 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
         // ID from params
         const applicationAnswerId: number = parseInt(req.params.applicationAnswerId);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is allowed to view this application answer
-        await checkAuthorization(user, [applicationAnswerId], [], 'get');
+        await checkAuthorization(requester, [applicationAnswerId], [], 'get');
         // Prisma operation
-        const detailedApplicationAnswer = await prismaClient.applicationAnswer.findUniqueOrThrow({
+        const detailedStoredApplicationAnswer = await prismaClient.applicationAnswer.findUniqueOrThrow({
             where: { id: applicationAnswerId },
             include: detailedApplicationAnswerFields(),
         });
         // Get application answer only with visible fields and with embedded actions
         const visibleApplicationAnswer = {
             ...(await prismaClient.applicationAnswer.findUnique({
-                where: { id: detailedApplicationAnswer.id },
-                ...(await getVisibleFields(user, [detailedApplicationAnswer], false))[0],
+                where: { id: detailedStoredApplicationAnswer.id },
+                ...(await getVisibleFields(requester, [detailedStoredApplicationAnswer], false))[0],
             })),
-            actions: (await getApplicationAnswerActions(user, [detailedApplicationAnswer]))[0],
+            actions: (await getApplicationAnswerActions(requester, [detailedStoredApplicationAnswer]))[0],
         };
 
         res.status(200).json({ message: 'Application answer found.', data: visibleApplicationAnswer });
@@ -969,11 +973,11 @@ export const approveApplicationAnswer = async (req: Request, res: Response): Pro
         // ID from params
         const applicationAnswerId: number = parseInt(req.params.applicationAnswerId);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is allowed to approve this application answer
-        await checkAuthorization(user, [applicationAnswerId], [], 'approve');
+        await checkAuthorization(requester, [applicationAnswerId], [], 'approve');
         // Prisma operation
-        const detailedApprovedApplicationAnswer = await prismaClient.applicationAnswer.update({
+        const detailedStoredApplicationAnswer = await prismaClient.applicationAnswer.update({
             where: { id: applicationAnswerId },
             data: { approved: true },
             include: detailedApplicationAnswerFields(),
@@ -981,10 +985,10 @@ export const approveApplicationAnswer = async (req: Request, res: Response): Pro
         // Get application answer only with visible fields and with embedded actions
         const visibleApplicationAnswer = {
             ...(await prismaClient.applicationAnswer.findUnique({
-                where: { id: detailedApprovedApplicationAnswer.id },
-                ...(await getVisibleFields(user, [detailedApprovedApplicationAnswer], false))[0],
+                where: { id: detailedStoredApplicationAnswer.id },
+                ...(await getVisibleFields(requester, [detailedStoredApplicationAnswer], false))[0],
             })),
-            actions: (await getApplicationAnswerActions(user, [detailedApprovedApplicationAnswer]))[0],
+            actions: (await getApplicationAnswerActions(requester, [detailedStoredApplicationAnswer]))[0],
         };
 
         res.status(200).json({ message: 'Application answer approved.', data: visibleApplicationAnswer });
@@ -1009,9 +1013,9 @@ export const deleteApplicationAnswer = async (req: Request, res: Response): Prom
         // ID from params
         const applicationAnswerId: number = parseInt(req.params.applicationAnswerId);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is allowed to delete this application answer
-        await checkAuthorization(user, [applicationAnswerId], [], 'delete');
+        await checkAuthorization(requester, [applicationAnswerId], [], 'delete');
         // Prisma operation
         const deletedApplicationAnswer = await prismaClient.applicationAnswer.delete({
             where: { id: applicationAnswerId },

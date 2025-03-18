@@ -181,6 +181,7 @@ const validateInstitution = (user: User, institutionId: number | undefined) => {
  * Checks if the user is authorized to perform a specific action on a set of classrooms.
  *
  * @param requester - The user object containing requester user details.
+ * @param classroomsIds - The classrooms IDs the user wants to perform the action on.
  * @param action - The action the user wants to perform (e.g., 'create', 'update', 'getAll', 'get', 'delete', 'search', 'getMy', 'getManaged').
  *
  * @throws Will throw an error if the classroom institution is not valid.
