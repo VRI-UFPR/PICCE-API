@@ -208,9 +208,9 @@ export const getAddressId = async (req: Request, res: Response): Promise<void> =
         // Yup parsing/validation
         const searchParams = await searchParamsSchema.validate(req.body, { stripUnknown: false });
         // Requester user from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to get a city ID
-        await checkAuthorization(user, 'getId');
+        await checkAuthorization(requester, 'getId');
         // Prisma operation
         const storedAddress = await prismaClient.address.findUniqueOrThrow({
             where: { city_state_country: searchParams },
