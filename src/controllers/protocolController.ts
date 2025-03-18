@@ -431,24 +431,24 @@ export const getProtocolsUserActions = async (user: User, protocols: Awaited<Ret
  * @throws Will throw an error if the user is not authorized to perform the action.
  * @returns A promise that resolves if the user is authorized to perform the action.
  */
-const checkAuthorization = async (user: User, protocolIds: number[], action: string) => {
+const checkAuthorization = async (requester: User, protocolIds: number[], action: string) => {
     // Admins can perform any action
-    if (user.role === UserRole.ADMIN) return;
+    if (requester.role === UserRole.ADMIN) return;
 
     switch (action) {
         case 'create': {
             // Anyone except users, appliers and guests can create protocols
-            if (user.role === UserRole.USER || user.role === UserRole.APPLIER || user.role === UserRole.GUEST)
+            if (requester.role === UserRole.USER || requester.role === UserRole.APPLIER || requester.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'update': {
-            if ((await getProtocolsUserActions(user, await getDetailedProtocols(protocolIds))).some(({ toUpdate }) => !toUpdate))
+            if ((await getProtocolsUserActions(requester, await getDetailedProtocols(protocolIds))).some(({ toUpdate }) => !toUpdate))
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'delete': {
-            if ((await getProtocolsUserActions(user, await getDetailedProtocols(protocolIds))).some(({ toDelete }) => !toDelete))
+            if ((await getProtocolsUserActions(requester, await getDetailedProtocols(protocolIds))).some(({ toDelete }) => !toDelete))
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
@@ -462,12 +462,16 @@ const checkAuthorization = async (user: User, protocolIds: number[], action: str
             break;
         }
         case 'get': {
-            if ((await getProtocolsUserActions(user, await getDetailedProtocols(protocolIds))).some(({ toGet }) => !toGet))
+            if ((await getProtocolsUserActions(requester, await getDetailedProtocols(protocolIds))).some(({ toGet }) => !toGet))
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'getWAnswers': {
-            if ((await getProtocolsUserActions(user, await getDetailedProtocols(protocolIds))).some(({ toGetWAnswers }) => !toGetWAnswers))
+            if (
+                (await getProtocolsUserActions(requester, await getDetailedProtocols(protocolIds))).some(
+                    ({ toGetWAnswers }) => !toGetWAnswers
+                )
+            )
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
