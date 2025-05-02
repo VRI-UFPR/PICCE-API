@@ -323,24 +323,24 @@ const validateProtocolPlacements = async (protocol: any) => {
                 itemsPlacements.push(item.placement);
                 const itemOptionsPlacements = [];
                 for (const itemOption of item.itemOptions) itemOptionsPlacements.push(itemOption.placement);
-                await validatePlacements(itemOptionsPlacements);
+                await validatePlacements(itemOptionsPlacements, 'itemOptions: ' + page.placement);
             }
-            await validatePlacements(itemsPlacements);
+            await validatePlacements(itemsPlacements, 'items');
             const tableColumnsPlacements = [];
             for (const tableColumn of itemGroup.tableColumns) tableColumnsPlacements.push(tableColumn.placement);
-            await validatePlacements(tableColumnsPlacements);
+            await validatePlacements(tableColumnsPlacements, 'tableColumns');
         }
-        await validatePlacements(itemGroupsPlacements);
+        await validatePlacements(itemGroupsPlacements, 'itemGroups');
     }
-    await validatePlacements(pagesPlacements);
+    await validatePlacements(pagesPlacements, 'pages');
 };
 
-const validatePlacements = async (placements: number[]) => {
+const validatePlacements = async (placements: number[], who: String) => {
     if (placements.length > 0) {
         const placementSet = new Set<number>(placements);
         placements.sort((a, b) => a - b);
         if (placementSet.size !== placements.length || placements[0] !== 1 || placements[placements.length - 1] !== placements.length)
-            throw new Error('Invalid placement values: must be unique, consecutive and start from 1.');
+            throw new Error('Invalid placement values: must be unique, consecutive and start from 1 ' + placements + '| ' + who);
     }
 };
 
@@ -525,7 +525,7 @@ export const createProtocol = async (req: Request, res: Response) => {
         // Yup schemas
         const fileSchema = yup
             .object()
-            .shape({ description: yup.string().max(3000) })
+            .shape({ description: yup.string().max(20000) })
             .noUnknown();
 
         const tableColumnSchema = yup
@@ -565,8 +565,8 @@ export const createProtocol = async (req: Request, res: Response) => {
             .object()
             .shape({
                 tempId: yup.number().min(1).required(),
-                text: yup.string().min(3).max(3000).required(),
-                description: yup.string().max(3000),
+                text: yup.string().min(3).max(20000).required(),
+                description: yup.string().max(20000),
                 enabled: yup.boolean().required(),
                 type: yup.mixed<ItemType>().oneOf(Object.values(ItemType)).required(),
                 placement: yup.number().min(1).required(),
@@ -603,7 +603,7 @@ export const createProtocol = async (req: Request, res: Response) => {
             .shape({
                 id: yup.number().min(1),
                 title: yup.string().min(3).max(255).required(),
-                description: yup.string().max(3000),
+                description: yup.string().max(20000),
                 enabled: yup.boolean().required(),
                 pages: yup.array().of(pagesSchema).min(1).required(),
                 managers: yup.array().of(yup.number()).default([]),
@@ -807,7 +807,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
         // Yup schemas
         const updateFileSchema = yup
             .object()
-            .shape({ id: yup.number().min(1), description: yup.string().max(3000) })
+            .shape({ id: yup.number().min(1), description: yup.string().max(20000) })
             .noUnknown();
 
         const updateTableColumnSchema = yup
@@ -851,8 +851,8 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             .shape({
                 id: yup.number().min(1),
                 tempId: yup.number().min(1).required(),
-                text: yup.string().min(3).max(3000),
-                description: yup.string().max(3000),
+                text: yup.string().min(3).max(20000),
+                description: yup.string().max(20000),
                 enabled: yup.boolean(),
                 type: yup.mixed<ItemType>().oneOf(Object.values(ItemType)).required(),
                 placement: yup.number().min(1).required(),
@@ -891,7 +891,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             .shape({
                 id: yup.number().min(1),
                 title: yup.string().min(3).max(255),
-                description: yup.string().max(3000),
+                description: yup.string().max(20000),
                 enabled: yup.boolean(),
                 pages: yup.array().of(updatePagesSchema).min(1).required(),
                 managers: yup.array().of(yup.number()).default([]),

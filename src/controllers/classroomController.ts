@@ -36,12 +36,12 @@ const getClassroomUserRoles = async (user: User, classroom: any, classroomId: nu
         classroom ||
         (await prismaClient.classroom.findUniqueOrThrow({
             where: { id: classroomId },
-            include: { users: { select: { id: true } } },
+            include: { users: { select: { id: true } }, creator: { select: { id: true } }, institution: { select: { id: true } } },
         }));
 
-    const creator = classroom?.creatorId === user.id;
+    const creator = classroom?.creator?.id === user.id;
     const member = classroom?.users?.some((u: any) => u.id === user.id);
-    const institutionMember = classroom?.institutionId === user.institutionId;
+    const institutionMember = classroom?.institution?.id === user.institutionId;
 
     return { creator, member, institutionMember };
 };
@@ -289,7 +289,7 @@ export const getManagedClassrooms = async (req: Request, res: Response): Promise
                     ],
                 }),
             },
-            select: fields,
+            select: { ...fields, creator: { select: { id: true, name: true } } },
         });
         // Embed user actions in the response
         const processedClassrooms = await Promise.all(
