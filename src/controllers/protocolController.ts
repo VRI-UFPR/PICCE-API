@@ -323,24 +323,24 @@ const validateProtocolPlacements = async (protocol: any) => {
                 itemsPlacements.push(item.placement);
                 const itemOptionsPlacements = [];
                 for (const itemOption of item.itemOptions) itemOptionsPlacements.push(itemOption.placement);
-                await validatePlacements(itemOptionsPlacements, 'itemOptions: ' + page.placement);
+                await validatePlacements(itemOptionsPlacements);
             }
-            await validatePlacements(itemsPlacements, 'items');
+            await validatePlacements(itemsPlacements);
             const tableColumnsPlacements = [];
             for (const tableColumn of itemGroup.tableColumns) tableColumnsPlacements.push(tableColumn.placement);
-            await validatePlacements(tableColumnsPlacements, 'tableColumns');
+            await validatePlacements(tableColumnsPlacements);
         }
-        await validatePlacements(itemGroupsPlacements, 'itemGroups');
+        await validatePlacements(itemGroupsPlacements);
     }
-    await validatePlacements(pagesPlacements, 'pages');
+    await validatePlacements(pagesPlacements);
 };
 
-const validatePlacements = async (placements: number[], who: String) => {
+const validatePlacements = async (placements: number[]) => {
     if (placements.length > 0) {
         const placementSet = new Set<number>(placements);
         placements.sort((a, b) => a - b);
         if (placementSet.size !== placements.length || placements[0] !== 1 || placements[placements.length - 1] !== placements.length)
-            throw new Error('Invalid placement values: must be unique, consecutive and start from 1 ' + placements + '| ' + who);
+            throw new Error('Invalid placement values: must be unique, consecutive and start from 1.');
     }
 };
 
