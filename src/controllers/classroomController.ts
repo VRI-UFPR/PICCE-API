@@ -9,127 +9,268 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import { Classroom, User, UserRole } from '@prisma/client';
+import { User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import errorFormatter from '../services/errorFormatter';
+import { detailedUserFields, getPeerUserActions, getVisibleUserFields as getUsersVisibleFields } from './userController';
+import fieldsFilter from '../services/fieldsFilter';
 
-// Fields to be selected from the database to the response
-const fields = {
-    id: true,
-    name: true,
-    institution: { select: { id: true, name: true } },
-    users: { select: { id: true, name: true, username: true, role: true } },
-    createdAt: true,
-    updatedAt: true,
+/**
+ * Retrieve the detailed classrooms fields required for internal endpoint validations.
+ *
+ * This function handles the creation of a custom select filter that serves as a parameter for Prisma Client to return an
+ * classroom with all the fields required for internal endpoint validations.
+ *
+ * @returns A Prisma select filter object
+ */
+export const detailedClassroomFields = () => ({
+    users: { include: detailedUserFields() },
+    institution: { select: { id: true } },
+    creator: { select: { id: true } },
+});
+
+/**
+ * Gets a set of detailed classrooms from a set of IDs
+ *
+ * This function handles the retrieval of a set of detailed classrooms, with all the fields required for internal
+ * endpoint validations, from a set of classrooms IDs using Prisma.
+ *
+ * @param classroomsIds An array of classrooms IDs
+ * @returns A set of detailed classrooms
+ */
+const getDetailedClassrooms = async (classroomsIds: number[]) => {
+    return await prismaClient.classroom.findMany({ where: { id: { in: classroomsIds } }, include: detailedClassroomFields() });
 };
 
-const publicFields = {
-    id: true,
-    name: true,
-    users: { select: { id: true, name: true, username: true, role: true } },
-    institution: { select: { id: true, name: true } },
+/**
+ * Retrieves the visible fields for classrooms based on the user's roles and permissions.
+ *
+ * @param user - The user for whom the visible fields are being determined.
+ * @param classrooms - The detailed classrooms for which the visible fields are being determined.
+ * @param includeUsers - A boolean indicating whether to include the users of the classrooms in the visible fields.
+ * @param ignoreFilters - A boolean indicating whether to ignore role-based filters and grant full access.
+ * @returns A promise that resolves to an array of objects representing the visible fields for each classroom.
+ */
+export const getVisibleFields = async (
+    user: User,
+    classrooms: Awaited<ReturnType<typeof getDetailedClassrooms>> | [],
+    includeUsers: boolean,
+    ignoreFilters: boolean
+) => {
+    const classroomRoles = await getClassroomUserRoles(user, classrooms);
+
+    const mapVisibleFields = (roles: (typeof classroomRoles)[0] | undefined) => {
+        const fullAccess = roles ? roles.creator || user.role === UserRole.ADMIN || roles.institutionCoordinator : ignoreFilters;
+        const baseAccess = roles
+            ? ((roles.viewer || roles.member) && user.role !== UserRole.GUEST && user.role !== UserRole.USER) ||
+              roles.institutionMember ||
+              roles.creator ||
+              user.role === UserRole.ADMIN
+            : ignoreFilters;
+
+        const visibleFields = {
+            select: {
+                id: baseAccess,
+                createdAt: baseAccess,
+                updatedAt: baseAccess,
+                name: baseAccess,
+                users: includeUsers && { select: { id: baseAccess, name: fullAccess, username: baseAccess, role: fullAccess } },
+                creator: fullAccess && { select: { id: fullAccess, username: fullAccess } },
+            },
+        };
+
+        return visibleFields;
+    };
+
+    const visibleFields = ignoreFilters ? [mapVisibleFields(undefined)] : classroomRoles.map(mapVisibleFields);
+
+    return visibleFields;
 };
 
-const getClassroomUserRoles = async (user: User, classroom: any, classroomId: number | undefined) => {
-    classroom =
-        classroom ||
-        (await prismaClient.classroom.findUniqueOrThrow({
-            where: { id: classroomId },
-            include: { users: { select: { id: true } } },
-        }));
+/**
+ * Retrieves a user's roles against a given set of classrooms.
+ *
+ * @param user - The user whose roles are being determined.
+ * @param classrooms - The detailed classrooms for which the roles are being determined.
+ * @returns A promise that resolves to an array of objects representing the roles of the user for each classroom.
+ *
+ * Each role object contains the following properties:
+ * - `creator` - Whether the user is the creator of the classroom.
+ * - `institutionMember` - Whether the user is a member of the institution to which the classroom belongs.
+ * - `member` - Whether the user is a member of the classroom.
+ * - `institutionCoordinator` - Whether the user is a coordinator of the institution to which the classroom belongs.
+ * - `viewer` - Whether the user is a viewer of the classroom.
+ */
+const getClassroomUserRoles = async (user: User, classrooms: Awaited<ReturnType<typeof getDetailedClassrooms>>) => {
+    const roles = classrooms.map((classroom) => {
+        const creator = classroom.creator.id === user.id;
+        const member = classroom.users.some(({ id }) => id === user.id);
+        const institutionMember = user.institutionId && classroom.institution?.id === user.institutionId;
+        const institutionCoordinator = user.role === UserRole.COORDINATOR && classroom.institution?.id === user.institutionId;
+        const viewer = !classroom.institution && user.role !== UserRole.GUEST && user.role !== UserRole.USER;
 
-    const creator = classroom?.creatorId === user.id;
-    const member = classroom?.users?.some((u: any) => u.id === user.id);
-    const institutionMember = classroom?.institutionId === user.institutionId;
+        return { creator, institutionCoordinator, institutionMember, member, viewer };
+    });
 
-    return { creator, member, institutionMember };
+    return roles;
 };
 
-export const getClassroomUserActions = async (user: User, classroom: any, classroomId: number | undefined) => {
-    const roles = await getClassroomUserRoles(user, classroom, classroomId);
+/**
+ * Retrieves the actions that a user can perform on a set of classrooms.
+ *
+ * @param user - The user whose actions are being determined.
+ * @param classrooms - The detailed classrooms for which the actions are being determined.
+ * @returns A promise that resolves to an array of objects representing the actions that the user can perform on each classroom.
+ *
+ * The returned action object contains the following properties:
+ * - `toDelete` - Whether the user can delete the classroom.
+ * - `toGet` - Whether the user can get the classroom.
+ * - `toUpdate` - Whether the user can update the classroom.
+ */
+export const getClassroomUserActions = async (user: User, classrooms: Awaited<ReturnType<typeof getDetailedClassrooms>>) => {
+    const classroomsRoles = await getClassroomUserRoles(user, classrooms);
 
-    // Only institution members (except users and guests)/creator can perform update operations on classrooms
-    const toUpdate =
-        roles.creator ||
-        (roles.institutionMember && user.role !== UserRole.USER && user.role !== UserRole.GUEST) ||
-        user.role === UserRole.ADMIN;
-    // Only institution members (except users and guests)/creator can perform delete operations on classrooms
-    const toDelete =
-        roles.creator ||
-        (roles.institutionMember && user.role !== UserRole.USER && user.role !== UserRole.GUEST) ||
-        user.role === UserRole.ADMIN;
-    // Only institution members (except users and guests)/creator can perform get operations on classrooms
-    const toGet =
-        roles.creator ||
-        (roles.institutionMember && user.role !== UserRole.USER && user.role !== UserRole.GUEST) ||
-        user.role === UserRole.ADMIN;
-    // No one can perform get all classrooms operation on classrooms
-    const toGetAll = user.role === UserRole.ADMIN;
-    // Anyone except users and guests can perform create operations on classrooms
-    const toSearch = user.role !== UserRole.USER && user.role !== UserRole.GUEST;
-    // Anyone can perform getMy operation on classrooms
-    const toGetMy = true;
-    // Anyone can perform getManaged operation on classrooms
-    const toGetManaged = true;
+    const actions = classroomsRoles.map((roles) => {
+        // Only institution members (except users and guests)/creator can perform update operations on classrooms
+        const toUpdate =
+            roles.creator ||
+            roles.institutionCoordinator ||
+            (roles.institutionMember && user.role !== UserRole.USER && user.role !== UserRole.GUEST) ||
+            user.role === UserRole.ADMIN;
+        // Only institution coordinators/creator can perform delete operations on classrooms
+        const toDelete = roles.creator || roles.institutionCoordinator || user.role === UserRole.ADMIN;
+        // Only institution members (except users and guests)/creator can perform get operations on classrooms
+        const toGet =
+            roles.creator ||
+            roles.viewer ||
+            roles.institutionCoordinator ||
+            (roles.institutionMember && user.role !== UserRole.USER && user.role !== UserRole.GUEST) ||
+            user.role === UserRole.ADMIN;
+        // No one can perform get all classrooms operation on classrooms
+        const toGetAll = user.role === UserRole.ADMIN;
+        // Anyone except users and guests can perform create operations on classrooms
+        const toSearch = user.role !== UserRole.USER && user.role !== UserRole.GUEST;
+        // Anyone can except GUESTS perform getMy operation on classrooms
+        const toGetMy = user.role !== UserRole.GUEST;
+        // Anyone can perform getManaged operation on classrooms
+        const toGetManaged = true;
 
-    return { toUpdate, toDelete, toGet, toGetAll, toSearch, toGetMy };
+        return { toDelete, toGet, toUpdate };
+    });
+
+    return actions;
 };
 
-const checkAuthorization = async (user: User, classroomId: number | undefined, institutionId: number | undefined, action: string) => {
-    if (user.role === UserRole.ADMIN) return;
+/**
+ * Validates the institution of a classroom
+ *
+ * @param user - The user whose institution is being validated.
+ * @param institutionId - The institution ID to validate.
+ * @throws An error if the user is not authorized to perform the action.
+ *
+ * The function performs the following validations:
+ * - If the institution ID is provided, the user must be from that institution.
+ *
+ * @returns void
+ */
+const validateInstitution = (user: User, institutionId: number | undefined) => {
+    if (institutionId && user.institutionId !== institutionId && user.role !== UserRole.ADMIN)
+        throw new Error('This user is not authorized to perform this action');
+};
+
+/**
+ * Checks if the user is authorized to perform a specific action on a set of classrooms.
+ *
+ * @param requester - The user object containing requester user details.
+ * @param classroomsIds - The classrooms IDs the user wants to perform the action on.
+ * @param action - The action the user wants to perform (e.g., 'create', 'update', 'getAll', 'get', 'delete', 'search', 'getMy', 'getManaged').
+ *
+ * @throws Will throw an error if the classroom institution is not valid.
+ * @returns A promise that resolves if the user is authorized to perform the action.
+ */
+const checkAuthorization = async (requester: User, classroomsIds: number[], action: string) => {
+    if (requester.role === UserRole.ADMIN) return;
 
     switch (action) {
-        case 'create':
+        case 'create': {
             // Anyone except users and guests can perform create operations on classrooms (if institutionId is provided, the user must be from that institution)
-            if (user.role === UserRole.USER || user.role === UserRole.GUEST || (institutionId && user.institutionId !== institutionId))
+            if (requester.role === UserRole.USER || requester.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
             break;
+        }
         case 'update': {
-            // Only institution members (except users and guests)/creator can perform update/delete operations on classrooms (if institutionId is provided, the user must be from that institution)
-            const roles = await getClassroomUserRoles(user, undefined, classroomId);
-            if (
-                (!roles.creator && !roles.institutionMember) ||
-                user.role === UserRole.USER ||
-                user.role === UserRole.GUEST ||
-                (institutionId && user.institutionId !== institutionId)
-            )
+            if ((await getClassroomUserActions(requester, await getDetailedClassrooms(classroomsIds))).some(({ toUpdate }) => !toUpdate))
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'getAll':
             // No one can perform get all classrooms operation on classrooms
             throw new Error('This user is not authorized to perform this action');
+        case 'get': {
+            if ((await getClassroomUserActions(requester, await getDetailedClassrooms(classroomsIds))).some(({ toGet }) => !toGet))
+                throw new Error('This user is not authorized to perform this action');
             break;
-        case 'get':
+        }
         case 'delete': {
-            // Only institution members (except users and guests)/creator can perform get/delete operations on classrooms
-            const roles = await getClassroomUserRoles(user, undefined, classroomId);
-            if ((!roles.creator && !roles.institutionMember) || user.role === UserRole.USER || user.role === UserRole.GUEST)
+            if ((await getClassroomUserActions(requester, await getDetailedClassrooms(classroomsIds))).some(({ toDelete }) => !toDelete))
                 throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'search':
             // Anyone except USERS and GUESTS can perform search classrooms operation
-            if (user.role === UserRole.USER || user.role === UserRole.GUEST)
+            if (requester.role === UserRole.USER || requester.role === UserRole.GUEST)
+                throw new Error('This user is not authorized to perform this action');
+            break;
+        case 'getManaged':
+            // Anyone except GUESTS and USERS can perform getMy operation on classrooms (since the result is filtered according to the user)
+            if (requester.role === UserRole.USER || requester.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
             break;
         case 'getMy':
-        case 'getManaged':
-            // Anyone can perform getMy operation on classrooms (since the result is filtered according to the user)
+            // Anyone except GUESTS can perform getMy operation on classrooms (since the result is filtered according to the user)
+            if (requester.role === UserRole.GUEST) throw new Error('This user is not authorized to perform this action');
             break;
     }
 };
 
+/**
+ * Validates the users of a classroom
+ *
+ * @param institutionId - The institution ID of the classroom.
+ * @param users - The users of the classroom.
+ * @throws Will throw an error if the classroom users are not valid.
+ *
+ * The function performs the following validations:
+ * - A classroom can not contain COORDINATOR, GUEST or ADMIN users.
+ * - An institution classroom can only contain users from the institution.
+ *
+ * @returns void
+ */
 const validateUsers = async (institutionId: number | undefined, users: number[]) => {
-    const guestUsers = await prismaClient.user.findMany({ where: { id: { in: users }, role: { in: [UserRole.GUEST, UserRole.ADMIN] } } });
-    if (guestUsers.length > 0) throw new Error('A classroom can not contain GUEST or ADMIN users.');
+    const guestUsers = await prismaClient.user.findMany({
+        where: { id: { in: users }, role: { in: [UserRole.GUEST, UserRole.ADMIN, UserRole.COORDINATOR] } },
+    });
+    if (guestUsers.length > 0) throw new Error('A classroom can not contain COORDINATOR, GUEST or ADMIN users.');
     if (institutionId) {
-        const invalidUsers = await prismaClient.user.findMany({ where: { id: { in: users }, institutionId: { not: institutionId } } });
+        const invalidUsers = await prismaClient.user.findMany({
+            where: { id: { in: users }, OR: [{ institutionId: { not: institutionId } }, { institutionId: null }] },
+        });
         if (invalidUsers.length > 0) throw new Error('An institution classroom can only contain users from the institution.');
     }
 };
 
+/**
+ * Creates a new classroom in the database.
+ *
+ * This function handles the creation of a new classroom, validating the body of the request and
+ * the user performing the action to then persist the object in the database using Prisma.
+ *
+ * @param req - The request object, containing the classroom data in the body and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const createClassroom = async (req: Request, res: Response) => {
     try {
         // Yup schemas
@@ -142,31 +283,61 @@ export const createClassroom = async (req: Request, res: Response) => {
             })
             .noUnknown();
         // Yup parsing/validation
-        const classroom = await createClassroomSchema.validate(req.body, { stripUnknown: false });
+        const classroomData = await createClassroomSchema.validate(req.body, { stripUnknown: false });
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to create a classroom
-        await checkAuthorization(user, undefined, classroom.institutionId, 'create');
+        await checkAuthorization(requester, [], 'create');
         // Check if users are from the same institution
-        await validateUsers(classroom.institutionId, classroom.users as number[]);
+        await validateUsers(classroomData.institutionId, classroomData.users as number[]);
+        // Check if user is authorized to create a classroom in this institution
+        validateInstitution(requester, classroomData.institutionId);
         // Prisma operation
-        const createdClassroom: Classroom = await prismaClient.classroom.create({
+        const detailedStoredClassroom = await prismaClient.classroom.create({
             data: {
-                name: classroom.name,
-                institution: { connect: classroom.institutionId ? { id: classroom.institutionId } : undefined },
-                users: { connect: classroom.users.map((id) => ({ id: id })) },
-                creator: { connect: { id: user.id } },
+                name: classroomData.name,
+                institution: { connect: classroomData.institutionId ? { id: classroomData.institutionId } : undefined },
+                users: { connect: classroomData.users.map((id) => ({ id: id })) },
+                creator: { connect: { id: requester.id } },
             },
+            include: detailedClassroomFields(),
         });
-        // Embed user actions in the response
-        const processedClassroom = { ...createdClassroom, actions: await getClassroomUserActions(user, createdClassroom, undefined) };
+        // Get classroom only with visible fields, with embedded actions and with unfiltered users
+        const fieldsWUnfilteredUsers = (await getVisibleFields(requester, [detailedStoredClassroom], true, false))[0];
+        fieldsWUnfilteredUsers.select.users = (await getUsersVisibleFields(requester, [], false, false, true))[0];
+        const visibleClassroomWUnfilteredUsers = {
+            ...(await prismaClient.classroom.findUnique({ where: { id: detailedStoredClassroom.id }, ...fieldsWUnfilteredUsers })),
+            actions: (await getClassroomUserActions(requester, [detailedStoredClassroom]))[0],
+        };
+        // Get users only with visible fields and with embedded actions
+        const detailedUsers = detailedStoredClassroom.users;
+        const userActions = await getPeerUserActions(requester, detailedUsers);
+        const filteredUserFields = await getUsersVisibleFields(requester, detailedUsers, false, false, false);
+        const visibleClassroom = {
+            ...visibleClassroomWUnfilteredUsers,
+            users: visibleClassroomWUnfilteredUsers.users?.map((user, i) => ({
+                ...fieldsFilter(user, filteredUserFields[i]),
+                actions: userActions[i],
+            })),
+        };
 
-        res.status(201).json({ message: 'Classroom created.', data: processedClassroom });
+        res.status(201).json({ message: 'Classroom created.', data: visibleClassroom });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
 };
 
+/**
+ * Updates an existing classroom in the database.
+ *
+ * This function handles the update of a existing classroom, validating the body of the request and
+ * the user performing the action to then persist the object in the database using Prisma.
+ *
+ * @param req - The request object, containing the classroom data in the body, the user object from Passport-JWT and the address ID in the params.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const updateClassroom = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
@@ -181,135 +352,278 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
             })
             .noUnknown();
         // Yup parsing/validation
-        const classroom = await updateClassroomSchema.validate(req.body, { stripUnknown: false });
+        const classroomData = await updateClassroomSchema.validate(req.body, { stripUnknown: false });
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to update this classroom
-        await checkAuthorization(user, classroomId, classroom.institutionId, 'update');
+        await checkAuthorization(requester, [classroomId], 'update');
         // Check if users are from the same institution
-        await validateUsers(classroom.institutionId, classroom.users as number[]);
+        await validateUsers(classroomData.institutionId, classroomData.users as number[]);
+        // Check if user is authorized to update this classroom in this institution
+        validateInstitution(requester, classroomData.institutionId);
         // Prisma operation
-        const updatedClassroom = await prismaClient.classroom.update({
+        const detailedStoredClassroom = await prismaClient.classroom.update({
             where: { id: classroomId },
             data: {
-                name: classroom.name,
-                institution: classroom.institutionId ? { connect: { id: classroom.institutionId } } : { disconnect: true },
-                users: { set: [], connect: classroom.users?.map((id) => ({ id: id })) },
+                name: classroomData.name,
+                institution: classroomData.institutionId ? { connect: { id: classroomData.institutionId } } : { disconnect: true },
+                users: { set: [], connect: classroomData.users?.map((id) => ({ id: id })) },
             },
-            select: fields,
+            include: detailedClassroomFields(),
         });
 
-        // Embed user actions in the response
-        const processedClassroom = { ...updatedClassroom, actions: await getClassroomUserActions(user, updatedClassroom, undefined) };
+        // Get classroom only with visible fields and with embedded actions
+        const fieldsWUnfilteredUsers = (await getVisibleFields(requester, [detailedStoredClassroom], true, false))[0];
+        fieldsWUnfilteredUsers.select.users = (await getUsersVisibleFields(requester, [], false, false, true))[0];
+        const visibleClassroomWUnfilteredUsers = {
+            ...(await prismaClient.classroom.findUnique({ where: { id: detailedStoredClassroom.id }, ...fieldsWUnfilteredUsers })),
+            actions: (await getClassroomUserActions(requester, [detailedStoredClassroom]))[0],
+        };
+        // Get users only with visible fields and with embedded actions
+        const detailedUsers = detailedStoredClassroom.users;
+        const userActions = await getPeerUserActions(requester, detailedUsers);
+        const filteredUserFields = await getUsersVisibleFields(requester, detailedUsers, false, false, false);
+        const visibleClassroom = {
+            ...visibleClassroomWUnfilteredUsers,
+            users: visibleClassroomWUnfilteredUsers.users?.map((user, i) => ({
+                ...fieldsFilter(user, filteredUserFields[i]),
+                actions: userActions[i],
+            })),
+        };
 
-        res.status(200).json({ message: 'Classroom updated.', data: processedClassroom });
+        res.status(200).json({ message: 'Classroom updated.', data: visibleClassroom });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
 };
 
+/**
+ * Gets all classrooms from the database.
+ *
+ * This function handles the retrieval of all classrooms in the database, validating the user
+ * performing the action to then retrieve all classrooms using Prisma.
+ *
+ * @param req - The request object, containing the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getAllClassrooms = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to get all classrooms (only roles above USER)
-        await checkAuthorization(user, undefined, undefined, 'getAll');
+        await checkAuthorization(requester, [], 'getAll');
         // Prisma operation
-        const classrooms = await prismaClient.classroom.findMany({ select: fields });
-        // Embed user actions in the response
-        const processedClassrooms = await Promise.all(
-            classrooms.map(async (classroom) => {
-                return { ...classroom, actions: await getClassroomUserActions(user, classroom, undefined) };
+        const detailedStoredClassrooms = await prismaClient.classroom.findMany({ include: detailedClassroomFields() });
+        // Get classrooms only with visible fields and with embedded actions
+        const actions = await getClassroomUserActions(requester, detailedStoredClassrooms);
+        const filteredFields = await getVisibleFields(requester, detailedStoredClassrooms, true, false);
+        const unfilteredFields = (await getVisibleFields(requester, [], true, true))[0];
+        unfilteredFields.select.users = (await getUsersVisibleFields(requester, [], false, false, true))[0];
+        const unfilteredClassrooms = await prismaClient.classroom.findMany({
+            where: { id: { in: detailedStoredClassrooms.map(({ id }) => id) } },
+            ...unfilteredFields,
+        });
+        const visibleClassrooms = await Promise.all(
+            unfilteredClassrooms.map(async (classroom, i) => {
+                const usersActions = await getPeerUserActions(requester, detailedStoredClassrooms[i].users);
+                const usersFields = await getUsersVisibleFields(requester, detailedStoredClassrooms[i].users, false, false, false);
+                return {
+                    ...fieldsFilter(classroom, filteredFields[i]),
+                    users: classroom.users.map((user, j) => ({
+                        ...fieldsFilter(user, usersFields[j]),
+                        actions: usersActions[j],
+                    })),
+                    actions: actions[i],
+                };
             })
         );
 
-        res.status(200).json({ message: 'All classrooms found.', data: processedClassrooms });
+        res.status(200).json({ message: 'All classrooms found.', data: visibleClassrooms });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
 };
 
+/**
+ * Gets an classroom from the database by ID.
+ *
+ * This function handles the retrieval of an classroom in the database by ID, validating the user
+ * performing the action to then retrieve the classroom using Prisma.
+ *
+ * @param req - The request object, containing the classroom ID in the params and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getClassroom = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
         const classroomId: number = parseInt(req.params.classroomId);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to get this classroom
-        await checkAuthorization(user, classroomId, undefined, 'get');
+        await checkAuthorization(requester, [classroomId], 'get');
         // Prisma operation
-        const classroom = await prismaClient.classroom.findUniqueOrThrow({ where: { id: classroomId }, select: fields });
-        // Embed user actions in the response
-        const processedClassroom = { ...classroom, actions: await getClassroomUserActions(user, classroom, classroomId) };
+        const detailedStoredClassroom = await prismaClient.classroom.findUniqueOrThrow({
+            where: { id: classroomId },
+            include: detailedClassroomFields(),
+        });
+        // Get classroom only with visible fields and with embedded actions
+        const fieldsWUnfilteredUsers = (await getVisibleFields(requester, [detailedStoredClassroom], true, false))[0];
+        fieldsWUnfilteredUsers.select.users = (await getUsersVisibleFields(requester, [], false, false, true))[0];
+        const visibleClassroomWUnfilteredUsers = {
+            ...(await prismaClient.classroom.findUnique({ where: { id: detailedStoredClassroom.id }, ...fieldsWUnfilteredUsers })),
+            actions: (await getClassroomUserActions(requester, [detailedStoredClassroom]))[0],
+        };
+        // Get users only with visible fields and with embedded actions
+        const detailedUsers = detailedStoredClassroom.users;
+        const userActions = await getPeerUserActions(requester, detailedUsers);
+        const filteredUserFields = await getUsersVisibleFields(requester, detailedUsers, false, false, false);
+        const visibleClassroom = {
+            ...visibleClassroomWUnfilteredUsers,
+            users: visibleClassroomWUnfilteredUsers.users?.map((user, i) => ({
+                ...fieldsFilter(user, filteredUserFields[i]),
+                actions: userActions[i],
+            })),
+        };
 
-        res.status(200).json({ message: 'Classroom found.', data: processedClassroom });
+        res.status(200).json({ message: 'Classroom found.', data: visibleClassroom });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
 };
 
+/**
+ * Gets all classrooms associated with the user from the database.
+ *
+ * This function handles the retrieval of all classrooms associated with the user in the database,
+ * validating the user performing the action to then retrieve all classrooms using Prisma.
+ *
+ * @param req - The request object, containing the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getMyClassrooms = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to get his classrooms
-        await checkAuthorization(user, undefined, undefined, 'getMy');
+        await checkAuthorization(requester, [], 'getMy');
         // Prisma operation
-        const classrooms = await prismaClient.classroom.findMany({
-            where: { users: { some: { id: user.id } } },
-            select: fields,
+        const detailedStoredClassrooms = await prismaClient.classroom.findMany({
+            where: { users: { some: { id: requester.id } } },
+            include: detailedClassroomFields(),
         });
-        // Embed user actions in the response
-        const processedClassrooms = await Promise.all(
-            classrooms.map(async (classroom) => {
-                return { ...classroom, actions: await getClassroomUserActions(user, classroom, undefined) };
+        // Get classrooms only with visible fields and with embedded actions
+        const actions = await getClassroomUserActions(requester, detailedStoredClassrooms);
+        const filteredFields = await getVisibleFields(requester, detailedStoredClassrooms, true, false);
+        const unfilteredFields = (await getVisibleFields(requester, [], true, true))[0];
+        unfilteredFields.select.users = (await getUsersVisibleFields(requester, [], false, false, true))[0];
+        const unfilteredClassrooms = await prismaClient.classroom.findMany({
+            where: { id: { in: detailedStoredClassrooms.map(({ id }) => id) } },
+            ...unfilteredFields,
+        });
+        const visibleClassrooms = await Promise.all(
+            unfilteredClassrooms.map(async (classroom, i) => {
+                const usersActions = await getPeerUserActions(requester, detailedStoredClassrooms[i].users);
+                const usersFields = await getUsersVisibleFields(requester, detailedStoredClassrooms[i].users, false, false, false);
+                return {
+                    ...fieldsFilter(classroom, filteredFields[i]),
+                    users: classroom.users.map((user, j) => ({
+                        ...fieldsFilter(user, usersFields[j]),
+                        actions: usersActions[j],
+                    })),
+                    actions: actions[i],
+                };
             })
         );
 
-        res.status(200).json({ message: 'My classrooms found.', data: processedClassrooms });
+        res.status(200).json({ message: 'My classrooms found.', data: visibleClassrooms });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
 };
 
+/**
+ * Gets all classrooms managed by the user from the database.
+ *
+ * This function handles the retrieval of all classrooms managed by the user in the database,
+ * validating the user performing the action to then retrieve all classrooms using Prisma.
+ *
+ * @param req - The request object, containing the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const getManagedClassrooms = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to get his managed classrooms
-        await checkAuthorization(user, undefined, undefined, 'getManaged');
+        await checkAuthorization(requester, [], 'getManaged');
         // Prisma operation
-        const classrooms = await prismaClient.classroom.findMany({
+        const detailedStoredClassrooms = await prismaClient.classroom.findMany({
             where: {
-                ...(user.role !== UserRole.ADMIN && {
+                ...(requester.role !== UserRole.ADMIN && {
                     // Admins can manage all classrooms
                     OR: [
-                        ...(user.role === UserRole.COORDINATOR ? [{ institutionId: user.institutionId }] : []), // Coordinators can manage classrooms from their institutions and users they created
-                        { creatorId: user.id }, // Publishers and appliers can only manage classrooms they created
+                        ...(requester.role === UserRole.COORDINATOR ? [{ institutionId: requester.institutionId }] : []), // Coordinators can manage classrooms from their institutions and users they created
+                        { creatorId: requester.id }, // Publishers and appliers can only manage classrooms they created
                     ],
                 }),
             },
-            select: fields,
+            include: detailedClassroomFields(),
         });
-        // Embed user actions in the response
-        const processedClassrooms = await Promise.all(
-            classrooms.map(async (classroom) => {
-                return { ...classroom, actions: await getClassroomUserActions(user, classroom, undefined) };
+        // Get classrooms only with visible fields and with embedded actions
+        const actions = await getClassroomUserActions(requester, detailedStoredClassrooms);
+        const filteredFields = await getVisibleFields(requester, detailedStoredClassrooms, true, false);
+        const unfilteredFields = (await getVisibleFields(requester, [], true, true))[0];
+        unfilteredFields.select.users = (await getUsersVisibleFields(requester, [], false, false, true))[0];
+        const unfilteredClassrooms = await prismaClient.classroom.findMany({
+            where: { id: { in: detailedStoredClassrooms.map(({ id }) => id) } },
+            ...unfilteredFields,
+        });
+        const visibleClassrooms = await Promise.all(
+            unfilteredClassrooms.map(async (classroom, i) => {
+                const usersActions = await getPeerUserActions(requester, detailedStoredClassrooms[i].users);
+                const usersFields = await getUsersVisibleFields(requester, detailedStoredClassrooms[i].users, false, false, false);
+                return {
+                    ...fieldsFilter(classroom, filteredFields[i]),
+                    users: classroom.users.map((user, j) => ({
+                        ...fieldsFilter(user, usersFields[j]),
+                        actions: usersActions[j],
+                    })),
+                    actions: actions[i],
+                };
             })
         );
 
-        res.status(200).json({ message: 'My managed classrooms found.', data: processedClassrooms });
+        res.status(200).json({ message: 'My managed classrooms found.', data: visibleClassrooms });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
 };
 
+/**
+ * Searches classrooms by name in the database.
+ *
+ * This function handles the search of classrooms by name in the database, validating the user
+ * performing the action to then retrieve all classrooms using Prisma.
+ *
+ * @param req - The request object, containing the user object from Passport-JWT and the term in the body.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const searchClassroomByName = async (req: Request, res: Response): Promise<void> => {
     try {
         // User from passport-jwt
-        const curUser = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to search users
-        await checkAuthorization(curUser, undefined, undefined, 'search');
+        await checkAuthorization(requester, [], 'search');
         // Yup schemas
         const searchUserSchema = yup
             .object()
@@ -318,36 +632,64 @@ export const searchClassroomByName = async (req: Request, res: Response): Promis
         // Yup parsing/validation
         const { term } = await searchUserSchema.validate(req.body, { stripUnknown: false });
         // Prisma operation
-        const classrooms = await prismaClient.classroom.findMany({
+        const detailedStoredClassrooms = await prismaClient.classroom.findMany({
             where: {
                 name: { startsWith: term },
-                ...(curUser.role !== UserRole.ADMIN && {
-                    OR: [{ institutionId: curUser.institutionId }, { institutionId: null }],
+                ...(requester.role !== UserRole.ADMIN && {
+                    OR: [{ institutionId: requester.institutionId }, { institutionId: null }],
                 }),
             },
-            select: publicFields,
+            include: detailedClassroomFields(),
         });
-        // Embed user actions in the response
-        const processedClassrooms = await Promise.all(
-            classrooms.map(async (classroom) => {
-                return { ...classroom, actions: await getClassroomUserActions(curUser, classroom, undefined) };
+        // Get classrooms only with visible fields and with embedded actions
+        const actions = await getClassroomUserActions(requester, detailedStoredClassrooms);
+        const filteredFields = await getVisibleFields(requester, detailedStoredClassrooms, true, false);
+        const unfilteredFields = (await getVisibleFields(requester, [], true, true))[0];
+        unfilteredFields.select.users = (await getUsersVisibleFields(requester, [], false, false, true))[0];
+        const unfilteredClassrooms = await prismaClient.classroom.findMany({
+            where: { id: { in: detailedStoredClassrooms.map(({ id }) => id) } },
+            ...unfilteredFields,
+        });
+        const visibleClassrooms = await Promise.all(
+            unfilteredClassrooms.map(async (classroom, i) => {
+                const usersActions = await getPeerUserActions(requester, detailedStoredClassrooms[i].users);
+                const usersFields = await getUsersVisibleFields(requester, detailedStoredClassrooms[i].users, false, false, false);
+                return {
+                    ...fieldsFilter(classroom, filteredFields[i]),
+                    users: classroom.users.map((user, j) => ({
+                        ...fieldsFilter(user, usersFields[j]),
+                        actions: usersActions[j],
+                    })),
+                    actions: actions[i],
+                };
             })
         );
 
-        res.status(200).json({ message: 'Searched classrooms found.', data: processedClassrooms });
+        res.status(200).json({ message: 'Searched classrooms found.', data: visibleClassrooms });
     } catch (error: any) {
         res.status(400).json(errorFormatter(error));
     }
 };
 
+/**
+ * Deletes an classroom from the database by ID.
+ *
+ * This function handles the deletion of an classroom in the database by ID, validating the user
+ * performing the action to then delete the classroom using Prisma.
+ *
+ * @param req - The request object, containing the classroom ID in the params and the user object from Passport-JWT.
+ * @param res - The response object, used to send the response back to the client.
+ *
+ * @returns A promise that resolves when the function sets the response to the client.
+ */
 export const deleteClassroom = async (req: Request, res: Response): Promise<void> => {
     try {
         // ID from params
         const classroomId: number = parseInt(req.params.classroomId);
         // User from Passport-JWT
-        const user = req.user as User;
+        const requester = req.user as User;
         // Check if user is authorized to delete this classroom
-        await checkAuthorization(user, classroomId, undefined, 'delete');
+        await checkAuthorization(requester, [classroomId], 'delete');
         // Prisma operation
         const deletedClassroom = await prismaClient.classroom.delete({ where: { id: classroomId }, select: { id: true } });
 
