@@ -395,15 +395,15 @@ export const getProtocolsUserRoles = async (user: User, protocols: Awaited<Retur
 export const getProtocolsUserActions = async (user: User, protocols: Awaited<ReturnType<typeof getDetailedProtocols>>) => {
     const protocolsRoles = await getProtocolsUserRoles(user, protocols);
 
-    const protocolsActions = protocols.map((protocol, i) => {
-        const roles = protocolsRoles[i];
+    const protocolsActions = protocolsRoles.map((roles, i) => {
         // Anyone except users, appliers and guests can create protocols
         const toCreate = user.role === UserRole.ADMIN || user.role === UserRole.PUBLISHER || user.role === UserRole.COORDINATOR;
         // Only managers/creator/institution coordinator can perform delete operations on protocols
         const toUpdate = roles.manager || roles.coordinator || roles.creator || user.role === UserRole.ADMIN;
         // Only managers/creator/institution coordinator can perform delete operations on protocols if there are no applications
         const toDelete =
-            ((roles.manager || roles.coordinator || roles.creator) && protocol.applications.length === 0) || user.role === UserRole.ADMIN;
+            ((roles.manager || roles.coordinator || roles.creator) && protocols[i].applications.length === 0) ||
+            user.role === UserRole.ADMIN;
         // Only viewers/creator/managers/appliers/institution coordinator can perform get operations on protocols
         const toGet = roles.viewer || roles.coordinator || roles.creator || roles.manager || roles.applier || user.role === UserRole.ADMIN;
         // No one can perform getAll operations on protocols

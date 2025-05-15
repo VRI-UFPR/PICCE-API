@@ -115,8 +115,7 @@ export const getApplicationsUserRoles = async (user: User, applications: Awaited
 export const getApplicationsUserActions = async (user: User, applications: Awaited<ReturnType<typeof getDetailedApplications>>) => {
     const applicationsRoles = await getApplicationsUserRoles(user, applications);
 
-    const applicationsActions = applications.map((application, i) => {
-        const roles = applicationsRoles[i];
+    const applicationsActions = applicationsRoles.map((roles) => {
         // Only protocol managers/applier/institution coordinator/protocol creator can perform update operations on applications
         const toUpdate =
             roles.applier || roles.coordinator || roles.protocolCreator || roles.protocolManager || user.role === UserRole.ADMIN;
