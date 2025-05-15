@@ -61,7 +61,7 @@ export const getVisibleFields = async (
     const classroomRoles = await getClassroomUserRoles(user, classrooms);
 
     const mapVisibleFields = (roles: (typeof classroomRoles)[0] | undefined) => {
-        const fullAccess = roles ? roles.creator || user.role === UserRole.ADMIN : ignoreFilters;
+        const fullAccess = roles ? roles.creator || user.role === UserRole.ADMIN || roles.institutionCoordinator : ignoreFilters;
         const baseAccess = roles
             ? ((roles.viewer || roles.member) && user.role !== UserRole.GUEST && user.role !== UserRole.USER) ||
               roles.institutionMember ||
@@ -76,7 +76,7 @@ export const getVisibleFields = async (
                 updatedAt: baseAccess,
                 name: baseAccess,
                 users: includeUsers && { select: { id: baseAccess, name: fullAccess, username: baseAccess, role: fullAccess } },
-                creator: { select: { id: fullAccess, username: fullAccess } },
+                creator: fullAccess && { select: { id: fullAccess, username: fullAccess } },
             },
         };
 
@@ -99,6 +99,7 @@ export const getVisibleFields = async (
  * - `creator` - Whether the user is the creator of the classroom.
  * - `institutionMember` - Whether the user is a member of the institution to which the classroom belongs.
  * - `member` - Whether the user is a member of the classroom.
+ * - `institutionCoordinator` - Whether the user is a coordinator of the institution to which the classroom belongs.
  * - `viewer` - Whether the user is a viewer of the classroom.
  */
 const getClassroomUserRoles = async (user: User, classrooms: Awaited<ReturnType<typeof getDetailedClassrooms>>) => {
@@ -106,9 +107,10 @@ const getClassroomUserRoles = async (user: User, classrooms: Awaited<ReturnType<
         const creator = classroom.creator.id === user.id;
         const member = classroom.users.some(({ id }) => id === user.id);
         const institutionMember = user.institutionId && classroom.institution?.id === user.institutionId;
+        const institutionCoordinator = user.role === UserRole.COORDINATOR && classroom.institution?.id === user.institutionId;
         const viewer = !classroom.institution && user.role !== UserRole.GUEST && user.role !== UserRole.USER;
 
-        return { creator, institutionMember, member, viewer };
+        return { creator, institutionCoordinator, institutionMember, member, viewer };
     });
 
     return roles;
@@ -133,25 +135,24 @@ export const getClassroomUserActions = async (user: User, classrooms: Awaited<Re
         // Only institution members (except users and guests)/creator can perform update operations on classrooms
         const toUpdate =
             roles.creator ||
+            roles.institutionCoordinator ||
             (roles.institutionMember && user.role !== UserRole.USER && user.role !== UserRole.GUEST) ||
             user.role === UserRole.ADMIN;
-        // Only institution members (except users and guests)/creator can perform delete operations on classrooms
-        const toDelete =
-            roles.creator ||
-            (roles.institutionMember && user.role !== UserRole.USER && user.role !== UserRole.GUEST) ||
-            user.role === UserRole.ADMIN;
+        // Only institution coordinators/creator can perform delete operations on classrooms
+        const toDelete = roles.creator || roles.institutionCoordinator || user.role === UserRole.ADMIN;
         // Only institution members (except users and guests)/creator can perform get operations on classrooms
         const toGet =
             roles.creator ||
             roles.viewer ||
+            roles.institutionCoordinator ||
             (roles.institutionMember && user.role !== UserRole.USER && user.role !== UserRole.GUEST) ||
             user.role === UserRole.ADMIN;
         // No one can perform get all classrooms operation on classrooms
         const toGetAll = user.role === UserRole.ADMIN;
         // Anyone except users and guests can perform create operations on classrooms
         const toSearch = user.role !== UserRole.USER && user.role !== UserRole.GUEST;
-        // Anyone can perform getMy operation on classrooms
-        const toGetMy = true;
+        // Anyone can except GUESTS perform getMy operation on classrooms
+        const toGetMy = user.role !== UserRole.GUEST;
         // Anyone can perform getManaged operation on classrooms
         const toGetManaged = true;
 
@@ -174,7 +175,8 @@ export const getClassroomUserActions = async (user: User, classrooms: Awaited<Re
  * @returns void
  */
 const validateInstitution = (user: User, institutionId: number | undefined) => {
-    if (institutionId && user.institutionId !== institutionId) throw new Error('This user is not authorized to perform this action');
+    if (institutionId && user.institutionId !== institutionId && user.role !== UserRole.ADMIN)
+        throw new Error('This user is not authorized to perform this action');
 };
 
 /**
@@ -220,9 +222,14 @@ const checkAuthorization = async (requester: User, classroomsIds: number[], acti
             if (requester.role === UserRole.USER || requester.role === UserRole.GUEST)
                 throw new Error('This user is not authorized to perform this action');
             break;
-        case 'getMy':
         case 'getManaged':
-            // Anyone can perform getMy operation on classrooms (since the result is filtered according to the user)
+            // Anyone except GUESTS and USERS can perform getMy operation on classrooms (since the result is filtered according to the user)
+            if (requester.role === UserRole.USER || requester.role === UserRole.GUEST)
+                throw new Error('This user is not authorized to perform this action');
+            break;
+        case 'getMy':
+            // Anyone except GUESTS can perform getMy operation on classrooms (since the result is filtered according to the user)
+            if (requester.role === UserRole.GUEST) throw new Error('This user is not authorized to perform this action');
             break;
     }
 };
@@ -235,16 +242,20 @@ const checkAuthorization = async (requester: User, classroomsIds: number[], acti
  * @throws Will throw an error if the classroom users are not valid.
  *
  * The function performs the following validations:
- * - A classroom can not contain GUEST or ADMIN users.
+ * - A classroom can not contain COORDINATOR, GUEST or ADMIN users.
  * - An institution classroom can only contain users from the institution.
  *
  * @returns void
  */
 const validateUsers = async (institutionId: number | undefined, users: number[]) => {
-    const guestUsers = await prismaClient.user.findMany({ where: { id: { in: users }, role: { in: [UserRole.GUEST, UserRole.ADMIN] } } });
-    if (guestUsers.length > 0) throw new Error('A classroom can not contain GUEST or ADMIN users.');
+    const guestUsers = await prismaClient.user.findMany({
+        where: { id: { in: users }, role: { in: [UserRole.GUEST, UserRole.ADMIN, UserRole.COORDINATOR] } },
+    });
+    if (guestUsers.length > 0) throw new Error('A classroom can not contain COORDINATOR, GUEST or ADMIN users.');
     if (institutionId) {
-        const invalidUsers = await prismaClient.user.findMany({ where: { id: { in: users }, institutionId: { not: institutionId } } });
+        const invalidUsers = await prismaClient.user.findMany({
+            where: { id: { in: users }, OR: [{ institutionId: { not: institutionId } }, { institutionId: null }] },
+        });
         if (invalidUsers.length > 0) throw new Error('An institution classroom can only contain users from the institution.');
     }
 };
