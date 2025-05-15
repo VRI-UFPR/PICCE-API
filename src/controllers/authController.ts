@@ -43,7 +43,7 @@ export const signIn = async (req: Request, res: Response) => {
             include: { profileImage: true },
         });
         // Password check
-        if (!compareSync(userData.hash, storedUser.hash)) throw new Error('Invalid credentials.');
+        if (!compareSync(userData.hash, storedUser.hash) || storedUser.role === UserRole.GUEST) throw new Error('Invalid credentials.');
         // JWT token creation
         const token = jwt.sign({ id: storedUser.id, username: storedUser.username }, process.env.JWT_SECRET as string, {
             expiresIn: process.env.JWT_EXPIRATION,
@@ -58,7 +58,7 @@ export const signIn = async (req: Request, res: Response) => {
                 token: token,
                 expiresIn: ms(process.env.JWT_EXPIRATION as string),
                 institutionId: storedUser.institutionId,
-                profileImage: storedUser.profileImage ? { path: storedUser.profileImage.path } : undefined,
+                profileImage: storedUser.profileImage ? { path: storedUser.profileImage.path } : null,
             },
         });
     } catch (error: any) {
@@ -92,8 +92,6 @@ export const passwordlessSignIn = async (req: Request, res: Response) => {
                 role: guestUser.role,
                 token: token,
                 expiresIn: ms(process.env.JWT_EXPIRATION as string),
-                institutionId: guestUser.institutionId,
-                profileImage: guestUser.profileImage ? { path: guestUser.profileImage.path } : undefined,
             },
         });
     } catch (error: any) {
@@ -128,6 +126,7 @@ export const renewSignIn = async (req: Request, res: Response) => {
                 role: requester.role,
                 token: token,
                 expiresIn: ms(process.env.JWT_EXPIRATION as string),
+                acceptedTerms: requester.acceptedTerms,
                 institutionId: requester.institutionId,
                 profileImage: requester.profileImage ? { path: requester.profileImage.path } : undefined,
             },
