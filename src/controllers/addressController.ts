@@ -38,7 +38,10 @@ const checkAuthorization = async (requester: User, action: string) => {
         case 'get':
         case 'getByState':
         case 'getId': {
-            // Everyone can perform get/getAll/getByState operations on addresses
+            // Everyone except users and guests can perform get/getAll/getByState operations on addresses
+            if (requester.role === UserRole.USER || requester.role === UserRole.GUEST) {
+                throw new Error('This user is not authorized to perform this action');
+            }
             break;
         }
     }
@@ -77,7 +80,6 @@ export const createAddress = async (req: Request, res: Response) => {
         // Express success response
         res.status(201).json({ message: 'Address created.', data: storedAddress });
     } catch (error: any) {
-        console.error(error);
         // Express error response
         res.status(400).json(errorFormatter(error));
     }
@@ -114,7 +116,6 @@ export const updateAddress = async (req: Request, res: Response): Promise<void> 
         // Express success response
         res.status(200).json({ message: 'Address updated.', data: storedAddress });
     } catch (error: any) {
-        console.error(error);
         // Express error response
         res.status(400).json(errorFormatter(error));
     }
@@ -142,7 +143,6 @@ export const getAllAddresses = async (req: Request, res: Response): Promise<void
         // Express success response
         res.status(200).json({ message: 'All addresses found.', data: storedAddresses });
     } catch (error: any) {
-        console.error(error);
         // Express error response
         res.status(400).json(errorFormatter(error));
     }
@@ -177,7 +177,6 @@ export const getAddressesByState = async (req: Request, res: Response): Promise<
         // Express success response
         res.status(200).json({ message: 'Addresses found.', data: storedAddresses });
     } catch (error: any) {
-        console.error(error);
         // Express error response
         res.status(400).json(errorFormatter(error));
     }
@@ -219,7 +218,6 @@ export const getAddressId = async (req: Request, res: Response): Promise<void> =
         // Express success response
         res.status(200).json({ message: 'City ID found.', data: storedAddress.id });
     } catch (error: any) {
-        console.error(error);
         // Express error response
         res.status(400).json(errorFormatter(error));
     }
@@ -249,7 +247,6 @@ export const getAddress = async (req: Request, res: Response): Promise<void> => 
         // Express success response
         res.status(200).json({ message: 'Address found.', data: storedAddress });
     } catch (error: any) {
-        console.error(error);
         // Express error response
         res.status(400).json(errorFormatter(error));
     }
@@ -279,7 +276,6 @@ export const deleteAddress = async (req: Request, res: Response): Promise<void> 
         // Express success response
         res.status(200).json({ message: 'Address deleted.', data: deletedAddress });
     } catch (error: any) {
-        console.error(error);
         // Express error response
         res.status(400).json(errorFormatter(error));
     }
