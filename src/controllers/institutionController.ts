@@ -159,8 +159,8 @@ const getInstitutionUserActions = async (user: User, institutions: Awaited<Retur
     const actions = institutionsRoles.map((roles) => {
         // Only the coordinator can perform update operations on an institution
         const toUpdate = roles.coordinator || user.role === UserRole.ADMIN;
-        // Only the coordinator can perform delete operations on an institution
-        const toDelete = roles.coordinator || user.role === UserRole.ADMIN;
+        // No one can perform delete operations on an institution
+        const toDelete = user.role === UserRole.ADMIN;
         // Only members (except users and guests) can perform get operations on institutions
         const toGet = (roles.member && user.role !== UserRole.USER && user.role !== UserRole.GUEST) || user.role === UserRole.ADMIN;
         // No one can perform getAll operations on institutions
@@ -192,7 +192,6 @@ const checkAuthorization = async (requester: User, institutionsIds: number[], ac
         case 'getAll': {
             // No one can perform create/getAll operations on institutions
             throw new Error('This user is not authorized to perform this action');
-            break;
         }
         case 'update': {
             if (
@@ -201,6 +200,7 @@ const checkAuthorization = async (requester: User, institutionsIds: number[], ac
                 )
             )
                 throw new Error('This user is not authorized to perform this action');
+            break;
         }
         case 'delete': {
             if (
@@ -209,10 +209,12 @@ const checkAuthorization = async (requester: User, institutionsIds: number[], ac
                 )
             )
                 throw new Error('This user is not authorized to perform this action');
+            break;
         }
         case 'get': {
             if ((await getInstitutionUserActions(requester, await getDetailedInstitutions(institutionsIds))).some(({ toGet }) => !toGet))
                 throw new Error('This user is not authorized to perform this action');
+            break;
         }
         case 'getVisible': {
             // Anyone (except users and guests) can perform getVisible operations on institutions
