@@ -1,4 +1,5 @@
 .env
+.env.test
 dist
 node_modules
 uploads
