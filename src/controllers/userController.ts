@@ -137,13 +137,22 @@ const getPeerUsersRoles = async (curUser: User, users: Awaited<ReturnType<typeof
 export const getPeerUserActions = async (curUser: User, users: Awaited<ReturnType<typeof getDetailedUsers>>) => {
     const peerUsersRoles = await getPeerUsersRoles(curUser, users);
 
-    const actions = peerUsersRoles.map((roles) => {
+    const actions = peerUsersRoles.map((roles, i) => {
         // Only the user itself, its creator and its institution coordinators can perform update operations on it
-        const toUpdate = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
+        const toUpdate =
+            (roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN) &&
+            users[i].role !== UserRole.GUEST &&
+            users[i].role !== UserRole.ADMIN;
         // Only the user itself, its creator and its institution coordinators can perform delete operations on it
-        const toDelete = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
+        const toDelete =
+            (roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN) &&
+            users[i].role !== UserRole.GUEST &&
+            users[i].role !== UserRole.ADMIN;
         // Only the user itself, its creator and its institution coordinators can perform get operations on it
-        const toGet = roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN;
+        const toGet =
+            (roles.creator || roles.coordinator || roles.itself || curUser.role === UserRole.ADMIN) &&
+            users[i].role !== UserRole.GUEST &&
+            users[i].role !== UserRole.ADMIN;
         // Only admins can perform get all users operation
         const toGetAll = curUser.role === UserRole.ADMIN;
         // Anyone (except users and guests) can perform search operations on users
@@ -160,7 +169,7 @@ export const getPeerUserActions = async (curUser: User, users: Awaited<ReturnTyp
 /**
  * Validates the hierarchy of a user to create or update another user.
  *
- * @param curUser - The user performing the operation.
+ * @param requester - The user performing the operation.
  * @param role - The role of the user being created or updated.
  * @param institutionId - The institution ID of the user being created or updated.
  * @param userId - The ID of the user being updated.
@@ -169,24 +178,25 @@ export const getPeerUserActions = async (curUser: User, users: Awaited<ReturnTyp
  * @returns A promise that resolves if the hierarchy is valid.
  */
 const validateHierarchy = async (
-    curUser: User,
+    requester: User,
     role: UserRole | undefined,
     institutionId: number | undefined,
     userId: number | undefined
 ) => {
     if (
         role === UserRole.ADMIN || // Admins cannot be managed by anyone
-        (curUser.role === UserRole.COORDINATOR && // Coordinators can only manage publishers, appliers and users
+        (requester.role === UserRole.COORDINATOR &&
+            role && // Coordinators can only manage publishers, appliers and users
             role !== UserRole.PUBLISHER &&
             role !== UserRole.APPLIER &&
             role !== UserRole.USER) ||
-        (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER) || // Publishers can only manage users
-        (curUser.role === UserRole.APPLIER && role !== UserRole.USER) || // Appliers can only manage users
-        (institutionId && curUser.institutionId !== institutionId) || // Users cannot insert people in institutions to which they do not belong
+        (requester.role === UserRole.PUBLISHER && role && role !== UserRole.USER) || // Publishers can only manage users
+        (requester.role === UserRole.APPLIER && role && role !== UserRole.USER) || // Appliers can only manage users
+        (institutionId && requester.institutionId !== institutionId && requester.role !== UserRole.ADMIN) || // Users cannot insert people in institutions to which they do not belong except for admins
         (role === UserRole.COORDINATOR && institutionId === undefined) || // Coordinators must belong to an institution
         role === UserRole.GUEST || // Users cannot be created as guests
-        (curUser.id === userId && role) || // The user itself cannot change its role
-        (curUser.role === UserRole.ADMIN && curUser.id === userId && institutionId) // Admins cannot have institutions
+        (requester.id === userId && role) || // The user itself cannot change its role
+        (requester.role === UserRole.ADMIN && requester.id === userId && institutionId) // Admins cannot have institutions
     )
         throw new Error('The role or institution of the user is invalid.');
 };
