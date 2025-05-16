@@ -172,7 +172,8 @@ const validateAnswers = async (itemAnswerGroups: any, applicationId: number) => 
         if (itemValidation.mandatory) {
             if (!answers[itemValidation.id]) throw new Error('Mandatory item is missing: ' + itemValidation.text);
             for (const answer of answers[itemValidation.id]) {
-                if (answer.text === '') throw new Error('Mandatory item is missing: ' + itemValidation.text);
+                if ((itemValidation.type === 'TEXTBOX' || itemValidation.type === 'NUMBERBOX') && answer.text === '')
+                    throw new Error('Mandatory item is missing: ' + itemValidation.text);
             }
         }
         if (itemValidation.min && answers[itemValidation.id]) {
