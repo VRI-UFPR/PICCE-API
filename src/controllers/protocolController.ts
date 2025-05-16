@@ -349,6 +349,7 @@ const validateDependency = async (type: DependencyType, argument: string = '') =
         case DependencyType.EXACT_ANSWER:
         case DependencyType.OPTION_SELECTED:
             if (argument.length === 0) throw new Error('Option selected and exact answer dependencies must have an argument.');
+            break;
         case DependencyType.MIN:
         case DependencyType.MAX:
             if (Number.isNaN(parseInt(argument))) throw new Error('Min and max dependencies must have a numeric argument.');
