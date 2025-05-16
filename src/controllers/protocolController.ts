@@ -344,6 +344,24 @@ const validatePlacements = async (placements: number[]) => {
     }
 };
 
+const validateDependency = async (type: DependencyType, argument: string = '') => {
+    switch (type) {
+        case DependencyType.EXACT_ANSWER:
+        case DependencyType.OPTION_SELECTED:
+            if (argument.length === 0) throw new Error('Option selected and exact answer dependencies must have an argument.');
+            break;
+        case DependencyType.MIN:
+        case DependencyType.MAX:
+            if (Number.isNaN(parseInt(argument))) throw new Error('Min and max dependencies must have a numeric argument.');
+            break;
+        case DependencyType.IS_ANSWERED:
+            if (argument.length > 0) throw new Error('Is answered dependency must not have an argument.');
+            break;
+        default:
+            throw new Error('Invalid dependency type.');
+    }
+};
+
 const dropSensitiveFields = (protocol: any) => {
     const filteredProtocol = { ...protocol };
     delete filteredProtocol.managers;
@@ -525,7 +543,7 @@ export const createProtocol = async (req: Request, res: Response, next: any) => 
         // Yup schemas
         const fileSchema = yup
             .object()
-            .shape({ description: yup.string().max(3000) })
+            .shape({ description: yup.string().max(20000) })
             .noUnknown();
 
         const tableColumnSchema = yup
@@ -555,7 +573,7 @@ export const createProtocol = async (req: Request, res: Response, next: any) => 
             .object()
             .shape({
                 type: yup.mixed<DependencyType>().oneOf(Object.values(DependencyType)).required(),
-                argument: yup.string().required(),
+                argument: yup.string(),
                 customMessage: yup.string(),
                 itemTempId: yup.number().min(1).required(),
             })
@@ -565,8 +583,8 @@ export const createProtocol = async (req: Request, res: Response, next: any) => 
             .object()
             .shape({
                 tempId: yup.number().min(1).required(),
-                text: yup.string().min(3).max(3000).required(),
-                description: yup.string().max(3000),
+                text: yup.string().min(3).max(20000).required(),
+                description: yup.string().max(20000),
                 enabled: yup.boolean().required(),
                 type: yup.mixed<ItemType>().oneOf(Object.values(ItemType)).required(),
                 placement: yup.number().min(1).required(),
@@ -603,7 +621,7 @@ export const createProtocol = async (req: Request, res: Response, next: any) => 
             .shape({
                 id: yup.number().min(1),
                 title: yup.string().min(3).max(255).required(),
-                description: yup.string().max(3000),
+                description: yup.string().max(20000),
                 enabled: yup.boolean().required(),
                 pages: yup.array().of(pagesSchema).min(1).required(),
                 managers: yup.array().of(yup.number()).default([]),
@@ -757,6 +775,8 @@ export const createProtocol = async (req: Request, res: Response, next: any) => 
                         }
                     }
                     for (const [dependencyId, dependency] of itemGroup.dependencies.entries()) {
+                        // Validate dependency type and argument
+                        await validateDependency(dependency.type, dependency.argument);
                         const createdDependency = await prisma.itemGroupDependencyRule.create({
                             data: {
                                 type: dependency.type,
@@ -769,6 +789,8 @@ export const createProtocol = async (req: Request, res: Response, next: any) => 
                     }
                 }
                 for (const [dependencyId, dependency] of page.dependencies.entries()) {
+                    // Validate dependency type and argument
+                    await validateDependency(dependency.type, dependency.argument);
                     const createdDependency = await prisma.pageDependencyRule.create({
                         data: {
                             type: dependency.type,
@@ -807,7 +829,7 @@ export const updateProtocol = async (req: Request, res: Response, next: any): Pr
         // Yup schemas
         const updateFileSchema = yup
             .object()
-            .shape({ id: yup.number().min(1), description: yup.string().max(3000) })
+            .shape({ id: yup.number().min(1), description: yup.string().max(20000) })
             .noUnknown();
 
         const updateTableColumnSchema = yup
@@ -840,7 +862,7 @@ export const updateProtocol = async (req: Request, res: Response, next: any): Pr
             .shape({
                 id: yup.number().min(1),
                 type: yup.mixed<DependencyType>().oneOf(Object.values(DependencyType)).required(),
-                argument: yup.string().required(),
+                argument: yup.string(),
                 customMessage: yup.string(),
                 itemTempId: yup.number().min(1).required(),
             })
@@ -851,8 +873,8 @@ export const updateProtocol = async (req: Request, res: Response, next: any): Pr
             .shape({
                 id: yup.number().min(1),
                 tempId: yup.number().min(1).required(),
-                text: yup.string().min(3).max(3000),
-                description: yup.string().max(3000),
+                text: yup.string().min(3).max(20000),
+                description: yup.string().max(20000),
                 enabled: yup.boolean(),
                 type: yup.mixed<ItemType>().oneOf(Object.values(ItemType)).required(),
                 placement: yup.number().min(1).required(),
@@ -891,7 +913,7 @@ export const updateProtocol = async (req: Request, res: Response, next: any): Pr
             .shape({
                 id: yup.number().min(1),
                 title: yup.string().min(3).max(255),
-                description: yup.string().max(3000),
+                description: yup.string().max(20000),
                 enabled: yup.boolean(),
                 pages: yup.array().of(updatePagesSchema).min(1).required(),
                 managers: yup.array().of(yup.number()).default([]),
@@ -1179,6 +1201,8 @@ export const updateProtocol = async (req: Request, res: Response, next: any): Pr
                     });
                     // Update existing dependencies or create new ones
                     for (const [dependencyId, dependency] of itemGroup.dependencies.entries()) {
+                        // Validate dependency type and argument
+                        await validateDependency(dependency.type, dependency.argument);
                         const upsertedDependency = dependency.id
                             ? await prisma.itemGroupDependencyRule.update({
                                   where: { id: dependency.id, itemGroupId: upsertedItemGroup.id },
@@ -1209,6 +1233,8 @@ export const updateProtocol = async (req: Request, res: Response, next: any): Pr
                 });
                 // Update existing dependencies or create new ones
                 for (const [dependencyId, dependency] of page.dependencies.entries()) {
+                    // Validate dependency type and argument
+                    await validateDependency(dependency.type, dependency.argument);
                     const upsertedDependency = dependency.id
                         ? await prisma.pageDependencyRule.update({
                               where: { id: dependency.id, pageId: upsertedPage.id },
@@ -1301,14 +1327,13 @@ export const getVisibleProtocols = async (req: Request, res: Response, next: any
                       where: {
                           OR: [
                               { managers: { some: { id: user.id } } },
-                              { appliers: { some: { id: user.id } } },
-                              { viewersUser: { some: { id: user.id } } },
-                              { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                              { appliers: { some: { id: user.id } }, enabled: true },
+                              { viewersUser: { some: { id: user.id } }, enabled: true },
+                              { viewersClassroom: { some: { users: { some: { id: user.id } } } }, enabled: true },
                               { creatorId: user.id },
-                              { visibility: VisibilityMode.PUBLIC },
+                              { visibility: VisibilityMode.PUBLIC, enabled: true },
                               ...(user.role === UserRole.COORDINATOR ? [{ creator: { institutionId: user.institutionId } }] : []),
                           ],
-                          enabled: true,
                       },
                       select: fields,
                   });
@@ -1335,7 +1360,7 @@ export const getMyProtocols = async (req: Request, res: Response, next: any): Pr
         const user = req.user as User;
         // Prisma operation
         const protocols = await prismaClient.protocol.findMany({
-            where: { OR: [{ managers: { some: { id: user.id } }, creatorId: user.id }] },
+            where: { OR: [{ managers: { some: { id: user.id } } }, { creatorId: user.id }] },
             select: fieldsWViewers,
         });
         // Embed user actions in the response

@@ -19,8 +19,8 @@ import { hashSync } from 'bcrypt';
 const getPeerUserRoles = async (curUser: User, user: any, userId: number | undefined) => {
     user = user || (await prismaClient.user.findUniqueOrThrow({ where: { id: userId } }));
 
-    const creator = user.creatorId === curUser.id;
-    const coordinator = curUser.role === UserRole.COORDINATOR && curUser.institutionId && curUser.institutionId === user.institutionId;
+    const creator = user.creator?.id === curUser.id;
+    const coordinator = curUser.role === UserRole.COORDINATOR && curUser.institutionId && curUser.institutionId === user.institution.id;
     const itself = curUser.id === userId;
 
     return { creator, coordinator, itself };
@@ -63,7 +63,7 @@ const checkAuthorization = async (
                     role !== UserRole.PUBLISHER &&
                     role !== UserRole.APPLIER &&
                     role !== UserRole.USER) ||
-                (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER) || // Publishers can only manage users
+                (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER && role !== UserRole.APPLIER) || // Publishers can only manage appliers and users
                 (curUser.role === UserRole.APPLIER && role !== UserRole.USER) || // Appliers can only manage users
                 curUser.role === UserRole.USER || // Users cannot perform create operations
                 curUser.role === UserRole.GUEST || // Guests cannot perform create operations
@@ -323,7 +323,7 @@ export const getManagedUsers = async (req: Request, res: Response, next: any): P
                     ],
                 }),
             },
-            select: publicFields,
+            select: { ...publicFields, creator: { select: { id: true, name: true } } },
         });
         // Embed user actions in the response
         const processedUsers = await Promise.all(
@@ -345,7 +345,10 @@ export const getUser = async (req: Request, res: Response, next: any): Promise<v
         // Check if user is authorized to get the user
         await checkAuthorization(curUser, userId, undefined, undefined, 'get');
         // Prisma operation
-        const user = await prismaClient.user.findUniqueOrThrow({ where: { id: userId }, select: fields });
+        const user = await prismaClient.user.findUniqueOrThrow({
+            where: { id: userId },
+            select: { ...fields, creator: { select: { id: true, name: true } } },
+        });
         // Embed user actions in the response
         const processedUser = { ...user, actions: await getPeerUserActions(curUser, user, userId) };
 
