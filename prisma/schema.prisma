@@ -7,7 +7,7 @@
 // of the GNU General Public License along with PICCE-API.  If not, see <https://www.gnu.org/licenses/>
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
@@ -212,8 +212,8 @@ model User {
   createdClassrooms         Classroom[]         @relation(name: "ClassroomCreator") // classrooms that the user has created
   createdUsers              User[]              @relation(name: "UserCreator") // users that the user has created
 
-  creatorId Int?
-  creator  User? @relation(name: "UserCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  creatorId     Int?
+  creator       User?        @relation(name: "UserCreator", fields: [creatorId], references: [id], onDelete: SetNull)
   institutionId Int?
   institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
 }
@@ -408,7 +408,7 @@ model ItemGroupDependencyRule {
   updatedAt DateTime @updatedAt
 
   type          DependencyType
-  argument      String
+  argument      String?
   customMessage String?
 
   itemGroupId Int
@@ -425,7 +425,7 @@ model PageDependencyRule {
   updatedAt DateTime @updatedAt
 
   type          DependencyType
-  argument      String
+  argument      String?
   customMessage String?
 
   pageId Int
