@@ -12,6 +12,7 @@ import express from 'express';
 import uploader from '../services/multerUploader';
 import passport from '../services/passportAuth';
 import { signIn, renewSignIn, checkSignIn, passwordlessSignIn, acceptTerms } from '../controllers/authController';
+import { setLoggerLocals } from '../services/eventLogger';
 
 /**
  * @swagger
@@ -140,7 +141,7 @@ const router = express.Router();
  *             error:
  *               message: Internal Server Error.
  */
-router.post('/signIn', uploader.none(), signIn);
+router.post('/signIn', uploader.none(), setLoggerLocals, signIn);
 
 // /**
 //  * @swagger
@@ -198,7 +199,7 @@ router.post('/signIn', uploader.none(), signIn);
  *             error:
  *               message: Internal Server Error.
  */
-router.get('/passwordlessSignIn', uploader.none(), passwordlessSignIn);
+router.get('/passwordlessSignIn', uploader.none(), setLoggerLocals, passwordlessSignIn);
 
 /**
  * @swagger
@@ -223,7 +224,7 @@ router.get('/passwordlessSignIn', uploader.none(), passwordlessSignIn);
  *             error:
  *               message: Internal Server Error.
  */
-router.post('/renewSignIn', passport.authenticate('jwt', { session: false }), uploader.none(), renewSignIn);
+router.post('/renewSignIn', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, renewSignIn);
 
 /**
  * @swagger
@@ -251,7 +252,7 @@ router.post('/renewSignIn', passport.authenticate('jwt', { session: false }), up
  *             error:
  *               message: Internal Server Error.
  */
-router.get('/checkSignIn', passport.authenticate('jwt', { session: false }), uploader.none(), checkSignIn);
+router.get('/checkSignIn', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, checkSignIn);
 
 /**
  * @swagger
@@ -280,6 +281,6 @@ router.get('/checkSignIn', passport.authenticate('jwt', { session: false }), upl
  *             error:
  *               message: Internal Server Error.
  */
-router.get('/acceptTerms', passport.authenticate('jwt', { session: false }), uploader.none(), acceptTerms);
+router.get('/acceptTerms', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, acceptTerms);
 
 export default router;

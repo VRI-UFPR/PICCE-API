@@ -20,6 +20,7 @@ import {
     deleteAddress,
 } from '../controllers/addressController';
 import passport from '../services/passportAuth';
+import { setLoggerLocals } from '../services/eventLogger';
 
 const router = express.Router();
 
@@ -134,7 +135,7 @@ const router = express.Router();
  *             error:
  *               message: Internal server error.
  */
-router.post('/createAddress', passport.authenticate('jwt', { session: false }), uploader.none(), createAddress);
+router.post('/createAddress', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, createAddress);
 
 /**
  * @swagger
@@ -176,7 +177,7 @@ router.post('/createAddress', passport.authenticate('jwt', { session: false }), 
  *             error:
  *               message: Internal server error.
  */
-router.put('/updateAddress/:addressId', passport.authenticate('jwt', { session: false }), uploader.none(), updateAddress);
+router.put('/updateAddress/:addressId', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, updateAddress);
 
 /**
  * @swagger
@@ -201,7 +202,7 @@ router.put('/updateAddress/:addressId', passport.authenticate('jwt', { session: 
  *             error:
  *               message: Internal server error.
  */
-router.get('/getAllAddresses', passport.authenticate('jwt', { session: false }), uploader.none(), getAllAddresses);
+router.get('/getAllAddresses', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getAllAddresses);
 
 /**
  * @swagger
@@ -240,7 +241,13 @@ router.get('/getAllAddresses', passport.authenticate('jwt', { session: false }),
  *             error:
  *               message: Internal server error.
  */
-router.post('/getAddressesByState', passport.authenticate('jwt', { session: false }), uploader.none(), getAddressesByState);
+router.post(
+    '/getAddressesByState',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    getAddressesByState
+);
 
 /**
  * @swagger
@@ -278,7 +285,7 @@ router.post('/getAddressesByState', passport.authenticate('jwt', { session: fals
  *             error:
  *               message: Internal server error.
  */
-router.post('/getAddressId', passport.authenticate('jwt', { session: false }), uploader.none(), getAddressId);
+router.post('/getAddressId', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getAddressId);
 
 /**
  * @swagger
@@ -314,7 +321,7 @@ router.post('/getAddressId', passport.authenticate('jwt', { session: false }), u
  *             error:
  *               message: Internal server error.
  */
-router.get('/getAddress/:addressId', passport.authenticate('jwt', { session: false }), uploader.none(), getAddress);
+router.get('/getAddress/:addressId', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getAddress);
 
 /**
  * @swagger
@@ -350,6 +357,12 @@ router.get('/getAddress/:addressId', passport.authenticate('jwt', { session: fal
  *             error:
  *               message: Internal server error.
  */
-router.delete('/deleteAddress/:addressId', passport.authenticate('jwt', { session: false }), uploader.none(), deleteAddress);
+router.delete(
+    '/deleteAddress/:addressId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    deleteAddress
+);
 
 export default router;

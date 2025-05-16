@@ -13,11 +13,10 @@ import { User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import jwt from 'jsonwebtoken';
-import errorFormatter from '../services/errorFormatter';
 import ms from 'ms';
 import { compareSync } from 'bcrypt';
 
-export const signIn = async (req: Request, res: Response) => {
+export const signIn = async (req: Request, res: Response, next: any) => {
     try {
         // Yup schemas
         const signInSchema = yup
@@ -37,7 +36,6 @@ export const signIn = async (req: Request, res: Response) => {
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET as string, {
             expiresIn: process.env.JWT_EXPIRATION,
         });
-
         res.status(200).json({
             message: 'User signed in.',
             data: {
@@ -51,14 +49,15 @@ export const signIn = async (req: Request, res: Response) => {
             },
         });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const passwordlessSignIn = async (req: Request, res: Response) => {
+export const passwordlessSignIn = async (req: Request, res: Response, next: any) => {
     try {
         // Prisma operation
         const user = await prismaClient.user.findFirstOrThrow({ where: { role: UserRole.GUEST }, include: { profileImage: true } });
+
         // JWT token creation
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET as string, {
             expiresIn: process.env.JWT_EXPIRATION,
@@ -76,11 +75,11 @@ export const passwordlessSignIn = async (req: Request, res: Response) => {
             },
         });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const renewSignIn = async (req: Request, res: Response) => {
+export const renewSignIn = async (req: Request, res: Response, next: any) => {
     try {
         // User from Passport-JWT
         const user = req.user as any;
@@ -101,22 +100,22 @@ export const renewSignIn = async (req: Request, res: Response) => {
             },
         });
     } catch (error) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const checkSignIn = async (req: Request, res: Response) => {
+export const checkSignIn = async (req: Request, res: Response, next: any) => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
 
         res.status(200).json({ message: 'User currently signed in.', data: { id: user.id } });
     } catch (error) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const acceptTerms = async (req: Request, res: Response) => {
+export const acceptTerms = async (req: Request, res: Response, next: any) => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -127,6 +126,6 @@ export const acceptTerms = async (req: Request, res: Response) => {
 
         res.status(200).json({ message: 'Terms accepted.', data: { id: updatedUser.id, acceptedTerms: updatedUser.acceptedTerms } });
     } catch (error) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };

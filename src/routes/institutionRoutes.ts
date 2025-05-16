@@ -19,6 +19,7 @@ import {
     getVisibleInstitutions,
 } from '../controllers/institutionController';
 import passport from '../services/passportAuth';
+import { setLoggerLocals } from '../services/eventLogger';
 
 /**
  * @swagger
@@ -206,7 +207,7 @@ const router = express.Router();
  *             error:
  *               message: Internal server error.
  */
-router.post('/createInstitution', passport.authenticate('jwt', { session: false }), uploader.none(), createInstitution);
+router.post('/createInstitution', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, createInstitution);
 
 /**
  * @swagger
@@ -250,7 +251,13 @@ router.post('/createInstitution', passport.authenticate('jwt', { session: false 
  *             error:
  *               message: Internal server error.
  */
-router.put('/updateInstitution/:institutionId', passport.authenticate('jwt', { session: false }), uploader.none(), updateInstitution);
+router.put(
+    '/updateInstitution/:institutionId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    updateInstitution
+);
 
 /**
  * @swagger
@@ -277,7 +284,7 @@ router.put('/updateInstitution/:institutionId', passport.authenticate('jwt', { s
  *             error:
  *               message: Internal server error.
  */
-router.get('/getAllInstitutions', passport.authenticate('jwt', { session: false }), uploader.none(), getAllInstitutions);
+router.get('/getAllInstitutions', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getAllInstitutions);
 
 /**
  * @swagger
@@ -304,7 +311,13 @@ router.get('/getAllInstitutions', passport.authenticate('jwt', { session: false 
  *             error:
  *               message: Internal server error.
  */
-router.get('/getVisibleInstitutions', passport.authenticate('jwt', { session: false }), uploader.none(), getVisibleInstitutions);
+router.get(
+    '/getVisibleInstitutions',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    getVisibleInstitutions
+);
 
 /**
  * @swagger
@@ -341,7 +354,13 @@ router.get('/getVisibleInstitutions', passport.authenticate('jwt', { session: fa
  *             error:
  *               message: Internal server error.
  */
-router.get('/getInstitution/:institutionId', passport.authenticate('jwt', { session: false }), uploader.none(), getInstitution);
+router.get(
+    '/getInstitution/:institutionId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    getInstitution
+);
 
 /**
  * @swagger
@@ -378,6 +397,12 @@ router.get('/getInstitution/:institutionId', passport.authenticate('jwt', { sess
  *             error:
  *               message: Internal server error.
  */
-router.delete('/deleteInstitution/:institutionId', passport.authenticate('jwt', { session: false }), uploader.none(), deleteInstitution);
+router.delete(
+    '/deleteInstitution/:institutionId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    deleteInstitution
+);
 
 export default router;

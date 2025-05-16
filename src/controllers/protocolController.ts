@@ -12,7 +12,7 @@ import { Response, Request } from 'express';
 import { ItemType, ItemGroupType, PageType, ItemValidationType, User, UserRole, VisibilityMode, DependencyType } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
-import errorFormatter from '../services/errorFormatter';
+
 import { unlinkSync, existsSync } from 'fs';
 import { getApplicationUserActions } from './applicationController';
 
@@ -520,7 +520,7 @@ const fieldsWAnswers = {
     },
 };
 
-export const createProtocol = async (req: Request, res: Response) => {
+export const createProtocol = async (req: Request, res: Response, next: any) => {
     try {
         // Yup schemas
         const fileSchema = yup
@@ -796,11 +796,11 @@ export const createProtocol = async (req: Request, res: Response) => {
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const updateProtocol = async (req: Request, res: Response): Promise<void> => {
+export const updateProtocol = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const id: number = parseInt(req.params.protocolId);
@@ -1259,11 +1259,11 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getAllProtocols = async (req: Request, res: Response): Promise<void> => {
+export const getAllProtocols = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -1283,11 +1283,11 @@ export const getAllProtocols = async (req: Request, res: Response): Promise<void
 
         res.status(200).json({ message: 'All protocols found.', data: filteredProtocol });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getVisibleProtocols = async (req: Request, res: Response): Promise<void> => {
+export const getVisibleProtocols = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -1325,11 +1325,11 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
 
         res.status(200).json({ message: 'Visible protocols found.', data: filteredProtocols });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getMyProtocols = async (req: Request, res: Response): Promise<void> => {
+export const getMyProtocols = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -1350,11 +1350,11 @@ export const getMyProtocols = async (req: Request, res: Response): Promise<void>
 
         res.status(200).json({ message: 'My protocols found.', data: filteredProtocols });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getProtocol = async (req: Request, res: Response): Promise<void> => {
+export const getProtocol = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const protocolId: number = parseInt(req.params.protocolId);
@@ -1402,11 +1402,11 @@ export const getProtocol = async (req: Request, res: Response): Promise<void> =>
 
         res.status(200).json({ message: 'Protocol found.', data: filteredProtocol });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getProtocolWithAnswers = async (req: Request, res: Response): Promise<void> => {
+export const getProtocolWithAnswers = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const protocolId: number = parseInt(req.params.protocolId);
@@ -1494,11 +1494,11 @@ export const getProtocolWithAnswers = async (req: Request, res: Response): Promi
 
         res.status(200).json({ message: 'Protocol with answers found.', data: processedProtocol });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const deleteProtocol = async (req: Request, res: Response): Promise<void> => {
+export const deleteProtocol = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const id: number = parseInt(req.params.protocolId);
@@ -1511,6 +1511,6 @@ export const deleteProtocol = async (req: Request, res: Response): Promise<void>
 
         res.status(200).json({ message: 'Protocol deleted.', data: deletedProtocol });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };

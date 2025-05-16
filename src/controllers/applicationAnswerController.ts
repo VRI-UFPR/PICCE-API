@@ -12,7 +12,6 @@ import { Response, Request } from 'express';
 import { ApplicationAnswer, User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
-import errorFormatter from '../services/errorFormatter';
 import { unlinkSync, existsSync } from 'fs';
 import { getApplicationUserRoles } from './applicationController';
 
@@ -253,7 +252,7 @@ const fields = {
     },
 };
 
-export const createApplicationAnswer = async (req: Request, res: Response) => {
+export const createApplicationAnswer = async (req: Request, res: Response, next: any) => {
     try {
         // Yup schemas
         const createItemAnswerSchema = yup
@@ -409,11 +408,11 @@ export const createApplicationAnswer = async (req: Request, res: Response) => {
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const updateApplicationAnswer = async (req: Request, res: Response): Promise<void> => {
+export const updateApplicationAnswer = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const applicationAnswerId: number = parseInt(req.params.applicationAnswerId);
@@ -634,11 +633,11 @@ export const updateApplicationAnswer = async (req: Request, res: Response): Prom
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getAllApplicationAnswers = async (req: Request, res: Response): Promise<void> => {
+export const getAllApplicationAnswers = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -660,11 +659,11 @@ export const getAllApplicationAnswers = async (req: Request, res: Response): Pro
 
         res.status(200).json({ message: 'All application answers found.', data: filteredApplicationAnswers });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getMyApplicationAnswers = async (req: Request, res: Response): Promise<void> => {
+export const getMyApplicationAnswers = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -689,11 +688,11 @@ export const getMyApplicationAnswers = async (req: Request, res: Response): Prom
 
         res.status(200).json({ message: 'My application answers found.', data: filteredApplicationAnswers });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getApplicationAnswer = async (req: Request, res: Response): Promise<void> => {
+export const getApplicationAnswer = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const applicationAnswerId: number = parseInt(req.params.applicationAnswerId);
@@ -716,11 +715,11 @@ export const getApplicationAnswer = async (req: Request, res: Response): Promise
 
         res.status(200).json({ message: 'Application answer found.', data: filteredApplicationAnswer });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const approveApplicationAnswer = async (req: Request, res: Response): Promise<void> => {
+export const approveApplicationAnswer = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const applicationAnswerId: number = parseInt(req.params.applicationAnswerId);
@@ -744,11 +743,11 @@ export const approveApplicationAnswer = async (req: Request, res: Response): Pro
 
         res.status(200).json({ message: 'Application answer approved.', data: filteredApplicationAnswer });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const deleteApplicationAnswer = async (req: Request, res: Response): Promise<void> => {
+export const deleteApplicationAnswer = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const applicationAnswerId: number = parseInt(req.params.applicationAnswerId);
@@ -764,6 +763,6 @@ export const deleteApplicationAnswer = async (req: Request, res: Response): Prom
 
         res.status(200).json({ message: 'Application answer deleted.', data: deletedApplicationAnswer });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };

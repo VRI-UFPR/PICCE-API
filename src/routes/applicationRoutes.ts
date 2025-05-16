@@ -22,6 +22,7 @@ import {
     getAllApplications,
 } from '../controllers/applicationController';
 import passport from '../services/passportAuth';
+import { setLoggerLocals } from '../services/eventLogger';
 
 /**
  * @swagger
@@ -610,7 +611,7 @@ const router = express.Router();
  *             error:
  *               message: Internal server error.
  */
-router.post('/createApplication', passport.authenticate('jwt', { session: false }), uploader.none(), createApplication);
+router.post('/createApplication', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, createApplication);
 
 /**
  * @swagger
@@ -654,7 +655,13 @@ router.post('/createApplication', passport.authenticate('jwt', { session: false 
  *             error:
  *               message: Internal server error.
  */
-router.put('/updateApplication/:applicationId', passport.authenticate('jwt', { session: false }), uploader.none(), updateApplication);
+router.put(
+    '/updateApplication/:applicationId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    updateApplication
+);
 
 /**
  * @swagger
@@ -681,7 +688,7 @@ router.put('/updateApplication/:applicationId', passport.authenticate('jwt', { s
  *             error:
  *               message: Internal server error.
  */
-router.get('/getMyApplications', passport.authenticate('jwt', { session: false }), uploader.none(), getMyApplications);
+router.get('/getMyApplications', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getMyApplications);
 
 /**
  * @swagger
@@ -708,7 +715,13 @@ router.get('/getMyApplications', passport.authenticate('jwt', { session: false }
  *             error:
  *               message: Internal server error.
  */
-router.get('/getVisibleApplications', passport.authenticate('jwt', { session: false }), uploader.none(), getVisibleApplications);
+router.get(
+    '/getVisibleApplications',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    getVisibleApplications
+);
 
 /**
  * @swagger
@@ -735,7 +748,7 @@ router.get('/getVisibleApplications', passport.authenticate('jwt', { session: fa
  *             error:
  *               message: Internal server error.
  */
-router.get('/getAllApplications', passport.authenticate('jwt', { session: false }), uploader.none(), getAllApplications);
+router.get('/getAllApplications', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getAllApplications);
 
 /**
  * @swagger
@@ -773,7 +786,13 @@ router.get('/getAllApplications', passport.authenticate('jwt', { session: false 
  *             error:
  *               message: Internal server error.
  */
-router.get('/getApplication/:applicationId', passport.authenticate('jwt', { session: false }), uploader.none(), getApplication);
+router.get(
+    '/getApplication/:applicationId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    getApplication
+);
 
 /**
  * @swagger
@@ -902,6 +921,12 @@ router.get(
  *             error:
  *               message: Internal server error.
  */
-router.delete('/deleteApplication/:applicationId', passport.authenticate('jwt', { session: false }), uploader.none(), deleteApplication);
+router.delete(
+    '/deleteApplication/:applicationId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    deleteApplication
+);
 
 export default router;

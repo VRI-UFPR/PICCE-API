@@ -12,7 +12,7 @@ import { Response, Request } from 'express';
 import { User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
-import errorFormatter from '../services/errorFormatter';
+
 import { unlinkSync, existsSync } from 'fs';
 import { hashSync } from 'bcrypt';
 
@@ -167,7 +167,7 @@ const publicFields = {
     classrooms: { select: { id: true, name: true } },
 };
 
-export const createUser = async (req: Request, res: Response) => {
+export const createUser = async (req: Request, res: Response, next: any) => {
     try {
         // Yup schemas
         const createUserSchema = yup
@@ -215,11 +215,11 @@ export const createUser = async (req: Request, res: Response) => {
     } catch (error: any) {
         const file = req.file as Express.Multer.File;
         if (file) if (existsSync(file.path)) unlinkSync(file.path);
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const updateUser = async (req: Request, res: Response): Promise<void> => {
+export const updateUser = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const userId: number = parseInt(req.params.userId);
@@ -281,11 +281,11 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     } catch (error: any) {
         const file = req.file as Express.Multer.File;
         if (file) if (existsSync(file.path)) unlinkSync(file.path);
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
+export const getAllUsers = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const curUser = req.user as User;
@@ -300,11 +300,11 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
 
         res.status(200).json({ message: 'All users found.', data: processedUsers });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getManagedUsers = async (req: Request, res: Response): Promise<void> => {
+export const getManagedUsers = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const curUser = req.user as User;
@@ -332,11 +332,11 @@ export const getManagedUsers = async (req: Request, res: Response): Promise<void
 
         res.status(200).json({ message: 'Managed users found.', data: processedUsers });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getUser = async (req: Request, res: Response): Promise<void> => {
+export const getUser = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const userId: number = parseInt(req.params.userId);
@@ -351,11 +351,11 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
 
         res.status(200).json({ message: 'User found.', data: processedUser });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const searchUserByUsername = async (req: Request, res: Response): Promise<void> => {
+export const searchUserByUsername = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from passport-jwt
         const curUser = req.user as User;
@@ -386,11 +386,11 @@ export const searchUserByUsername = async (req: Request, res: Response): Promise
 
         res.status(200).json({ message: 'Searched users found.', data: processedUsers });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+export const deleteUser = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const userId: number = parseInt(req.params.userId);
@@ -403,6 +403,6 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
 
         res.status(200).json({ message: 'User deleted.', data: deletedUser });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };

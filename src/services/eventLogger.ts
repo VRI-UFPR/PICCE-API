@@ -10,6 +10,23 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 
 import prismaClient from '../../src/services/prismaClient';
 
+export const setLoggerLocals = (req: any, res: any, next: any) => {
+    const baseUrlParts = req.originalUrl.split('/').filter(Boolean);
+    res.locals.resource = baseUrlParts[1];
+    res.locals.action = baseUrlParts[2];
+    res.locals.userId = req.user.id;
+    res.locals.metadata = {
+        request: {
+            method: req.method,
+            path: req.originalUrl,
+            body: req.body,
+            userAgent: req.headers['user-agent'],
+        },
+    };
+
+    next();
+};
+
 export const eventLogger = (req: any, res: any, next: any) => {
     res.on('finish', async () => {
         const { action, userId, message, metadata, type, resource } = res.locals;
