@@ -8,6 +8,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 of the GNU General Public License along with PICCE-API.  If not, see <https://www.gnu.org/licenses/>
 */
 
+import { EventType } from '@prisma/client';
+
 export const errorFormatter = (error: any) => {
     const message = error.message.split('\n');
     return {
@@ -18,6 +20,20 @@ export const errorFormatter = (error: any) => {
 
 export const errorFormatterMiddleware = (error: any, req: any, res: any, next: any) => {
     const formattedError = errorFormatter(error);
+    res.locals = {
+        ...res.locals,
+        type: EventType.ERROR,
+        metadata: {
+            request: {
+                method: req.method,
+                path: req.originalUrl,
+                body: req.body,
+                userAgent: req.headers['user-agent'],
+            },
+            status: res.statusCode,
+        },
+        message: formattedError.message,
+    };
     res.status(error.status || 500).json(formattedError);
 };
 

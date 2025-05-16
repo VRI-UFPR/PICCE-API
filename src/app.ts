@@ -16,6 +16,7 @@ import swaggerDocs from './config/openAPISpec';
 import swaggerUi from 'swagger-ui-express';
 import cors from 'cors';
 import { errorFormatterMiddleware } from './services/errorFormatter';
+import { eventLogger } from './services/eventLogger';
 
 // Express configuration
 const app = express();
@@ -35,8 +36,10 @@ app.use(
 );
 
 // API routes
-app.use('/api', routes, errorFormatterMiddleware);
+app.use('/api', eventLogger);
+app.use('/api', routes);
 app.use('/api/uploads', express.static(path.basename('uploads')));
+app.use(errorFormatterMiddleware);
 
 // Server starting point
 const server = app.listen(3000);

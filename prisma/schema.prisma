@@ -7,444 +7,464 @@
 // of the GNU General Public License along with PICCE-API.  If not, see <https://www.gnu.org/licenses/>
 
 generator client {
-  provider = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+    provider      = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+enum EventType {
+    ERROR
+    ACTION
 }
 
 enum DependencyType {
-  IS_ANSWERED
-  EXACT_ANSWER
-  OPTION_SELECTED
-  MIN
-  MAX
+    IS_ANSWERED
+    EXACT_ANSWER
+    OPTION_SELECTED
+    MIN
+    MAX
 }
 
 enum PageType {
-  ITEMS
-  SUBPROTOCOL
+    ITEMS
+    SUBPROTOCOL
 }
 
 enum ItemGroupType {
-  ONE_DIMENSIONAL
-  TEXTBOX_TABLE
-  RADIO_TABLE
-  CHECKBOX_TABLE
+    ONE_DIMENSIONAL
+    TEXTBOX_TABLE
+    RADIO_TABLE
+    CHECKBOX_TABLE
 }
 
 enum ItemType {
-  TABLEROW
-  TEXTBOX
-  CHECKBOX
-  RADIO
-  SELECT
-  RANGE
-  TEXT
-  UPLOAD
-  DATEBOX
-  NUMBERBOX
-  TIMEBOX
-  LOCATIONBOX
+    TABLEROW
+    TEXTBOX
+    CHECKBOX
+    RADIO
+    SELECT
+    RANGE
+    TEXT
+    UPLOAD
+    DATEBOX
+    NUMBERBOX
+    TIMEBOX
+    LOCATIONBOX
 }
 
 enum InstitutionType {
-  PRIMARY
-  LOWER_SECONDARY
-  UPPER_SECONDARY
-  TERTIARY
-  OTHER
+    PRIMARY
+    LOWER_SECONDARY
+    UPPER_SECONDARY
+    TERTIARY
+    OTHER
 }
 
 enum UserRole {
-  GUEST
-  USER
-  APPLIER
-  PUBLISHER
-  COORDINATOR
-  ADMIN
+    GUEST
+    USER
+    APPLIER
+    PUBLISHER
+    COORDINATOR
+    ADMIN
 }
 
 enum VisibilityMode {
-  PUBLIC
-  AUTHENTICATED
-  RESTRICT
+    PUBLIC
+    AUTHENTICATED
+    RESTRICT
 }
 
 enum ItemValidationType {
-  MANDATORY
-  MIN
-  MAX
-  STEP
+    MANDATORY
+    MIN
+    MAX
+    STEP
 }
 
 model Address {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  city    String
-  state   String
-  country String
+    city    String
+    state   String
+    country String
 
-  institutions Institution[]
+    institutions Institution[]
 
-  @@unique([city, state, country])
+    @@unique([city, state, country])
 }
 
 model ApplicationAnswer {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  date     DateTime
-  approved Boolean  @default(false)
+    date     DateTime
+    approved Boolean  @default(false)
 
-  itemAnswerGroups ItemAnswerGroup[]
+    itemAnswerGroups ItemAnswerGroup[]
 
-  userId        Int?
-  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
-  applicationId Int
-  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  coordinateId  Int?
-  coordinate    Coordinate? @relation(fields: [coordinateId], references: [id], onDelete: SetNull)
+    userId        Int?
+    user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+    applicationId Int
+    application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+    coordinateId  Int?
+    coordinate    Coordinate? @relation(fields: [coordinateId], references: [id], onDelete: SetNull)
 }
 
 model ItemAnswer {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  text String?
+    text String?
 
-  files File[]
+    files File[]
 
-  itemId  Int
-  item    Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  groupId Int
-  group   ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    itemId  Int
+    item    Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
+    groupId Int
+    group   ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model ItemAnswerGroup {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  itemAnswers   ItemAnswer[]
-  optionAnswers OptionAnswer[]
-  tableAnswers  TableAnswer[]
+    itemAnswers   ItemAnswer[]
+    optionAnswers OptionAnswer[]
+    tableAnswers  TableAnswer[]
 
-  applicationAnswerId Int
-  applicationAnswer   ApplicationAnswer @relation(fields: [applicationAnswerId], references: [id], onDelete: Cascade)
+    applicationAnswerId Int
+    applicationAnswer   ApplicationAnswer @relation(fields: [applicationAnswerId], references: [id], onDelete: Cascade)
 }
 
 model OptionAnswer {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  text String?
+    text String?
 
-  itemId   Int
-  item     Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  groupId  Int
-  group    ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  optionId Int
-  option   ItemOption      @relation(fields: [optionId], references: [id], onDelete: Cascade)
+    itemId   Int
+    item     Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
+    groupId  Int
+    group    ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    optionId Int
+    option   ItemOption      @relation(fields: [optionId], references: [id], onDelete: Cascade)
 }
 
 model TableAnswer {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  text String?
+    text String?
 
-  itemId   Int
-  item     Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  groupId  Int
-  group    ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  columnId Int
-  column   TableColumn     @relation(fields: [columnId], references: [id], onDelete: Cascade)
+    itemId   Int
+    item     Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
+    groupId  Int
+    group    ItemAnswerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    columnId Int
+    column   TableColumn     @relation(fields: [columnId], references: [id], onDelete: Cascade)
 }
 
 model Institution {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  name String
-  type InstitutionType
+    name String
+    type InstitutionType
 
-  users      User[]
-  classrooms Classroom[]
+    users      User[]
+    classrooms Classroom[]
 
-  addressId Int?
-  address   Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+    addressId Int?
+    address   Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  name           String
-  username       String   @unique
-  hash           String
-  role           UserRole
-  acceptedTerms  Boolean  @default(false)
-  profileImageId Int?
-  profileImage   File?    @relation(name: "UserProfileImage", fields: [profileImageId], references: [id], onDelete: SetNull)
+    name           String
+    username       String   @unique
+    hash           String
+    role           UserRole
+    acceptedTerms  Boolean  @default(false)
+    profileImageId Int?
+    profileImage   File?    @relation(name: "UserProfileImage", fields: [profileImageId], references: [id], onDelete: SetNull)
 
-  createdProtocols          Protocol[]          @relation(name: "Creator") // protocols that the user has created
-  ownedProtocols            Protocol[]          @relation(name: "ManagersProtocols") // protocols that the user can edit
-  answeredApplications      ApplicationAnswer[]
-  applications              Application[]       @relation(name: "Applier") // applications that the user has created
-  visibleApplications       Application[]       @relation(name: "ApplicationViewersUser") // applications that the user can see
-  visibleProtocols          Protocol[]          @relation(name: "ProtocolViewersUsers") // protocols that the user can see
-  appliableProtocols        Protocol[]          @relation(name: "Appliers") // protocols that the user can apply
-  visibleProtocolAnswers    Protocol[]          @relation(name: "ProtocolAnswersViewersUsers") // protocols that the user can see the answers
-  visibleApplicationAnswers Application[]       @relation(name: "ApplicationAnswersViewersUsers") // applications that the user can see the answers
-  classrooms                Classroom[]         @relation(name: "ClassroomUsers") // classrooms that the user is in
-  createdClassrooms         Classroom[]         @relation(name: "ClassroomCreator") // classrooms that the user has created
-  createdUsers              User[]              @relation(name: "UserCreator") // users that the user has created
+    createdProtocols          Protocol[]          @relation(name: "Creator") // protocols that the user has created
+    ownedProtocols            Protocol[]          @relation(name: "ManagersProtocols") // protocols that the user can edit
+    answeredApplications      ApplicationAnswer[]
+    applications              Application[]       @relation(name: "Applier") // applications that the user has created
+    visibleApplications       Application[]       @relation(name: "ApplicationViewersUser") // applications that the user can see
+    visibleProtocols          Protocol[]          @relation(name: "ProtocolViewersUsers") // protocols that the user can see
+    appliableProtocols        Protocol[]          @relation(name: "Appliers") // protocols that the user can apply
+    visibleProtocolAnswers    Protocol[]          @relation(name: "ProtocolAnswersViewersUsers") // protocols that the user can see the answers
+    visibleApplicationAnswers Application[]       @relation(name: "ApplicationAnswersViewersUsers") // applications that the user can see the answers
+    classrooms                Classroom[]         @relation(name: "ClassroomUsers") // classrooms that the user is in
+    createdClassrooms         Classroom[]         @relation(name: "ClassroomCreator") // classrooms that the user has created
+    createdUsers              User[]              @relation(name: "UserCreator") // users that the user has created
+    eventLogs                 EventLog[]          @relation(name: "UserEventLogs") // event logs that the user has created
 
-  creatorId Int?
-  creator  User? @relation(name: "UserCreator", fields: [creatorId], references: [id], onDelete: SetNull)
-  institutionId Int?
-  institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+    creatorId     Int?
+    creator       User?        @relation(name: "UserCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+    institutionId Int?
+    institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
 }
 
 model Classroom {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  name String
+    name String
 
-  users                     User[]        @relation(name: "ClassroomUsers") // users that are in the classroom
-  visibleApplications       Application[] @relation(name: "ApplicationViewersClassroom") // applications that the classroom can see
-  visibleProtocols          Protocol[]    @relation(name: "ProtocolViewersClassroom") // protocols that the classroom can see
-  visibleProtocolAnswers    Protocol[]    @relation(name: "ProtocolAnswersViewersClassroom") // protocols that the classroom can see the answers
-  visibleApplicationAnswers Application[] @relation(name: "ApplicationAnswersViewersClassroom") // applications that the classroom can see the answers
+    users                     User[]        @relation(name: "ClassroomUsers") // users that are in the classroom
+    visibleApplications       Application[] @relation(name: "ApplicationViewersClassroom") // applications that the classroom can see
+    visibleProtocols          Protocol[]    @relation(name: "ProtocolViewersClassroom") // protocols that the classroom can see
+    visibleProtocolAnswers    Protocol[]    @relation(name: "ProtocolAnswersViewersClassroom") // protocols that the classroom can see the answers
+    visibleApplicationAnswers Application[] @relation(name: "ApplicationAnswersViewersClassroom") // applications that the classroom can see the answers
 
-  institutionId Int?
-  institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  creatorId     Int
-  creator       User         @relation(name: "ClassroomCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+    institutionId Int?
+    institution   Institution? @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+    creatorId     Int
+    creator       User         @relation(name: "ClassroomCreator", fields: [creatorId], references: [id], onDelete: Cascade)
 
-  @@unique([name, institutionId])
+    @@unique([name, institutionId])
 }
 
 model Application {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  visibility        VisibilityMode
-  answersVisibility VisibilityMode
-  keepLocation      Boolean
+    visibility        VisibilityMode
+    answersVisibility VisibilityMode
+    keepLocation      Boolean
 
-  answers                 ApplicationAnswer[]
-  viewersClassroom        Classroom[]         @relation(name: "ApplicationViewersClassroom") // classrooms that can see the application
-  viewersUser             User[]              @relation(name: "ApplicationViewersUser") // users that can see the application
-  answersViewersUser      User[]              @relation(name: "ApplicationAnswersViewersUsers") // users that can see the answers
-  answersViewersClassroom Classroom[]         @relation(name: "ApplicationAnswersViewersClassroom") // classrooms that can see the answers
+    answers                 ApplicationAnswer[]
+    viewersClassroom        Classroom[]         @relation(name: "ApplicationViewersClassroom") // classrooms that can see the application
+    viewersUser             User[]              @relation(name: "ApplicationViewersUser") // users that can see the application
+    answersViewersUser      User[]              @relation(name: "ApplicationAnswersViewersUsers") // users that can see the answers
+    answersViewersClassroom Classroom[]         @relation(name: "ApplicationAnswersViewersClassroom") // classrooms that can see the answers
 
-  protocolId Int
-  protocol   Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
-  applierId  Int
-  applier    User     @relation(name: "Applier", fields: [applierId], references: [id], onDelete: Cascade)
+    protocolId Int
+    protocol   Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+    applierId  Int
+    applier    User     @relation(name: "Applier", fields: [applierId], references: [id], onDelete: Cascade)
 }
 
 model Protocol {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  title                   String
-  description             String?
-  enabled                 Boolean
-  replicable              Boolean
-  creatorId               Int
-  creator                 User           @relation(name: "Creator", fields: [creatorId], references: [id], onDelete: Cascade)
-  applicability           VisibilityMode
-  visibility              VisibilityMode
-  answersVisibility       VisibilityMode
-  appliers                User[]         @relation(name: "Appliers") // users that can apply the protocol
-  viewersUser             User[]         @relation(name: "ProtocolViewersUsers") // users that can see the protocol
-  viewersClassroom        Classroom[]    @relation(name: "ProtocolViewersClassroom") // classrooms that can see the protocol
-  answersViewersUser      User[]         @relation(name: "ProtocolAnswersViewersUsers") // users that can see the answers
-  answersViewersClassroom Classroom[]    @relation(name: "ProtocolAnswersViewersClassroom") // classrooms that can see the answers
+    title                   String
+    description             String?
+    enabled                 Boolean
+    replicable              Boolean
+    creatorId               Int
+    creator                 User           @relation(name: "Creator", fields: [creatorId], references: [id], onDelete: Cascade)
+    applicability           VisibilityMode
+    visibility              VisibilityMode
+    answersVisibility       VisibilityMode
+    appliers                User[]         @relation(name: "Appliers") // users that can apply the protocol
+    viewersUser             User[]         @relation(name: "ProtocolViewersUsers") // users that can see the protocol
+    viewersClassroom        Classroom[]    @relation(name: "ProtocolViewersClassroom") // classrooms that can see the protocol
+    answersViewersUser      User[]         @relation(name: "ProtocolAnswersViewersUsers") // users that can see the answers
+    answersViewersClassroom Classroom[]    @relation(name: "ProtocolAnswersViewersClassroom") // classrooms that can see the answers
 
-  pages        Page[]
-  managers     User[]        @relation(name: "ManagersProtocols") // users that can edit the protocol
-  applications Application[]
+    pages        Page[]
+    managers     User[]        @relation(name: "ManagersProtocols") // users that can edit the protocol
+    applications Application[]
 }
 
 model Page {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  type      PageType
-  placement Int
+    type      PageType
+    placement Int
 
-  itemGroups   ItemGroup[]
-  dependencies PageDependencyRule[]
+    itemGroups   ItemGroup[]
+    dependencies PageDependencyRule[]
 
-  protocolId Int
-  protocol   Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
+    protocolId Int
+    protocol   Protocol @relation(fields: [protocolId], references: [id], onDelete: Cascade)
 }
 
 model ItemGroup {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  type         ItemGroupType
-  placement    Int
-  isRepeatable Boolean
+    type         ItemGroupType
+    placement    Int
+    isRepeatable Boolean
 
-  tableColumns TableColumn[]
-  items        Item[]
-  dependencies ItemGroupDependencyRule[]
+    tableColumns TableColumn[]
+    items        Item[]
+    dependencies ItemGroupDependencyRule[]
 
-  pageId Int
-  page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+    pageId Int
+    page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
 }
 
 model Item {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  text        String
-  description String?
-  type        ItemType
-  placement   Int
-  enabled     Boolean
+    text        String
+    description String?
+    type        ItemType
+    placement   Int
+    enabled     Boolean
 
-  itemOptions           ItemOption[]
-  itemAnswers           ItemAnswer[]
-  optionAnswers         OptionAnswer[]
-  tableAnswers          TableAnswer[]
-  files                 File[]
-  itemValidations       ItemValidation[]
-  pageDependencies      PageDependencyRule[]
-  itemGroupDependencies ItemGroupDependencyRule[]
+    itemOptions           ItemOption[]
+    itemAnswers           ItemAnswer[]
+    optionAnswers         OptionAnswer[]
+    tableAnswers          TableAnswer[]
+    files                 File[]
+    itemValidations       ItemValidation[]
+    pageDependencies      PageDependencyRule[]
+    itemGroupDependencies ItemGroupDependencyRule[]
 
-  groupId   Int
-  itemGroup ItemGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    groupId   Int
+    itemGroup ItemGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model ItemValidation {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  type          ItemValidationType
-  argument      String
-  customMessage String?
+    type          ItemValidationType
+    argument      String
+    customMessage String?
 
-  itemId Int
-  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+    itemId Int
+    item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
-  @@unique([itemId, type])
+    @@unique([itemId, type])
 }
 
 model ItemOption {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  text      String
-  placement Int
+    text      String
+    placement Int
 
-  optionAnswers OptionAnswer[]
-  files         File[]
+    optionAnswers OptionAnswer[]
+    files         File[]
 
-  itemId Int
-  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+    itemId Int
+    item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
 }
 
 model TableColumn {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  text      String
-  placement Int
+    text      String
+    placement Int
 
-  answers TableAnswer[]
+    answers TableAnswer[]
 
-  groupId   Int
-  itemGroup ItemGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    groupId   Int
+    itemGroup ItemGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
 model File {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  path        String
-  description String?
+    path        String
+    description String?
 
-  itemId       Int?
-  item         Item?       @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  itemOptionId Int?
-  itemOption   ItemOption? @relation(fields: [itemOptionId], references: [id], onDelete: Cascade)
-  itemAnswerId Int?
-  itemAnswer   ItemAnswer? @relation(fields: [itemAnswerId], references: [id], onDelete: Cascade)
-  users        User[]      @relation(name: "UserProfileImage")
+    itemId       Int?
+    item         Item?       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+    itemOptionId Int?
+    itemOption   ItemOption? @relation(fields: [itemOptionId], references: [id], onDelete: Cascade)
+    itemAnswerId Int?
+    itemAnswer   ItemAnswer? @relation(fields: [itemAnswerId], references: [id], onDelete: Cascade)
+    users        User[]      @relation(name: "UserProfileImage")
 }
 
 model ItemGroupDependencyRule {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  type          DependencyType
-  argument      String
-  customMessage String?
+    type          DependencyType
+    argument      String
+    customMessage String?
 
-  itemGroupId Int
-  itemGroup   ItemGroup @relation(fields: [itemGroupId], references: [id], onDelete: Cascade)
-  itemId      Int
-  item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+    itemGroupId Int
+    itemGroup   ItemGroup @relation(fields: [itemGroupId], references: [id], onDelete: Cascade)
+    itemId      Int
+    item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
-  @@unique([itemGroupId, itemId, type])
+    @@unique([itemGroupId, itemId, type])
 }
 
 model PageDependencyRule {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  type          DependencyType
-  argument      String
-  customMessage String?
+    type          DependencyType
+    argument      String
+    customMessage String?
 
-  pageId Int
-  page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  itemId Int
-  item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+    pageId Int
+    page   Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+    itemId Int
+    item   Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
-  @@unique([pageId, itemId, type])
+    @@unique([pageId, itemId, type])
 }
 
 model Coordinate {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  latitude  Float
-  longitude Float
+    latitude  Float
+    longitude Float
 
-  answers ApplicationAnswer[]
+    answers ApplicationAnswer[]
 
-  @@unique([latitude, longitude])
+    @@unique([latitude, longitude])
+}
+
+model EventLog {
+    id        Int      @id @default(autoincrement())
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    type     EventType
+    action   String
+    resource String
+    userId   Int?
+    user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull, name: "UserEventLogs")
+    message  String?
+    metadata Json?
 }
