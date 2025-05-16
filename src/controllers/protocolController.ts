@@ -1327,14 +1327,13 @@ export const getVisibleProtocols = async (req: Request, res: Response): Promise<
                       where: {
                           OR: [
                               { managers: { some: { id: user.id } } },
-                              { appliers: { some: { id: user.id } } },
-                              { viewersUser: { some: { id: user.id } } },
-                              { viewersClassroom: { some: { users: { some: { id: user.id } } } } },
+                              { appliers: { some: { id: user.id } }, enabled: true },
+                              { viewersUser: { some: { id: user.id } }, enabled: true },
+                              { viewersClassroom: { some: { users: { some: { id: user.id } } } }, enabled: true },
                               { creatorId: user.id },
-                              { visibility: VisibilityMode.PUBLIC },
+                              { visibility: VisibilityMode.PUBLIC, enabled: true },
                               ...(user.role === UserRole.COORDINATOR ? [{ creator: { institutionId: user.institutionId } }] : []),
                           ],
-                          enabled: true,
                       },
                       select: fields,
                   });
@@ -1361,7 +1360,7 @@ export const getMyProtocols = async (req: Request, res: Response): Promise<void>
         const user = req.user as User;
         // Prisma operation
         const protocols = await prismaClient.protocol.findMany({
-            where: { OR: [{ managers: { some: { id: user.id } }, creatorId: user.id }] },
+            where: { OR: [{ managers: { some: { id: user.id } } }, { creatorId: user.id }] },
             select: fieldsWViewers,
         });
         // Embed user actions in the response
