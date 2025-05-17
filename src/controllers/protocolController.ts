@@ -986,6 +986,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             const pagesIds = [];
             const itemGroupsIds = [];
             const itemsIds = [];
+            const itemOptionsIds = [];
             const tableColumnsIds = [];
             for (const [pageId, page] of protocol.pages.entries()) {
                 const upsertedPage = page.id
@@ -1121,6 +1122,7 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
                                           itemId: upsertedItem.id as number,
                                       },
                                   });
+                            itemOptionsIds.push(upsertedItemOption.id);
                             // Remove files that are not in the updated itemOption
                             const filesToDelete = await prisma.file.findMany({
                                 where: {
@@ -1266,6 +1268,10 @@ export const updateProtocol = async (req: Request, res: Response): Promise<void>
             // Remove items that are not in the updated itemGroup
             await prisma.item.deleteMany({
                 where: { id: { notIn: itemsIds }, itemGroup: { page: { protocolId: id } } },
+            });
+            // Remove itemOptions that are not in the updated item
+            await prisma.itemOption.deleteMany({
+                where: { id: { notIn: itemOptionsIds }, item: { itemGroup: { page: { protocolId: id } } } },
             });
             // Check if there are any files left
             if (files.length > 0) {
