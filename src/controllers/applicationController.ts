@@ -9,10 +9,10 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import { User, VisibilityMode, UserRole } from '@prisma/client';
+import { User, VisibilityMode, UserRole, EventType } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
-import errorFormatter from '../services/errorFormatter';
+
 import { getProtocolUserRoles } from './protocolController';
 
 export const getApplicationUserRoles = async (user: User, application: any, applicationId: number | undefined) => {
@@ -275,7 +275,7 @@ const fieldsWAnswers = {
     },
 };
 
-export const createApplication = async (req: Request, res: Response) => {
+export const createApplication = async (req: Request, res: Response, next: any) => {
     try {
         // Yup schemas
         const createApplicationSchema = yup
@@ -331,13 +331,15 @@ export const createApplication = async (req: Request, res: Response) => {
         // Filter sensitive fields
         const filteredApplication = dropSensitiveFields(processedApplication);
 
-        res.status(201).json({ message: 'Application created.', data: filteredApplication });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Application created.';
+        res.status(201).json({ message: res.locals.message, data: filteredApplication });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const updateApplication = async (req: Request, res: Response): Promise<void> => {
+export const updateApplication = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const applicationId: number = parseInt(req.params.applicationId);
@@ -393,13 +395,15 @@ export const updateApplication = async (req: Request, res: Response): Promise<vo
         // Filter sensitive fields
         const filteredApplication = dropSensitiveFields(processedApplication);
 
-        res.status(200).json({ message: 'Application updated.', data: filteredApplication });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Application updated.';
+        res.status(200).json({ message: res.locals.message, data: filteredApplication });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getMyApplications = async (req: Request, res: Response): Promise<void> => {
+export const getMyApplications = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -423,11 +427,11 @@ export const getMyApplications = async (req: Request, res: Response): Promise<vo
 
         res.status(200).json({ message: 'All your applications found.', data: filteredApplications });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getVisibleApplications = async (req: Request, res: Response): Promise<void> => {
+export const getVisibleApplications = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -462,11 +466,11 @@ export const getVisibleApplications = async (req: Request, res: Response): Promi
 
         res.status(200).json({ message: 'All visible applications found.', data: filteredApplications });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getAllApplications = async (req: Request, res: Response): Promise<void> => {
+export const getAllApplications = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -489,11 +493,11 @@ export const getAllApplications = async (req: Request, res: Response): Promise<v
 
         res.status(200).json({ message: 'All applications found.', data: filteredApplications });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getApplication = async (req: Request, res: Response): Promise<void> => {
+export const getApplication = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const applicationId: number = parseInt(req.params.applicationId);
@@ -527,11 +531,11 @@ export const getApplication = async (req: Request, res: Response): Promise<void>
 
         res.status(200).json({ message: 'Application found.', data: filteredApplication });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getApplicationWithProtocol = async (req: Request, res: Response): Promise<void> => {
+export const getApplicationWithProtocol = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const applicationId: number = parseInt(req.params.applicationId);
@@ -554,11 +558,11 @@ export const getApplicationWithProtocol = async (req: Request, res: Response): P
 
         res.status(200).json({ message: 'Application with protocol found.', data: filteredApplication });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getApplicationWithAnswers = async (req: Request, res: Response): Promise<void> => {
+export const getApplicationWithAnswers = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const applicationId: number = parseInt(req.params.applicationId);
@@ -721,11 +725,11 @@ export const getApplicationWithAnswers = async (req: Request, res: Response): Pr
 
         res.status(200).json({ message: 'Application with answers found.', data: processedApplication });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const deleteApplication = async (req: Request, res: Response): Promise<void> => {
+export const deleteApplication = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const applicationId: number = parseInt(req.params.applicationId);
@@ -739,8 +743,10 @@ export const deleteApplication = async (req: Request, res: Response): Promise<vo
             select: { id: true },
         });
 
-        res.status(200).json({ message: 'Application deleted.', data: deletedApplication });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Application deleted.';
+        res.status(200).json({ message: res.locals.message, data: deletedApplication });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };

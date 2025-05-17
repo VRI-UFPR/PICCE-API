@@ -16,6 +16,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum EventType {
+  ERROR
+  ACTION
+}
+
 enum DependencyType {
   IS_ANSWERED
   EXACT_ANSWER
@@ -211,6 +216,7 @@ model User {
   classrooms                Classroom[]         @relation(name: "ClassroomUsers") // classrooms that the user is in
   createdClassrooms         Classroom[]         @relation(name: "ClassroomCreator") // classrooms that the user has created
   createdUsers              User[]              @relation(name: "UserCreator") // users that the user has created
+  eventLogs                 EventLog[]          @relation(name: "UserEventLogs") // event logs that the user has created
 
   creatorId     Int?
   creator       User?        @relation(name: "UserCreator", fields: [creatorId], references: [id], onDelete: SetNull)
@@ -447,4 +453,18 @@ model Coordinate {
   answers ApplicationAnswer[]
 
   @@unique([latitude, longitude])
+}
+
+model EventLog {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type     EventType
+  action   String
+  resource String
+  userId   Int?
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull, name: "UserEventLogs")
+  message  String?
+  metadata Json?
 }

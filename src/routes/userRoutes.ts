@@ -20,6 +20,7 @@ import {
     getManagedUsers,
 } from '../controllers/userController';
 import passport from '../services/passportAuth';
+import { setLoggerLocals } from '../services/eventLogger';
 
 /**
  * @swagger
@@ -192,7 +193,7 @@ const router = express.Router();
  *             error:
  *               message: Internal Server Error.
  */
-router.post('/createUser', passport.authenticate('jwt', { session: false }), uploader.single('profileImage'), createUser);
+router.post('/createUser', passport.authenticate('jwt', { session: false }), uploader.single('profileImage'), setLoggerLocals, createUser);
 
 /**
  * @swagger
@@ -237,7 +238,13 @@ router.post('/createUser', passport.authenticate('jwt', { session: false }), upl
  *             error:
  *               message: Internal Server Error.
  */
-router.put('/updateUser/:userId', passport.authenticate('jwt', { session: false }), uploader.single('profileImage'), updateUser);
+router.put(
+    '/updateUser/:userId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.single('profileImage'),
+    setLoggerLocals,
+    updateUser
+);
 
 /**
  * @swagger
@@ -264,7 +271,7 @@ router.put('/updateUser/:userId', passport.authenticate('jwt', { session: false 
  *             error:
  *               message: Internal Server Error.
  */
-router.get('/getManagedUsers', passport.authenticate('jwt', { session: false }), uploader.none(), getManagedUsers);
+router.get('/getManagedUsers', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getManagedUsers);
 
 /**
  * @swagger
@@ -291,7 +298,7 @@ router.get('/getManagedUsers', passport.authenticate('jwt', { session: false }),
  *             error:
  *               message: Internal Server Error.
  */
-router.get('/getAllUsers', passport.authenticate('jwt', { session: false }), uploader.none(), getAllUsers);
+router.get('/getAllUsers', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getAllUsers);
 
 /**
  * @swagger
@@ -330,7 +337,7 @@ router.get('/getAllUsers', passport.authenticate('jwt', { session: false }), upl
  *             error:
  *               message: Internal Server Error.
  */
-router.get('/getUser/:userId', passport.authenticate('jwt', { session: false }), uploader.none(), getUser);
+router.get('/getUser/:userId', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getUser);
 
 /**
  * @swagger
@@ -376,7 +383,13 @@ router.get('/getUser/:userId', passport.authenticate('jwt', { session: false }),
  *             error:
  *               message: Internal Server Error.
  */
-router.post('/searchUserByUsername', passport.authenticate('jwt', { session: false }), uploader.none(), searchUserByUsername);
+router.post(
+    '/searchUserByUsername',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    searchUserByUsername
+);
 
 /**
  * @swagger
@@ -420,6 +433,6 @@ router.post('/searchUserByUsername', passport.authenticate('jwt', { session: fal
  *             error:
  *               message: Internal Server Error.
  */
-router.delete('/deleteUser/:userId', passport.authenticate('jwt', { session: false }), uploader.none(), deleteUser);
+router.delete('/deleteUser/:userId', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, deleteUser);
 
 export default router;

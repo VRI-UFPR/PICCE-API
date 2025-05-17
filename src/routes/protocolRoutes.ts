@@ -21,6 +21,7 @@ import {
     getVisibleProtocols,
     getProtocolWithAnswers,
 } from '../controllers/protocolController';
+import { setLoggerLocals } from '../services/eventLogger';
 /**
  * @swagger
  * components:
@@ -290,7 +291,7 @@ const router = express.Router();
  *               type: string
  *               description: Error message
  */
-router.post('/createProtocol', passport.authenticate('jwt', { session: false }), uploader.any(), createProtocol);
+router.post('/createProtocol', passport.authenticate('jwt', { session: false }), uploader.any(), setLoggerLocals, createProtocol);
 
 /**
  * @swagger
@@ -334,7 +335,13 @@ router.post('/createProtocol', passport.authenticate('jwt', { session: false }),
  *               type: string
  *               description: Error message
  */
-router.put('/updateProtocol/:protocolId', passport.authenticate('jwt', { session: false }), uploader.any(), updateProtocol);
+router.put(
+    '/updateProtocol/:protocolId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.any(),
+    setLoggerLocals,
+    updateProtocol
+);
 
 /**
  * @swagger
@@ -360,7 +367,7 @@ router.put('/updateProtocol/:protocolId', passport.authenticate('jwt', { session
  *               type: string
  *               description: Error message
  */
-router.get('/getAllProtocols', passport.authenticate('jwt', { session: false }), uploader.none(), getAllProtocols);
+router.get('/getAllProtocols', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getAllProtocols);
 
 /**
  * @swagger
@@ -386,7 +393,7 @@ router.get('/getAllProtocols', passport.authenticate('jwt', { session: false }),
  *               type: string
  *               description: Error message
  */
-router.get('/getMyProtocols', passport.authenticate('jwt', { session: false }), uploader.none(), getMyProtocols);
+router.get('/getMyProtocols', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getMyProtocols);
 
 /**
  * @swagger
@@ -412,7 +419,7 @@ router.get('/getMyProtocols', passport.authenticate('jwt', { session: false }), 
  *               type: string
  *               description: Error message
  */
-router.get('/getVisibleProtocols', passport.authenticate('jwt', { session: false }), uploader.none(), getVisibleProtocols);
+router.get('/getVisibleProtocols', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getVisibleProtocols);
 
 /**
  * @swagger
@@ -493,7 +500,7 @@ router.get(
  *               type: string
  *               description: Error message
  */
-router.get('/getProtocol/:protocolId', passport.authenticate('jwt', { session: false }), uploader.none(), getProtocol);
+router.get('/getProtocol/:protocolId', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getProtocol);
 
 /**
  * @swagger
@@ -531,6 +538,12 @@ router.get('/getProtocol/:protocolId', passport.authenticate('jwt', { session: f
  *               type: string
  *               description: Error message
  */
-router.delete('/deleteProtocol/:protocolId', passport.authenticate('jwt', { session: false }), uploader.none(), deleteProtocol);
+router.delete(
+    '/deleteProtocol/:protocolId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    deleteProtocol
+);
 
 export default router;

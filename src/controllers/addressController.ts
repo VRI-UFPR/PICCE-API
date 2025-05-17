@@ -9,11 +9,9 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import { Address, User, UserRole } from '@prisma/client';
+import { Address, EventType, User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
-import errorFormatter from '../services/errorFormatter';
-import { count } from 'console';
 
 const checkAuthorization = async (user: User, addressId: number | undefined, action: string) => {
     if (user.role === UserRole.ADMIN) return;
@@ -34,7 +32,7 @@ const checkAuthorization = async (user: User, addressId: number | undefined, act
     }
 };
 
-export const createAddress = async (req: Request, res: Response) => {
+export const createAddress = async (req: Request, res: Response, next: any) => {
     try {
         // Yup schemas
         const createAddressSchema = yup
@@ -57,13 +55,15 @@ export const createAddress = async (req: Request, res: Response) => {
             data: { id: address.id, city: address.city, state: address.state, country: address.country },
         });
 
-        res.status(201).json({ message: 'Address created.', data: createdAddress });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Address created.';
+        res.status(201).json({ message: res.locals.message, data: createdAddress });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const updateAddress = async (req: Request, res: Response): Promise<void> => {
+export const updateAddress = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const addressId: number = parseInt(req.params.addressId);
@@ -84,13 +84,15 @@ export const updateAddress = async (req: Request, res: Response): Promise<void> 
             data: { city: address.city, state: address.state, country: address.country },
         });
 
-        res.status(200).json({ message: 'Address updated.', data: updatedAddress });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Address updated.';
+        res.status(200).json({ message: res.locals.message, data: updatedAddress });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getAllAddresses = async (req: Request, res: Response): Promise<void> => {
+export const getAllAddresses = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -101,11 +103,11 @@ export const getAllAddresses = async (req: Request, res: Response): Promise<void
 
         res.status(200).json({ message: 'All addresses found.', data: addresses });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getAddressesByState = async (req: Request, res: Response): Promise<void> => {
+export const getAddressesByState = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // Yup schemas
         const getAddressesByStateSchema = yup
@@ -126,11 +128,11 @@ export const getAddressesByState = async (req: Request, res: Response): Promise<
 
         res.status(200).json({ message: 'Addresses found.', data: addresses });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getAddressId = async (req: Request, res: Response): Promise<void> => {
+export const getAddressId = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // Yup schemas
         const getCityIdSchema = yup
@@ -155,11 +157,11 @@ export const getAddressId = async (req: Request, res: Response): Promise<void> =
 
         res.status(200).json({ message: 'City ID found.', data: cityId });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getAddress = async (req: Request, res: Response): Promise<void> => {
+export const getAddress = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const addressId: number = parseInt(req.params.addressId);
@@ -172,11 +174,11 @@ export const getAddress = async (req: Request, res: Response): Promise<void> => 
 
         res.status(200).json({ message: 'Address found.', data: address });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const deleteAddress = async (req: Request, res: Response): Promise<void> => {
+export const deleteAddress = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const addressId: number = parseInt(req.params.addressId);
@@ -186,8 +188,11 @@ export const deleteAddress = async (req: Request, res: Response): Promise<void> 
         await checkAuthorization(user, addressId, 'delete');
         // Prisma operation
         const deletedAddress = await prismaClient.address.delete({ where: { id: addressId }, select: { id: true } });
-        res.status(200).json({ message: 'Address deleted.', data: deletedAddress });
+
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Address deleted.';
+        res.status(200).json({ message: res.locals.message, data: deletedAddress });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };

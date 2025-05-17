@@ -9,10 +9,9 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import { Classroom, User, UserRole } from '@prisma/client';
+import { Classroom, EventType, User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
-import errorFormatter from '../services/errorFormatter';
 
 // Fields to be selected from the database to the response
 const fields = {
@@ -130,7 +129,7 @@ const validateUsers = async (institutionId: number | undefined, users: number[])
     }
 };
 
-export const createClassroom = async (req: Request, res: Response) => {
+export const createClassroom = async (req: Request, res: Response, next: any) => {
     try {
         // Yup schemas
         const createClassroomSchema = yup
@@ -161,13 +160,15 @@ export const createClassroom = async (req: Request, res: Response) => {
         // Embed user actions in the response
         const processedClassroom = { ...createdClassroom, actions: await getClassroomUserActions(user, createdClassroom, undefined) };
 
-        res.status(201).json({ message: 'Classroom created.', data: processedClassroom });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Classroom created.';
+        res.status(201).json({ message: res.locals.message, data: processedClassroom });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const updateClassroom = async (req: Request, res: Response): Promise<void> => {
+export const updateClassroom = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const classroomId: number = parseInt(req.params.classroomId);
@@ -202,13 +203,15 @@ export const updateClassroom = async (req: Request, res: Response): Promise<void
         // Embed user actions in the response
         const processedClassroom = { ...updatedClassroom, actions: await getClassroomUserActions(user, updatedClassroom, undefined) };
 
-        res.status(200).json({ message: 'Classroom updated.', data: processedClassroom });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Classroom updated.';
+        res.status(200).json({ message: res.locals.message, data: processedClassroom });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getAllClassrooms = async (req: Request, res: Response): Promise<void> => {
+export const getAllClassrooms = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -225,11 +228,11 @@ export const getAllClassrooms = async (req: Request, res: Response): Promise<voi
 
         res.status(200).json({ message: 'All classrooms found.', data: processedClassrooms });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getClassroom = async (req: Request, res: Response): Promise<void> => {
+export const getClassroom = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const classroomId: number = parseInt(req.params.classroomId);
@@ -244,11 +247,11 @@ export const getClassroom = async (req: Request, res: Response): Promise<void> =
 
         res.status(200).json({ message: 'Classroom found.', data: processedClassroom });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getMyClassrooms = async (req: Request, res: Response): Promise<void> => {
+export const getMyClassrooms = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -268,11 +271,11 @@ export const getMyClassrooms = async (req: Request, res: Response): Promise<void
 
         res.status(200).json({ message: 'My classrooms found.', data: processedClassrooms });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getManagedClassrooms = async (req: Request, res: Response): Promise<void> => {
+export const getManagedClassrooms = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -300,11 +303,11 @@ export const getManagedClassrooms = async (req: Request, res: Response): Promise
 
         res.status(200).json({ message: 'My managed classrooms found.', data: processedClassrooms });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const searchClassroomByName = async (req: Request, res: Response): Promise<void> => {
+export const searchClassroomByName = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from passport-jwt
         const curUser = req.user as User;
@@ -336,11 +339,11 @@ export const searchClassroomByName = async (req: Request, res: Response): Promis
 
         res.status(200).json({ message: 'Searched classrooms found.', data: processedClassrooms });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const deleteClassroom = async (req: Request, res: Response): Promise<void> => {
+export const deleteClassroom = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const classroomId: number = parseInt(req.params.classroomId);
@@ -351,8 +354,10 @@ export const deleteClassroom = async (req: Request, res: Response): Promise<void
         // Prisma operation
         const deletedClassroom = await prismaClient.classroom.delete({ where: { id: classroomId }, select: { id: true } });
 
-        res.status(200).json({ message: 'Classroom deleted.', data: deletedClassroom });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Classroom deleted.';
+        res.status(200).json({ message: res.locals.message, data: deletedClassroom });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };

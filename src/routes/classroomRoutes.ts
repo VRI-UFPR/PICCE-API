@@ -21,6 +21,7 @@ import {
     getManagedClassrooms,
 } from '../controllers/classroomController';
 import passport from '../services/passportAuth';
+import { setLoggerLocals } from '../services/eventLogger';
 
 /**
  * @swagger
@@ -150,7 +151,7 @@ const router = express.Router();
  *             error:
  *               message: Internal Server Error.
  */
-router.post('/createClassroom', passport.authenticate('jwt', { session: false }), uploader.none(), createClassroom);
+router.post('/createClassroom', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, createClassroom);
 
 /**
  * @swagger
@@ -194,7 +195,13 @@ router.post('/createClassroom', passport.authenticate('jwt', { session: false })
  *             error:
  *               message: Internal Server Error.
  */
-router.put('/updateClassroom/:classroomId', passport.authenticate('jwt', { session: false }), uploader.none(), updateClassroom);
+router.put(
+    '/updateClassroom/:classroomId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    updateClassroom
+);
 
 /**
  * @swagger
@@ -221,7 +228,13 @@ router.put('/updateClassroom/:classroomId', passport.authenticate('jwt', { sessi
  *             error:
  *               message: Internal Server Error.
  */
-router.get('/getManagedClassrooms', passport.authenticate('jwt', { session: false }), uploader.none(), getManagedClassrooms);
+router.get(
+    '/getManagedClassrooms',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    getManagedClassrooms
+);
 
 /**
  * @swagger
@@ -248,7 +261,7 @@ router.get('/getManagedClassrooms', passport.authenticate('jwt', { session: fals
  *             error:
  *               message: Internal Server Error.
  */
-router.get('/getAllClassrooms', passport.authenticate('jwt', { session: false }), uploader.none(), getAllClassrooms);
+router.get('/getAllClassrooms', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getAllClassrooms);
 
 /**
  * @swagger
@@ -275,7 +288,7 @@ router.get('/getAllClassrooms', passport.authenticate('jwt', { session: false })
  *             error:
  *               message: Internal Server Error.
  */
-router.get('/getMyClassrooms', passport.authenticate('jwt', { session: false }), uploader.none(), getMyClassrooms);
+router.get('/getMyClassrooms', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getMyClassrooms);
 
 /**
  * @swagger
@@ -313,7 +326,7 @@ router.get('/getMyClassrooms', passport.authenticate('jwt', { session: false }),
  *             error:
  *               message: Internal Server Error.
  */
-router.get('/getClassroom/:classroomId', passport.authenticate('jwt', { session: false }), uploader.none(), getClassroom);
+router.get('/getClassroom/:classroomId', passport.authenticate('jwt', { session: false }), uploader.none(), setLoggerLocals, getClassroom);
 
 /**
  * @swagger
@@ -359,7 +372,13 @@ router.get('/getClassroom/:classroomId', passport.authenticate('jwt', { session:
  *             error:
  *               message: Internal Server Error.
  */
-router.post('/searchClassroomByName', passport.authenticate('jwt', { session: false }), uploader.none(), searchClassroomByName);
+router.post(
+    '/searchClassroomByName',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    searchClassroomByName
+);
 
 /**
  * @swagger
@@ -397,6 +416,12 @@ router.post('/searchClassroomByName', passport.authenticate('jwt', { session: fa
  *             error:
  *               message: Internal Server Error.
  */
-router.delete('/deleteClassroom/:classroomId', passport.authenticate('jwt', { session: false }), uploader.none(), deleteClassroom);
+router.delete(
+    '/deleteClassroom/:classroomId',
+    passport.authenticate('jwt', { session: false }),
+    uploader.none(),
+    setLoggerLocals,
+    deleteClassroom
+);
 
 export default router;

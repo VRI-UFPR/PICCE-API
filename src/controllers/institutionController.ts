@@ -9,10 +9,10 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import { InstitutionType, User, UserRole } from '@prisma/client';
+import { EventType, InstitutionType, User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
-import errorFormatter from '../services/errorFormatter';
+
 import { getPeerUserActions } from './userController';
 import { getClassroomUserActions } from './classroomController';
 
@@ -95,7 +95,7 @@ const checkAuthorization = async (user: User, institutionId: number | undefined,
     }
 };
 
-export const createInstitution = async (req: Request, res: Response) => {
+export const createInstitution = async (req: Request, res: Response, next: any) => {
     try {
         // Yup schemas
         const createInstitutionSchema = yup
@@ -136,13 +136,15 @@ export const createInstitution = async (req: Request, res: Response) => {
         // Filter roles from the response
         const filteredInstitution = dropSensitiveFields(processedInstitution);
 
-        res.status(201).json({ message: 'Institution created.', data: filteredInstitution });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Institution created.';
+        res.status(201).json({ message: res.locals.message, data: filteredInstitution });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const updateInstitution = async (req: Request, res: Response): Promise<void> => {
+export const updateInstitution = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const institutionId: number = parseInt(req.params.institutionId);
@@ -185,13 +187,15 @@ export const updateInstitution = async (req: Request, res: Response): Promise<vo
         // Filter roles from the response
         const filteredInstitution = dropSensitiveFields(processedInstitution);
 
-        res.status(200).json({ message: 'Institution updated.', data: filteredInstitution });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Institution updated.';
+        res.status(200).json({ message: res.locals.message, data: filteredInstitution });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getAllInstitutions = async (req: Request, res: Response): Promise<void> => {
+export const getAllInstitutions = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -225,11 +229,11 @@ export const getAllInstitutions = async (req: Request, res: Response): Promise<v
 
         res.status(200).json({ message: 'All institutions found.', data: filteredInstitutions });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getVisibleInstitutions = async (req: Request, res: Response): Promise<void> => {
+export const getVisibleInstitutions = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
         const user = req.user as User;
@@ -268,11 +272,11 @@ export const getVisibleInstitutions = async (req: Request, res: Response): Promi
 
         res.status(200).json({ message: 'Visible institutions found.', data: filteredInstitutions });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const getInstitution = async (req: Request, res: Response): Promise<void> => {
+export const getInstitution = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const institutionId: number = parseInt(req.params.institutionId);
@@ -300,11 +304,11 @@ export const getInstitution = async (req: Request, res: Response): Promise<void>
 
         res.status(200).json({ message: 'Institution found.', data: filteredInstitution });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
 
-export const deleteInstitution = async (req: Request, res: Response): Promise<void> => {
+export const deleteInstitution = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // ID from params
         const institutionId: number = parseInt(req.params.institutionId);
@@ -315,8 +319,10 @@ export const deleteInstitution = async (req: Request, res: Response): Promise<vo
         // Prisma operation
         const deletedInstitution = await prismaClient.institution.delete({ where: { id: institutionId }, select: { id: true } });
 
-        res.status(200).json({ message: 'Institution deleted.', data: deletedInstitution });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Institution deleted.';
+        res.status(200).json({ message: res.locals.message, data: deletedInstitution });
     } catch (error: any) {
-        res.status(400).json(errorFormatter(error));
+        next(error);
     }
 };
