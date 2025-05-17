@@ -9,7 +9,17 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import { ItemType, ItemGroupType, PageType, ItemValidationType, User, UserRole, VisibilityMode, DependencyType } from '@prisma/client';
+import {
+    ItemType,
+    ItemGroupType,
+    PageType,
+    ItemValidationType,
+    User,
+    UserRole,
+    VisibilityMode,
+    DependencyType,
+    EventType,
+} from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 
@@ -814,7 +824,10 @@ export const createProtocol = async (req: Request, res: Response, next: any) => 
         const processedProtocol = { ...createdProtocol, actions: await getProtocolUserActions(user, createdProtocol, undefined) };
         // Filter sensitive fields
         const filteredProtocol = dropSensitiveFields(processedProtocol);
-        res.status(201).json({ message: 'Protocol created.', data: filteredProtocol });
+
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Protocol created.';
+        res.status(201).json({ message: res.locals.message, data: filteredProtocol });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
@@ -1281,7 +1294,9 @@ export const updateProtocol = async (req: Request, res: Response, next: any): Pr
         // Filter sensitive fields
         const filteredProtocol = dropSensitiveFields(processedProtocol);
 
-        res.status(200).json({ message: 'Protocol updated.', data: filteredProtocol });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Protocol updated.';
+        res.status(200).json({ message: res.locals.message, data: filteredProtocol });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
@@ -1534,7 +1549,9 @@ export const deleteProtocol = async (req: Request, res: Response, next: any): Pr
         // Delete protocol
         const deletedProtocol = await prismaClient.protocol.delete({ where: { id }, select: { id: true } });
 
-        res.status(200).json({ message: 'Protocol deleted.', data: deletedProtocol });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Protocol deleted.';
+        res.status(200).json({ message: res.locals.message, data: deletedProtocol });
     } catch (error: any) {
         next(error);
     }

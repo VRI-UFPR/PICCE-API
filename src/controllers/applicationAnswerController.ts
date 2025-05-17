@@ -9,7 +9,7 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import { ApplicationAnswer, User, UserRole } from '@prisma/client';
+import { ApplicationAnswer, EventType, User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 import { unlinkSync, existsSync } from 'fs';
@@ -405,7 +405,9 @@ export const createApplicationAnswer = async (req: Request, res: Response, next:
         // Filter sensitive fields from the response
         const filteredApplicationAnswer = dropSensitiveFields(processedApplicationAnswer);
 
-        res.status(201).json({ message: 'Application answer created.', data: filteredApplicationAnswer });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Application answer created.';
+        res.status(201).json({ message: res.locals.message, data: filteredApplicationAnswer });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
@@ -630,7 +632,9 @@ export const updateApplicationAnswer = async (req: Request, res: Response, next:
         // Filter sensitive fields from the response
         const filteredApplicationAnswer = dropSensitiveFields(processedApplicationAnswer);
 
-        res.status(200).json({ message: 'Application answer updated.', data: filteredApplicationAnswer });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Application answer updated.';
+        res.status(200).json({ message: res.locals.message, data: filteredApplicationAnswer });
     } catch (error: any) {
         const files = req.files as Express.Multer.File[];
         for (const file of files) if (existsSync(file.path)) unlinkSync(file.path);
@@ -762,7 +766,9 @@ export const deleteApplicationAnswer = async (req: Request, res: Response, next:
             select: { id: true },
         });
 
-        res.status(200).json({ message: 'Application answer deleted.', data: deletedApplicationAnswer });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Application answer deleted.';
+        res.status(200).json({ message: res.locals.message, data: deletedApplicationAnswer });
     } catch (error: any) {
         next(error);
     }

@@ -9,7 +9,7 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import { Address, User, UserRole } from '@prisma/client';
+import { Address, EventType, User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 
@@ -55,7 +55,9 @@ export const createAddress = async (req: Request, res: Response, next: any) => {
             data: { id: address.id, city: address.city, state: address.state, country: address.country },
         });
 
-        res.status(201).json({ message: 'Address created.', data: createdAddress });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Address created.';
+        res.status(201).json({ message: res.locals.message, data: createdAddress });
     } catch (error: any) {
         next(error);
     }
@@ -82,7 +84,9 @@ export const updateAddress = async (req: Request, res: Response, next: any): Pro
             data: { city: address.city, state: address.state, country: address.country },
         });
 
-        res.status(200).json({ message: 'Address updated.', data: updatedAddress });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Address updated.';
+        res.status(200).json({ message: res.locals.message, data: updatedAddress });
     } catch (error: any) {
         next(error);
     }
@@ -184,7 +188,10 @@ export const deleteAddress = async (req: Request, res: Response, next: any): Pro
         await checkAuthorization(user, addressId, 'delete');
         // Prisma operation
         const deletedAddress = await prismaClient.address.delete({ where: { id: addressId }, select: { id: true } });
-        res.status(200).json({ message: 'Address deleted.', data: deletedAddress });
+
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Address deleted.';
+        res.status(200).json({ message: res.locals.message, data: deletedAddress });
     } catch (error: any) {
         next(error);
     }

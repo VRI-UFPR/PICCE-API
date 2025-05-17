@@ -9,7 +9,7 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import { InstitutionType, User, UserRole } from '@prisma/client';
+import { EventType, InstitutionType, User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 
@@ -136,7 +136,9 @@ export const createInstitution = async (req: Request, res: Response, next: any) 
         // Filter roles from the response
         const filteredInstitution = dropSensitiveFields(processedInstitution);
 
-        res.status(201).json({ message: 'Institution created.', data: filteredInstitution });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Institution created.';
+        res.status(201).json({ message: res.locals.message, data: filteredInstitution });
     } catch (error: any) {
         next(error);
     }
@@ -185,7 +187,9 @@ export const updateInstitution = async (req: Request, res: Response, next: any):
         // Filter roles from the response
         const filteredInstitution = dropSensitiveFields(processedInstitution);
 
-        res.status(200).json({ message: 'Institution updated.', data: filteredInstitution });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Institution updated.';
+        res.status(200).json({ message: res.locals.message, data: filteredInstitution });
     } catch (error: any) {
         next(error);
     }
@@ -315,7 +319,9 @@ export const deleteInstitution = async (req: Request, res: Response, next: any):
         // Prisma operation
         const deletedInstitution = await prismaClient.institution.delete({ where: { id: institutionId }, select: { id: true } });
 
-        res.status(200).json({ message: 'Institution deleted.', data: deletedInstitution });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Institution deleted.';
+        res.status(200).json({ message: res.locals.message, data: deletedInstitution });
     } catch (error: any) {
         next(error);
     }

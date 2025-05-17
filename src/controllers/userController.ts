@@ -9,7 +9,7 @@ of the GNU General Public License along with PICCE-API.  If not, see <https://ww
 */
 
 import { Response, Request } from 'express';
-import { User, UserRole } from '@prisma/client';
+import { EventType, User, UserRole } from '@prisma/client';
 import * as yup from 'yup';
 import prismaClient from '../services/prismaClient';
 
@@ -211,7 +211,9 @@ export const createUser = async (req: Request, res: Response, next: any) => {
         // Embed user actions in the response
         const processedUser = { ...createdUser, actions: await getPeerUserActions(curUser, createdUser, undefined) };
 
-        res.status(201).json({ message: 'User created.', data: processedUser });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'User created.';
+        res.status(201).json({ message: res.locals.message, data: processedUser });
     } catch (error: any) {
         const file = req.file as Express.Multer.File;
         if (file) if (existsSync(file.path)) unlinkSync(file.path);
@@ -277,7 +279,9 @@ export const updateUser = async (req: Request, res: Response, next: any): Promis
         // Embed user actions in the response
         const processedUser = { ...updatedUser, actions: await getPeerUserActions(curUser, updatedUser, userId) };
 
-        res.status(200).json({ message: 'User updated.', data: processedUser });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'User updated.';
+        res.status(200).json({ message: res.locals.message, data: processedUser });
     } catch (error: any) {
         const file = req.file as Express.Multer.File;
         if (file) if (existsSync(file.path)) unlinkSync(file.path);
@@ -404,7 +408,9 @@ export const deleteUser = async (req: Request, res: Response, next: any): Promis
         // Prisma operation
         const deletedUser = await prismaClient.user.delete({ where: { id: userId }, select: { id: true } });
 
-        res.status(200).json({ message: 'User deleted.', data: deletedUser });
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'User deleted.';
+        res.status(200).json({ message: res.locals.message, data: deletedUser });
     } catch (error: any) {
         next(error);
     }
