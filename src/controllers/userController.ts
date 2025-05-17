@@ -86,7 +86,7 @@ const checkAuthorization = async (
                     role !== UserRole.PUBLISHER &&
                     role !== UserRole.APPLIER &&
                     role !== UserRole.USER) ||
-                (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER) || // Publishers can only manage users
+                (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER && role !== UserRole.APPLIER) || // Publishers can only manage appliers and users
                 (curUser.role === UserRole.APPLIER && role !== UserRole.USER) || // Appliers can only manage users
                 curUser.role === UserRole.GUEST || // Guests cannot perform update operations
                 role === UserRole.GUEST || // Users cannot be updated to guests
@@ -100,7 +100,6 @@ const checkAuthorization = async (
         case 'getAll':
             // Only ADMINs can perform get all users operation
             throw new Error('This user is not authorized to perform this action');
-            break;
         case 'get': {
             // Only the user itself (except guests), its creator and institution members (except users and guests) can perform get operations on it
             const user: User | null = await prismaClient.user.findUniqueOrThrow({ where: { id: userId } });
