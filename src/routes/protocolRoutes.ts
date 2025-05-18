@@ -20,6 +20,7 @@ import {
     getMyProtocols,
     getVisibleProtocols,
     getProtocolWithAnswers,
+    replicateProtocol,
 } from '../controllers/protocolController';
 import { setLoggerLocals } from '../services/eventLogger';
 /**
@@ -292,6 +293,48 @@ const router = express.Router();
  *               description: Error message
  */
 router.post('/createProtocol', passport.authenticate('jwt', { session: false }), uploader.any(), setLoggerLocals, createProtocol);
+
+/**
+ * @swagger
+ * /api/protocol/replicateProtocol:
+ *   post:
+ *     summary: Replicate an existing protocol by id
+ *     tags: [Protocol]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: number
+ *                 description: The id of the protocol to replicate
+ *                 example: 1
+ *     responses:
+ *       201:
+ *         description: The protocol was successfully replicated
+ *         content:
+ *           application/json:
+ *             message: protocol replicated.
+ *             data:
+ *               $ref: '#/components/schemas/Protocol'
+ *       400:
+ *         description: The request was malformed or invalid
+ *         content:
+ *           application/json:
+ *             error:
+ *               type: string
+ *               description: Error message
+ *       500:
+ *         description: A server-side error occurred while replicating the protocol
+ *         content:
+ *           application/json:
+ *             error:
+ *               type: string
+ *               description: Error message
+ */
+router.post('/replicateProtocol', passport.authenticate('jwt', { session: false }), uploader.any(), setLoggerLocals, replicateProtocol);
 
 /**
  * @swagger
