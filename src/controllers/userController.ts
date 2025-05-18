@@ -20,7 +20,7 @@ const getPeerUserRoles = async (curUser: User, user: any, userId: number | undef
     user = user || (await prismaClient.user.findUniqueOrThrow({ where: { id: userId } }));
 
     const creator = user.creator?.id === curUser.id;
-    const coordinator = curUser.role === UserRole.COORDINATOR && curUser.institutionId && curUser.institutionId === user.institution.id;
+    const coordinator = curUser.role === UserRole.COORDINATOR && curUser.institutionId && curUser.institutionId === user.institution?.id;
     const itself = curUser.id === userId;
 
     return { creator, coordinator, itself };
@@ -82,12 +82,13 @@ const checkAuthorization = async (
                     curUser.id !== user.creatorId &&
                     (curUser.role !== UserRole.COORDINATOR || curUser.institutionId !== user.institutionId)) ||
                 (curUser.id === userId && role) || // The user itself cannot change its role
-                (curUser.role === UserRole.COORDINATOR && // Coordinators can only manage publishers, appliers and users
+                (curUser.id !== userId &&
+                    curUser.role === UserRole.COORDINATOR && // Coordinators can only manage publishers, appliers and users
                     role !== UserRole.PUBLISHER &&
                     role !== UserRole.APPLIER &&
                     role !== UserRole.USER) ||
-                (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER && role !== UserRole.APPLIER) || // Publishers can only manage appliers and users
-                (curUser.role === UserRole.APPLIER && role !== UserRole.USER) || // Appliers can only manage users
+                (curUser.id !== userId && curUser.role === UserRole.PUBLISHER && role !== UserRole.USER && role !== UserRole.APPLIER) || // Publishers can only manage appliers and users
+                (curUser.id !== userId && curUser.role === UserRole.APPLIER && role !== UserRole.USER) || // Appliers can only manage users
                 curUser.role === UserRole.GUEST || // Guests cannot perform update operations
                 role === UserRole.GUEST || // Users cannot be updated to guests
                 (institutionId && curUser.institutionId !== institutionId) || // Users cannot insert people in institutions to which they do not belong
