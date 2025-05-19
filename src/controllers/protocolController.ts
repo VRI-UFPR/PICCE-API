@@ -58,8 +58,15 @@ export const getProtocolUserRoles = async (user: User, protocol: any, protocolId
         protocol?.answersViewersUser?.some((viewer: any) => viewer.id === user.id) ||
         protocol?.answersViewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
     );
+    const replicator = !!(
+        (coordinator || creator || manager || applier || viewer || answersViewer) &&
+        user.role !== UserRole.GUEST &&
+        user.role !== UserRole.USER &&
+        user.role !== UserRole.APPLIER &&
+        protocol?.replicable
+    );
 
-    return { creator, manager, applier, viewer, answersViewer, coordinator };
+    return { creator, manager, applier, viewer, answersViewer, coordinator, replicator };
 };
 
 const getProtocolUserActions = async (user: User, protocol: any, protocolId: number | undefined) => {
@@ -127,15 +134,7 @@ const checkAuthorization = async (user: User, protocolId: number | undefined, ac
         case 'replicate': {
             // Only viewers/creator/managers/appliers/coordinator can perform get operations on protocols
             const roles = await getProtocolUserRoles(user, undefined, protocolId);
-            if (
-                !roles.viewer &&
-                !roles.creator &&
-                !roles.applier &&
-                !roles.manager &&
-                !roles.coordinator &&
-                (user.role === UserRole.GUEST || user.role === UserRole.USER || user.role === UserRole.APPLIER)
-            )
-                throw new Error('This user is not authorized to perform this action');
+            if (!roles.replicator) throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'getWAnswers': {
