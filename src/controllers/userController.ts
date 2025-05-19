@@ -409,7 +409,20 @@ export const deleteUser = async (req: Request, res: Response, next: any): Promis
         // Check if user is authorized to delete the user
         await checkAuthorization(curUser, userId, undefined, undefined, 'delete');
         // Prisma operation
-        const deletedUser = await prismaClient.user.delete({ where: { id: userId }, select: { id: true } });
+        const deletedUser = await prismaClient.$transaction(async (prisma) => {
+            // Unlink user files
+            const filesToDelete = await prisma.file.findMany({
+                where: { users: { some: { id: userId } } },
+                select: { id: true, path: true, _count: { select: { users: true } } },
+            });
+            for (const file of filesToDelete) {
+                const fileReferences = await prisma.file.count({ where: { path: file.path } });
+                if (existsSync(file.path) && fileReferences <= 1 && file._count.users <= 1) unlinkSync(file.path);
+            }
+            await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
+            // Delete protocol
+            return await prisma.user.delete({ where: { id: userId }, select: { id: true } });
+        });
 
         res.locals.type = EventType.ACTION;
         res.locals.message = 'User deleted.';

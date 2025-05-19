@@ -1110,7 +1110,7 @@ export const updateProtocol = async (req: Request, res: Response, next: any): Pr
                             select: { id: true, path: true },
                         });
                         for (const file of filesToDelete) {
-                            const fileReferences = (await prisma.file.findMany({ where: { path: file.path } })).length;
+                            const fileReferences = await prisma.file.count({ where: { path: file.path } });
                             if (existsSync(file.path) && fileReferences <= 1) unlinkSync(file.path);
                         }
                         await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
@@ -1162,7 +1162,7 @@ export const updateProtocol = async (req: Request, res: Response, next: any): Pr
                                 select: { id: true, path: true },
                             });
                             for (const file of filesToDelete) {
-                                const fileReferences = (await prisma.file.findMany({ where: { path: file.path } })).length;
+                                const fileReferences = await prisma.file.count({ where: { path: file.path } });
                                 if (existsSync(file.path) && fileReferences <= 1) unlinkSync(file.path);
                             }
                             await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
@@ -1721,9 +1721,24 @@ export const deleteProtocol = async (req: Request, res: Response, next: any): Pr
         const user = req.user as User;
         // Check if user is allowed to delete the protocol
         await checkAuthorization(user, id, 'delete');
-        // Delete protocol
-        const deletedProtocol = await prismaClient.protocol.delete({ where: { id }, select: { id: true } });
-
+        const deletedProtocol = await prismaClient.$transaction(async (prisma) => {
+            // Unlink protocol files
+            const filesToDelete = await prisma.file.findMany({
+                where: {
+                    OR: [
+                        { item: { itemGroup: { page: { protocolId: id } } } },
+                        { itemOption: { item: { itemGroup: { page: { protocolId: id } } } } },
+                    ],
+                },
+            });
+            for (const file of filesToDelete) {
+                const fileReferences = await prisma.file.count({ where: { path: file.path } });
+                if (existsSync(file.path) && fileReferences <= 1) unlinkSync(file.path);
+            }
+            await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
+            // Delete protocol
+            return await prisma.protocol.delete({ where: { id }, select: { id: true } });
+        });
         res.locals.type = EventType.ACTION;
         res.locals.message = 'Protocol deleted.';
         res.status(200).json({ message: res.locals.message, data: deletedProtocol });
