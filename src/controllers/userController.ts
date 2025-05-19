@@ -20,7 +20,7 @@ const getPeerUserRoles = async (curUser: User, user: any, userId: number | undef
     user = user || (await prismaClient.user.findUniqueOrThrow({ where: { id: userId } }));
 
     const creator = user.creator?.id === curUser.id;
-    const coordinator = curUser.role === UserRole.COORDINATOR && curUser.institutionId && curUser.institutionId === user.institution.id;
+    const coordinator = curUser.role === UserRole.COORDINATOR && curUser.institutionId && curUser.institutionId === user.institution?.id;
     const itself = curUser.id === userId;
 
     return { creator, coordinator, itself };
@@ -82,12 +82,13 @@ const checkAuthorization = async (
                     curUser.id !== user.creatorId &&
                     (curUser.role !== UserRole.COORDINATOR || curUser.institutionId !== user.institutionId)) ||
                 (curUser.id === userId && role) || // The user itself cannot change its role
-                (curUser.role === UserRole.COORDINATOR && // Coordinators can only manage publishers, appliers and users
+                (curUser.id !== userId &&
+                    curUser.role === UserRole.COORDINATOR && // Coordinators can only manage publishers, appliers and users
                     role !== UserRole.PUBLISHER &&
                     role !== UserRole.APPLIER &&
                     role !== UserRole.USER) ||
-                (curUser.role === UserRole.PUBLISHER && role !== UserRole.USER && role !== UserRole.APPLIER) || // Publishers can only manage appliers and users
-                (curUser.role === UserRole.APPLIER && role !== UserRole.USER) || // Appliers can only manage users
+                (curUser.id !== userId && curUser.role === UserRole.PUBLISHER && role !== UserRole.USER && role !== UserRole.APPLIER) || // Publishers can only manage appliers and users
+                (curUser.id !== userId && curUser.role === UserRole.APPLIER && role !== UserRole.USER) || // Appliers can only manage users
                 curUser.role === UserRole.GUEST || // Guests cannot perform update operations
                 role === UserRole.GUEST || // Users cannot be updated to guests
                 (institutionId && curUser.institutionId !== institutionId) || // Users cannot insert people in institutions to which they do not belong
@@ -255,7 +256,10 @@ export const updateUser = async (req: Request, res: Response, next: any): Promis
                 where: { id: { not: user.profileImageId }, users: { some: { id: userId } } },
                 select: { id: true, path: true },
             });
-            for (const file of filesToDelete) if (existsSync(file.path)) unlinkSync(file.path);
+            for (const file of filesToDelete) {
+                const fileReferences = (await prisma.file.findMany({ where: { path: file.path } })).length;
+                if (existsSync(file.path) && fileReferences <= 1) unlinkSync(file.path);
+            }
             await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
             const updatedUser = await prisma.user.update({
                 where: { id: userId },
@@ -405,7 +409,20 @@ export const deleteUser = async (req: Request, res: Response, next: any): Promis
         // Check if user is authorized to delete the user
         await checkAuthorization(curUser, userId, undefined, undefined, 'delete');
         // Prisma operation
-        const deletedUser = await prismaClient.user.delete({ where: { id: userId }, select: { id: true } });
+        const deletedUser = await prismaClient.$transaction(async (prisma) => {
+            // Unlink user files
+            const filesToDelete = await prisma.file.findMany({
+                where: { users: { some: { id: userId } } },
+                select: { id: true, path: true, _count: { select: { users: true } } },
+            });
+            for (const file of filesToDelete) {
+                const fileReferences = await prisma.file.count({ where: { path: file.path } });
+                if (existsSync(file.path) && fileReferences <= 1 && file._count.users <= 1) unlinkSync(file.path);
+            }
+            await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
+            // Delete protocol
+            return await prisma.user.delete({ where: { id: userId }, select: { id: true } });
+        });
 
         res.locals.type = EventType.ACTION;
         res.locals.message = 'User deleted.';

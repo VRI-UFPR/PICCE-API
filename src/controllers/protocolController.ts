@@ -58,8 +58,15 @@ export const getProtocolUserRoles = async (user: User, protocol: any, protocolId
         protocol?.answersViewersUser?.some((viewer: any) => viewer.id === user.id) ||
         protocol?.answersViewersClassroom?.some((classroom: any) => classroom.users?.some((viewer: any) => viewer.id === user.id))
     );
+    const replicator = !!(
+        (coordinator || creator || manager || applier || viewer || answersViewer) &&
+        user.role !== UserRole.GUEST &&
+        user.role !== UserRole.USER &&
+        user.role !== UserRole.APPLIER &&
+        protocol?.replicable
+    );
 
-    return { creator, manager, applier, viewer, answersViewer, coordinator };
+    return { creator, manager, applier, viewer, answersViewer, coordinator, replicator };
 };
 
 const getProtocolUserActions = async (user: User, protocol: any, protocolId: number | undefined) => {
@@ -122,6 +129,12 @@ const checkAuthorization = async (user: User, protocolId: number | undefined, ac
             const roles = await getProtocolUserRoles(user, undefined, protocolId);
             if (!roles.viewer && !roles.creator && !roles.applier && !roles.manager && !roles.coordinator)
                 throw new Error('This user is not authorized to perform this action');
+            break;
+        }
+        case 'replicate': {
+            // Only viewers/creator/managers/appliers/coordinator can perform get operations on protocols
+            const roles = await getProtocolUserRoles(user, undefined, protocolId);
+            if (!roles.replicator) throw new Error('This user is not authorized to perform this action');
             break;
         }
         case 'getWAnswers': {
@@ -1095,7 +1108,10 @@ export const updateProtocol = async (req: Request, res: Response, next: any): Pr
                             },
                             select: { id: true, path: true },
                         });
-                        for (const file of filesToDelete) if (existsSync(file.path)) unlinkSync(file.path);
+                        for (const file of filesToDelete) {
+                            const fileReferences = await prisma.file.count({ where: { path: file.path } });
+                            if (existsSync(file.path) && fileReferences <= 1) unlinkSync(file.path);
+                        }
                         await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
                         // Update existing files or create new ones
                         for (const [fileIndex, itemFile] of item.files.entries()) {
@@ -1144,7 +1160,10 @@ export const updateProtocol = async (req: Request, res: Response, next: any): Pr
                                 },
                                 select: { id: true, path: true },
                             });
-                            for (const file of filesToDelete) if (existsSync(file.path)) unlinkSync(file.path);
+                            for (const file of filesToDelete) {
+                                const fileReferences = await prisma.file.count({ where: { path: file.path } });
+                                if (existsSync(file.path) && fileReferences <= 1) unlinkSync(file.path);
+                            }
                             await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
                             // Update existing files or create new ones
                             for (const [fileIndex, itemOptionFile] of itemOption.files.entries()) {
@@ -1375,6 +1394,155 @@ export const getVisibleProtocols = async (req: Request, res: Response, next: any
     }
 };
 
+export const replicateProtocol = async (req: Request, res: Response, next: any): Promise<void> => {
+    try {
+        // Yup schemas
+        const replicateProtocolSchema = yup
+            .object()
+            .shape({ id: yup.number().min(1) })
+            .noUnknown();
+        // Yup parsing/validation
+        const replicateData = await replicateProtocolSchema.validate(req.body, { stripUnknown: false });
+        // User from Passport-JWT
+        const user = req.user as User;
+        // Check if user is authorized to replicate
+        await checkAuthorization(user, replicateData.id, 'replicate');
+        // Find protocol to replicate
+        const protocolToReplicate = await prismaClient.protocol.findUniqueOrThrow({
+            where: { id: replicateData.id },
+            include: {
+                pages: {
+                    include: {
+                        itemGroups: {
+                            include: {
+                                items: { include: { itemOptions: { include: { files: true } }, files: true, itemValidations: true } },
+                                tableColumns: true,
+                                dependencies: true,
+                            },
+                        },
+                        dependencies: true,
+                    },
+                },
+            },
+        });
+        // Create map table for tempIds
+        const tempIdMap = new Map<number, number>();
+        // Create new protocol
+        const createdProtocol = await prismaClient.$transaction(async (prisma) => {
+            const createdProtocol = await prisma.protocol.create({
+                data: {
+                    title: protocolToReplicate.title,
+                    description: protocolToReplicate.description,
+                    enabled: protocolToReplicate.enabled,
+                    creatorId: user.id,
+                    visibility: protocolToReplicate.visibility as VisibilityMode,
+                    applicability: protocolToReplicate.applicability as VisibilityMode,
+                    answersVisibility: protocolToReplicate.answersVisibility as VisibilityMode,
+                    replicable: protocolToReplicate.replicable,
+                },
+            });
+            // Create nested pages as well as itemGroups, items, itemOptions, tableColumns, itemValidations and dependencies
+            for (const [pageId, page] of protocolToReplicate.pages.entries()) {
+                const createdPage = await prisma.page.create({
+                    data: { placement: page.placement, protocolId: createdProtocol.id, type: page.type },
+                });
+                for (const [itemGroupId, itemGroup] of page.itemGroups.entries()) {
+                    await validateItemGroup(itemGroup.type, itemGroup.items.length, itemGroup.tableColumns.length);
+                    const createdItemGroup = await prisma.itemGroup.create({
+                        data: {
+                            placement: itemGroup.placement,
+                            isRepeatable: itemGroup.isRepeatable,
+                            pageId: createdPage.id,
+                            type: itemGroup.type,
+                        },
+                    });
+                    for (const [tableColumnId, tableColumn] of itemGroup.tableColumns.entries()) {
+                        const createdTableColumn = await prisma.tableColumn.create({
+                            data: { text: tableColumn.text, placement: tableColumn.placement, groupId: createdItemGroup.id },
+                        });
+                    }
+                    for (const [itemId, item] of itemGroup.items.entries()) {
+                        // Check if item has the allowed amount of itemOptions and tableColumns
+                        await validateItem(item.type, item.itemOptions.length);
+                        // Check if itemValidations are valid
+                        await validateItemValidations(item.type, item.itemValidations);
+                        const createdItem = await prisma.item.create({
+                            data: {
+                                text: item.text,
+                                description: item.description,
+                                enabled: item.enabled,
+                                groupId: createdItemGroup.id,
+                                type: item.type,
+                                placement: item.placement,
+                                files: { create: item.files.map((file) => ({ path: file.path, description: file.description })) },
+                            },
+                        });
+                        tempIdMap.set(item.id, createdItem.id);
+                        for (const [itemOptionId, itemOption] of item.itemOptions.entries()) {
+                            const createdItemOption = await prisma.itemOption.create({
+                                data: {
+                                    text: itemOption.text,
+                                    placement: itemOption.placement,
+                                    itemId: createdItem.id,
+                                    files: { create: itemOption.files.map((file) => ({ path: file.path, description: file.description })) },
+                                },
+                            });
+                        }
+                        for (const [itemValidationId, itemValidation] of item.itemValidations.entries()) {
+                            const createdItemValidation = await prisma.itemValidation.create({
+                                data: {
+                                    type: itemValidation.type,
+                                    argument: itemValidation.argument,
+                                    customMessage: itemValidation.customMessage,
+                                    itemId: createdItem.id,
+                                },
+                            });
+                        }
+                    }
+                    for (const [dependencyId, dependency] of itemGroup.dependencies.entries()) {
+                        // Validate dependency type and argument
+                        await validateDependency(dependency.type, dependency.argument || '');
+                        const createdDependency = await prisma.itemGroupDependencyRule.create({
+                            data: {
+                                type: dependency.type,
+                                argument: dependency.argument,
+                                customMessage: dependency.customMessage,
+                                itemGroupId: createdItemGroup.id,
+                                itemId: tempIdMap.get(dependency.itemId) as number,
+                            },
+                        });
+                    }
+                }
+                for (const [dependencyId, dependency] of page.dependencies.entries()) {
+                    // Validate dependency type and argument
+                    await validateDependency(dependency.type, dependency.argument || '');
+                    const createdDependency = await prisma.pageDependencyRule.create({
+                        data: {
+                            type: dependency.type,
+                            argument: dependency.argument,
+                            customMessage: dependency.customMessage,
+                            pageId: createdPage.id,
+                            itemId: tempIdMap.get(dependency.itemId) as number,
+                        },
+                    });
+                }
+            }
+
+            return await prisma.protocol.findUnique({ where: { id: createdProtocol.id }, select: fieldsWViewers });
+        });
+        // Embed user actions in the response
+        const processedProtocol = { ...createdProtocol, actions: await getProtocolUserActions(user, createdProtocol, undefined) };
+        // Filter sensitive fields
+        const filteredProtocol = dropSensitiveFields(processedProtocol);
+
+        res.locals.type = EventType.ACTION;
+        res.locals.message = 'Protocol replicated.';
+        res.status(201).json({ message: res.locals.message, data: filteredProtocol });
+    } catch (error: any) {
+        next(error);
+    }
+};
+
 export const getMyProtocols = async (req: Request, res: Response, next: any): Promise<void> => {
     try {
         // User from Passport-JWT
@@ -1552,9 +1720,24 @@ export const deleteProtocol = async (req: Request, res: Response, next: any): Pr
         const user = req.user as User;
         // Check if user is allowed to delete the protocol
         await checkAuthorization(user, id, 'delete');
-        // Delete protocol
-        const deletedProtocol = await prismaClient.protocol.delete({ where: { id }, select: { id: true } });
-
+        const deletedProtocol = await prismaClient.$transaction(async (prisma) => {
+            // Unlink protocol files
+            const filesToDelete = await prisma.file.findMany({
+                where: {
+                    OR: [
+                        { item: { itemGroup: { page: { protocolId: id } } } },
+                        { itemOption: { item: { itemGroup: { page: { protocolId: id } } } } },
+                    ],
+                },
+            });
+            for (const file of filesToDelete) {
+                const fileReferences = await prisma.file.count({ where: { path: file.path } });
+                if (existsSync(file.path) && fileReferences <= 1) unlinkSync(file.path);
+            }
+            await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
+            // Delete protocol
+            return await prisma.protocol.delete({ where: { id }, select: { id: true } });
+        });
         res.locals.type = EventType.ACTION;
         res.locals.message = 'Protocol deleted.';
         res.status(200).json({ message: res.locals.message, data: deletedProtocol });

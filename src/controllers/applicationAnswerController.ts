@@ -547,7 +547,10 @@ export const updateApplicationAnswer = async (req: Request, res: Response, next:
                         },
                         select: { id: true, path: true },
                     });
-                    for (const file of filesToDelete) if (existsSync(file.path)) unlinkSync(file.path);
+                    for (const file of filesToDelete) {
+                        const fileReferences = await prisma.file.count({ where: { path: file.path } });
+                        if (existsSync(file.path) && fileReferences <= 1) unlinkSync(file.path);
+                    }
                     await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
                     // Create new files (udpating files is not supported)
                     const itemAnswerFiles = files
@@ -761,11 +764,24 @@ export const deleteApplicationAnswer = async (req: Request, res: Response, next:
         // Check if user is allowed to delete this application answer
         await checkAuthorization(user, applicationAnswerId, undefined, 'delete');
         // Prisma operation
-        const deletedApplicationAnswer = await prismaClient.applicationAnswer.delete({
-            where: { id: applicationAnswerId },
-            select: { id: true },
+        const deletedApplicationAnswer = await prismaClient.$transaction(async (prisma) => {
+            // Unlink answer files
+            const filesToDelete = await prisma.file.findMany({
+                where: {
+                    itemAnswer: { group: { applicationAnswerId: applicationAnswerId } },
+                },
+            });
+            for (const file of filesToDelete) {
+                const fileReferences = await prisma.file.count({ where: { path: file.path } });
+                if (existsSync(file.path) && fileReferences <= 1) unlinkSync(file.path);
+            }
+            await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
+            // Delete protocol
+            return await prisma.applicationAnswer.delete({
+                where: { id: applicationAnswerId },
+                select: { id: true },
+            });
         });
-
         res.locals.type = EventType.ACTION;
         res.locals.message = 'Application answer deleted.';
         res.status(200).json({ message: res.locals.message, data: deletedApplicationAnswer });
