@@ -22,6 +22,8 @@ export const setLoggerLocals = (req: any, res: any, next: any) => {
             body: req.body,
             userAgent: req.headers['user-agent'],
         },
+        error: res.locals.error,
+        status: res.statusCode,
     };
 
     next();

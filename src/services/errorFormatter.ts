@@ -22,6 +22,7 @@ export const errorFormatterMiddleware = (error: any, req: any, res: any, next: a
     const formattedError = errorFormatter(error);
     res.locals.type = EventType.ERROR;
     res.locals.message = formattedError.message;
+    res.locals.error = formattedError.details;
     res.status(error.status || 500).json(formattedError);
 };
 
