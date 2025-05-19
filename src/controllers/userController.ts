@@ -256,7 +256,10 @@ export const updateUser = async (req: Request, res: Response, next: any): Promis
                 where: { id: { not: user.profileImageId }, users: { some: { id: userId } } },
                 select: { id: true, path: true },
             });
-            for (const file of filesToDelete) if (existsSync(file.path)) unlinkSync(file.path);
+            for (const file of filesToDelete) {
+                const fileReferences = (await prisma.file.findMany({ where: { path: file.path } })).length;
+                if (existsSync(file.path) && fileReferences <= 1) unlinkSync(file.path);
+            }
             await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
             const updatedUser = await prisma.user.update({
                 where: { id: userId },

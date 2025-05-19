@@ -1109,7 +1109,10 @@ export const updateProtocol = async (req: Request, res: Response, next: any): Pr
                             },
                             select: { id: true, path: true },
                         });
-                        for (const file of filesToDelete) if (existsSync(file.path)) unlinkSync(file.path);
+                        for (const file of filesToDelete) {
+                            const fileReferences = (await prisma.file.findMany({ where: { path: file.path } })).length;
+                            if (existsSync(file.path) && fileReferences <= 1) unlinkSync(file.path);
+                        }
                         await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
                         // Update existing files or create new ones
                         for (const [fileIndex, itemFile] of item.files.entries()) {
@@ -1158,7 +1161,10 @@ export const updateProtocol = async (req: Request, res: Response, next: any): Pr
                                 },
                                 select: { id: true, path: true },
                             });
-                            for (const file of filesToDelete) if (existsSync(file.path)) unlinkSync(file.path);
+                            for (const file of filesToDelete) {
+                                const fileReferences = (await prisma.file.findMany({ where: { path: file.path } })).length;
+                                if (existsSync(file.path) && fileReferences <= 1) unlinkSync(file.path);
+                            }
                             await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
                             // Update existing files or create new ones
                             for (const [fileIndex, itemOptionFile] of itemOption.files.entries()) {

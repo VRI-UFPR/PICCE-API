@@ -547,7 +547,10 @@ export const updateApplicationAnswer = async (req: Request, res: Response, next:
                         },
                         select: { id: true, path: true },
                     });
-                    for (const file of filesToDelete) if (existsSync(file.path)) unlinkSync(file.path);
+                    for (const file of filesToDelete) {
+                        const fileReferences = (await prisma.file.findMany({ where: { path: file.path } })).length;
+                        if (existsSync(file.path) && fileReferences <= 1) unlinkSync(file.path);
+                    }
                     await prisma.file.deleteMany({ where: { id: { in: filesToDelete.map((file) => file.id) } } });
                     // Create new files (udpating files is not supported)
                     const itemAnswerFiles = files
